@@ -4,9 +4,8 @@ FROM ocaml/opam:alpine-ocaml-4.14 AS builder
 RUN sudo apk add --update --no-cache gmp-dev libffi-dev m4 perl pkgconfig git bash
 RUN sudo mkdir -p /usr/src/app && sudo chown opam:opam /usr/src/app
 
-ARG REPO_URL=https://bitbucket.org/jshs/monpoly.git
-ARG BRANCH=master
-RUN git clone --depth 1 --branch $BRANCH $REPO_URL /usr/src/app/monpoly
+ARG GIT_BRANCH=master
+RUN git clone --depth 1 --branch $GIT_BRANCH https://bitbucket.org/jshs/monpoly.git /usr/src/app/monpoly
 
 WORKDIR /usr/src/app/monpoly
 
