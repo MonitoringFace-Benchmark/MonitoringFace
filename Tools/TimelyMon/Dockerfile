@@ -13,6 +13,6 @@ RUN cargo build --release --bin timelymon && cp target/release/timelymon /usr/lo
 # Use bookworm instead of bullseye for runtime
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libssl3 ca-certificates time && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/bin/timelymon /usr/local/bin/
 CMD ["timelymon"]
