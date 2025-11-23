@@ -131,19 +131,3 @@ class DataGolfContract:
     tup_ts: list[int]
     tup_amt: int
     tup_val: int
-
-
-def data_golf_contract_to_command(contract) -> list[AnyStr]:
-    args = ["-sig", contract.sig_file, "-formula", contract.formula]
-    if hasattr(contract, 'no_rewrite') and contract.no_rewrite is not None:
-        if contract.no_rewrite:
-            args += ["-no_rw"]
-
-    args += ["-nonewlastts"]
-    args += ["-tup-ts", ",".join(map(str, contract.tup_ts)), "-tup-amt", str(contract.tup_amt), "-tup-val", str(contract.tup_val)]
-
-    if contract.oracle:
-        args += ["-tup-out", f"result/result_{str(contract.trace_length)}.res"]
-
-    return args
-

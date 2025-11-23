@@ -22,7 +22,7 @@ from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import Sy
     construct_synthetic_experiment_sig, construct_synthetic_experiment_pattern, TimeGuarded
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
-from Infrastructure.DataTypes.Types.custome_type import GeneratorMode
+from Infrastructure.DataTypes.Types.custome_type import ExperimentType
 
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate, run_monitor
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
@@ -66,7 +66,7 @@ def init_data_generator(tag: DataGenerators, path_to_build_inner):
 
 class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
     def __init__(self, contract, path_to_build, path_to_experiment, data_setup,
-                 experiment: SyntheticExperiment, gen_mode: GeneratorMode, time_guard: TimeGuarded, oracle=None):
+                 experiment: SyntheticExperiment, gen_mode: ExperimentType, time_guard: TimeGuarded, oracle=None):
         print("\n" + "=" * 15 + " Benchmark Init" + "=" * 15)
         self.contract = contract
 
@@ -101,15 +101,15 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         if not os.path.exists(self.path_to_named_experiment):
             os.mkdir(self.path_to_named_experiment)
         try:
-            if self.gen_mode == GeneratorMode.Signature:
+            if self.gen_mode == ExperimentType.Signature:
                 construct_synthetic_experiment_sig(self.experiment, self.path_to_named_experiment,
                                                    self.data_setup, self.data_gen,
                                                    self.contract.policy_setup, self.formula_gen,
                                                    self.oracle, self.time_guard)
-            elif self.gen_mode == GeneratorMode.Pattern:
+            elif self.gen_mode == ExperimentType.Pattern:
                 construct_synthetic_experiment_pattern(self.experiment, self.path_to_named_experiment,
                                                        self.data_setup, self.data_gen, self.oracle, self.time_guard)
-            elif self.gen_mode == GeneratorMode.CaseStudy:
+            elif self.gen_mode == ExperimentType.CaseStudy:
                 construct_case_study(self.data_gen, self.data_setup, self.path_to_named_experiment, self.oracle, self.time_out)
             else:
                 print("Not implemented")
@@ -122,7 +122,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         print("====== Run Experiments ======")
         settings_result = pd.DataFrame(columns=["Name", "Setting", "pre", "runtime", "post", "wall time", "max mem", "cpu"])
 
-        if self.gen_mode == GeneratorMode.CaseStudy:
+        if self.gen_mode == ExperimentType.CaseStudy:
             path_to_folder = f"{self.path_to_named_experiment}/data"
             sfh = ScratchFolderHandler(path_to_folder)
             for (num, (data, formula, sig)) in self.data_setup["case_study_mapper"].iterate_settings():
@@ -137,11 +137,11 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             return settings_result
 
         paths = []
-        if self.gen_mode == GeneratorMode.Pattern:
+        if self.gen_mode == ExperimentType.Pattern:
             for num_ops in self.experiment.num_operators:
                 for num_set in self.experiment.num_setting:
                     paths.append(f"{self.path_to_named_experiment}/operators_{num_ops}/num_{num_set}")
-        elif self.gen_mode == GeneratorMode.Signature:
+        elif self.gen_mode == ExperimentType.Signature:
             for num_ops in self.experiment.num_operators:
                 for num_fv in self.experiment.num_fvs:
                     for num_set in self.experiment.num_setting:

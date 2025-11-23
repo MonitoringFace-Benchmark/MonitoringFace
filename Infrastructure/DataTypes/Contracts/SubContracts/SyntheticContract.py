@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 from typing import AnyStr, Optional
 
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternsGenerator import PatternsGenerator
 from Infrastructure.DataTypes.Contracts.SubContracts.DataGeneratorContract import patterns_to_formula
 from Infrastructure.DataTypes.Contracts.SubContracts.PolicyGeneratorContract import PolicyGeneratorContract
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
@@ -26,14 +27,11 @@ class SyntheticExperiment:
 def construct_synthetic_experiment_pattern(
         experiment: SyntheticExperiment,
         path_to_folder: AnyStr,
-        data_setup,
-        data_source,
+        data_setup, data_source,
         oracle: Optional[AbstractOracleTemplate],
         time_guard
 ):
-    sig = "A(int,int)\nB(int,int)\nC(int,int)"
-    formula = patterns_to_formula(data_setup)
-
+    policy_source = PatternsGenerator()
     for num_ops in experiment.num_operators:
         ops_path = path_to_folder + "/" + f"operators_{num_ops}"
         if not os.path.exists(ops_path):
@@ -45,6 +43,9 @@ def construct_synthetic_experiment_pattern(
             if not os.path.exists(num_path):
                 os.mkdir(num_path)
 
+            (seed, sig, formula), _ = policy_source.generate_policy()
+
+            to_file(num_path, seed, "policy_seed", "seed")
             to_file(num_path, sig, "signature", "sig")
             to_file(num_path, formula, "formula", "mfotl")
 
@@ -87,7 +88,7 @@ def guarded_synthetic_experiment_pattern(num_path, data_source, data_setup, num_
 
 def construct_synthetic_experiment_sig(
         experiment: SyntheticExperiment, path_to_folder: AnyStr, data_setup, data_source,
-        formula_setup: PolicyGeneratorContract, formula_source,
+        policy_setup: PolicyGeneratorContract, policy_source,
         oracle: Optional[AbstractOracleTemplate], time_guard: TimeGuarded):
     for num_ops in experiment.num_operators:
         ops_path = path_to_folder + "/" + f"operators_{num_ops}"
@@ -111,11 +112,11 @@ def construct_synthetic_experiment_sig(
                         os.mkdir(f"{num_path}/result")
 
                 if not time_guard.time_guarded:
-                    unguarded_synthetic_experiment_sig(num_path, num_ops, num_fv, formula_setup, formula_source,
+                    unguarded_synthetic_experiment_sig(num_path, num_ops, num_fv, policy_setup, policy_source,
                                                        data_source, data_setup, experiment.num_data_set_sizes.copy(),
                                                        oracle, None)
                 else:
-                    guarded_synthetic_experiment_sig(num_path, num_ops, num_fv, formula_setup, formula_source,
+                    guarded_synthetic_experiment_sig(num_path, num_ops, num_fv, policy_setup, policy_source,
                                                      data_source, data_setup, experiment.num_data_set_sizes.copy(),
                                                      oracle, time_guard)
 
@@ -209,7 +210,7 @@ def synthetic_formula_guard(inner_path, num_ops_, num_fv_, formula_setup_, formu
 
         (seed, sig, formula), _ = formula_source_.generate_policy(formula_setup_)
 
-        to_file(inner_path, seed, "formula_seed", "seed")
+        to_file(inner_path, seed, "policy_seed", "seed")
         to_file(inner_path, sig, "signature", "sig")
         to_file(inner_path, formula, "formula", "mfotl")
 

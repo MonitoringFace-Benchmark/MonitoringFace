@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class GeneratorMode(Enum):
+class ExperimentType(Enum):
     Pattern = 1
     Signature = 2
     CaseStudy = 3

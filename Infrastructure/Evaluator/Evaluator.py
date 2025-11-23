@@ -7,7 +7,7 @@ from Infrastructure.DataTypes.Contracts.SubContracts.DataGeneratorContract impor
 from Infrastructure.DataTypes.Contracts.SubContracts.PolicyGeneratorContract import PolicyGeneratorContract
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
-from Infrastructure.DataTypes.Types.custome_type import GeneratorMode, BranchOrRelease
+from Infrastructure.DataTypes.Types.custome_type import ExperimentType, BranchOrRelease
 
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
 
@@ -26,7 +26,6 @@ class Evaluator:
         path_to_build = f"{your_path_to_mfb}/Infrastructure/build"
         if not os.path.exists(path_to_build):
             os.mkdir(path_to_build)
-            os.mkdir(f"{path_to_build}/Monitor")
 
         path_to_experiments = f"{your_path_to_mfb}/Infrastructure/experiments"
         if not os.path.exists(path_to_experiments):
@@ -99,7 +98,7 @@ class Evaluator:
                                         {"replayer": "gen_data", "path_to_build": path_to_build}), {})
         #oracle = DataGolfOracle()
         benchmark = BenchmarkBuilder(init, path_to_build, path_to_experiments,
-                                     data_setup, synthetic_experiment, GeneratorMode.Signature, time_guarded, oracle)
+                                     data_setup, synthetic_experiment, ExperimentType.Signature, time_guarded, oracle)
 
         d = {"worker": 1, "output_mode": 1}
         tm = TimelyMon(tool_manager.get_image("TimelyMon", "development"), "TimelyMon 1", d)

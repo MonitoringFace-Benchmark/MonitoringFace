@@ -2,7 +2,7 @@ import re
 from dataclasses import fields
 from typing import AnyStr
 
-from Infrastructure.DataTypes.Contracts.SubContracts.DataGeneratorContract import DataGolfContract, data_golf_contract_to_command
+from Infrastructure.DataTypes.Contracts.SubContracts.DataGeneratorContract import DataGolfContract
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException
@@ -78,3 +78,18 @@ def stdout_to_csv(in_str: AnyStr):
                 else:
                     res.append(prefix)
     return "\n".join(res)
+
+
+def data_golf_contract_to_command(contract) -> list[AnyStr]:
+    args = ["-sig", contract.sig_file, "-formula", contract.formula]
+    if hasattr(contract, 'no_rewrite') and contract.no_rewrite is not None:
+        if contract.no_rewrite:
+            args += ["-no_rw"]
+
+    args += ["-nonewlastts", "-tup-ts", ",".join(map(str, contract.tup_ts)), "-tup-amt",
+             str(contract.tup_amt), "-tup-val", str(contract.tup_val)]
+
+    if contract.oracle:
+        args += ["-tup-out", f"result/result_{str(contract.trace_length)}.res"]
+
+    return args
