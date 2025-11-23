@@ -22,18 +22,13 @@ class Evaluator:
 
     def __init__(self):
         # very important directional values
-        your_path_to_mfb = "/Users/krq770/Desktop/MonitoringFace"
-        path_to_build = f"{your_path_to_mfb}/MonitoringFaceBootloader/build"
+        your_path_to_mfb = "/Users/krq770/PycharmProjects/MonitoringFace"
+        path_to_build = f"{your_path_to_mfb}/Infrastructure/build"
         if not os.path.exists(path_to_build):
             os.mkdir(path_to_build)
-            os.mkdir(f"{path_to_build}/Generator")
             os.mkdir(f"{path_to_build}/Monitor")
 
-            os.mkdir(f"{path_to_build}/Generator/CaseStudies")
-            os.mkdir(f"{path_to_build}/Generator/Data")
-            os.mkdir(f"{path_to_build}/Generator/Formula")
-
-        path_to_experiments = f"{your_path_to_mfb}/MonitoringFaceBootloader/experiments"
+        path_to_experiments = f"{your_path_to_mfb}/Infrastructure/experiments"
         if not os.path.exists(path_to_experiments):
             os.mkdir(path_to_experiments)
 

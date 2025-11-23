@@ -16,7 +16,7 @@ class DataGenerators(Enum):
 
 class PolicyGenerators(Enum):
     MFOTLGENERATOR = 1,
-    PATTERS = 1
+    PATTERNS = 1
 
 
 @dataclass

@@ -14,6 +14,7 @@ from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGenGenerator im
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator import DataGolfGenerator
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator import \
     MfotlPolicyGenerator
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternsGenerator import PatternsGenerator
 from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract, PolicyGenerators, \
     DataGenerators
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import construct_case_study
@@ -48,6 +49,8 @@ class TimeGuard:
 def init_policy_generator(name: PolicyGenerators, path_to_build_inner):
     if name == PolicyGenerators.MFOTLGENERATOR:
         return MfotlPolicyGenerator("gen_mfotl", path_to_build_inner)
+    elif name == PolicyGenerators.PATTERNS:
+        return PatternsGenerator()
     else:
         return None
 
