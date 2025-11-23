@@ -1,0 +1,4 @@
+
+
+class BenchmarkCreationFailed(Exception):
+    pass
