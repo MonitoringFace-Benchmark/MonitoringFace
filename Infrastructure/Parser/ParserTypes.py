@@ -1,4 +1,5 @@
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
+from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
 from Infrastructure.Monitors.MonPoly.MonPoly import MonPoly
 from Infrastructure.Monitors.MonitorManager import MonitorManager
@@ -6,7 +7,7 @@ from Infrastructure.Monitors.TimelyMon.TimelyMon import TimelyMon
 from Infrastructure.Oracles.DataGolfOracle.DataGolfOracle import DataGolfOracle
 from Infrastructure.Oracles.OracleManager import OracleManager
 from Infrastructure.Oracles.VeriMonOracle.VeriMonOracle import VeriMonOracle
-from Infrastructure.Parser.ParserConstants import TOOL_MANAGER, MONITORS, ORACLES
+from Infrastructure.Parser.ParserConstants import TOOL_MANAGER, MONITORS, ORACLES, TIME_GUARD
 
 
 def deconstruct_tool_manager(tool_manager: ToolManager):
@@ -75,6 +76,42 @@ def deconstruct_oracle_manager(oracle_manager: OracleManager):
 def construct_oracle_manager(json_dump, monitor_manager: MonitorManager):
     oracles_to_build = [[key, items["identifier"], items["name"], items["params"]] for (key, items) in json_dump[ORACLES]]
     return OracleManager(monitor_manager=monitor_manager, oracles_to_build=oracles_to_build)
+
+
+def deconstruct_time_guarded(time_guarded: TimeGuarded):
+    def guard_type_to_str(gt):
+        if gt == TimeGuardingTool.Monitor:
+            return "Monitor"
+        elif gt == TimeGuardingTool.Oracle:
+            return "Oracle"
+        else:
+            return "Generator"
+
+    return {
+        TIME_GUARD: {
+            "time_guarded": str(time_guarded.time_guarded),
+            "guard_type": guard_type_to_str(time_guarded.guard_type),
+            "lower_bound": time_guarded.lower_bound,
+            "upper_bound": time_guarded.upper_bound,
+            "guard": time_guarded.guard
+        }
+    }
+
+
+def construct_time_guarded(json_dump, monitor_manager: MonitorManager):
+    def str_to_guard_type(gt):
+        if gt == "Monitor":
+            return TimeGuardingTool.Monitor
+        elif gt == "Oracle":
+            return TimeGuardingTool.Oracle
+        else:
+            return TimeGuardingTool.Generator
+
+    vals = json_dump[TIME_GUARD]
+    return TimeGuarded(
+        time_guarded=vals["time_guarded"], lower_bound=vals["lower_bound"], upper_bound=vals["upper_bound"],
+        guard_type=str_to_guard_type(vals["guard_type"]), guard_name=vals["guard"], monitor_manager=monitor_manager
+    )
 
 
 if __name__ == "__main__":

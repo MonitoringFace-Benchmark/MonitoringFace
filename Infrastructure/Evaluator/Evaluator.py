@@ -109,8 +109,8 @@ class Evaluator:
         )
 
         time_guarded = TimeGuarded(
-            time_guarded=False, lower_bound=None, upper_bound=200,
-            guard_type=TimeGuardingTool.Monitor, guard=monitor_manager.get_monitor("TimelyMon 6")
+            time_guarded=False, lower_bound=None, upper_bound=200, monitor_manager=monitor_manager,
+            guard_type=TimeGuardingTool.Monitor, guard_name="TimelyMon 6"
         )
 
         benchmark = BenchmarkBuilder(

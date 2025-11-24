@@ -1,8 +1,4 @@
-from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
-
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 
 
 class TimeGuardingTool(Enum):
@@ -11,11 +7,12 @@ class TimeGuardingTool(Enum):
     Monitor = 3
 
 
-@dataclass
 class TimeGuarded:
-    time_guarded: bool
-    lower_bound: Optional[int]
-    upper_bound: Optional[int]
+    def __init__(self, time_guarded, guard_type, guard_name, monitor_manager, lower_bound=None, upper_bound=None):
+        self.time_guarded = time_guarded
+        self.guard_type = guard_type
 
-    guard_type: TimeGuardingTool
-    guard: Optional[AbstractMonitorTemplate]
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
+
+        self.guard = monitor_manager.get_monitor(guard_name)
