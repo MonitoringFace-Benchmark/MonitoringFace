@@ -11,8 +11,8 @@ from Infrastructure.DataTypes.Types.custome_type import ExperimentType, BranchOr
 
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
 
-from Infrastructure.Monitors.MonPoly import MonPoly
-from Infrastructure.Monitors.TimelyMon import TimelyMon
+from Infrastructure.Monitors.MonPoly.MonPoly import MonPoly
+from Infrastructure.Monitors.TimelyMon.TimelyMon import TimelyMon
 from Infrastructure.Oracles.VeriMonOracle import VeriMonOracle
 
 
@@ -79,8 +79,6 @@ class Evaluator:
         formula_setup.num_preds = 4
         formula_setup.prob_eand = None
         formula_setup.prob_rand = None
-
-
 
         synthetic_experiment = SyntheticExperiment(
             num_operators=[5], num_fvs=[2], num_setting=[0, 1], num_data_set_sizes=[50]

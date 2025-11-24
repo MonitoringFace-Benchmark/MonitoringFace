@@ -4,8 +4,9 @@ import os
 from dataclasses import dataclass
 from typing import AnyStr, Optional
 
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import \
+    PolicyGeneratorContract
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator import PatternPolicyGenerator
-from Infrastructure.DataTypes.Contracts.SubContracts.PolicyGeneratorContract import PolicyGeneratorContract
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
