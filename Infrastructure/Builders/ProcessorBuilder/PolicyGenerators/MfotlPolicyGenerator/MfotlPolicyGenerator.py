@@ -1,7 +1,8 @@
 from typing import AnyStr
 
-from Infrastructure.DataTypes.Contracts.SubContracts.PolicyGeneratorContract import policy_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import \
+    policy_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException
 from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY

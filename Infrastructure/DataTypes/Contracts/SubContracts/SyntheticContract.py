@@ -4,8 +4,7 @@ import os
 from dataclasses import dataclass
 from typing import AnyStr, Optional
 
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternsGenerator import PatternsGenerator
-from Infrastructure.DataTypes.Contracts.SubContracts.DataGeneratorContract import patterns_to_formula
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator import PatternPolicyGenerator
 from Infrastructure.DataTypes.Contracts.SubContracts.PolicyGeneratorContract import PolicyGeneratorContract
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
@@ -31,7 +30,7 @@ def construct_synthetic_experiment_pattern(
         oracle: Optional[AbstractOracleTemplate],
         time_guard
 ):
-    policy_source = PatternsGenerator()
+    policy_source = PatternPolicyGenerator()
     for num_ops in experiment.num_operators:
         ops_path = path_to_folder + "/" + f"operators_{num_ops}"
         if not os.path.exists(ops_path):

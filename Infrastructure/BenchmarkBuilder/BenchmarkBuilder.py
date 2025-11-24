@@ -10,11 +10,11 @@ import pandas as pd
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilderException import BenchmarkCreationFailed
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import \
     CaseStudyGenerator
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGenGenerator import DataGenGenerator
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator import DataGolfGenerator
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator import \
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGenerator import SignatureGenerator
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfGenerator import DataGolfGenerator
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyGenerator import \
     MfotlPolicyGenerator
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternsGenerator import PatternsGenerator
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
 from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract, PolicyGenerators, \
     DataGenerators
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import construct_case_study
@@ -50,7 +50,7 @@ def init_policy_generator(name: PolicyGenerators, path_to_build_inner):
     if name == PolicyGenerators.MFOTLGENERATOR:
         return MfotlPolicyGenerator("gen_mfotl", path_to_build_inner)
     elif name == PolicyGenerators.PATTERNS:
-        return PatternsGenerator()
+        return PatternPolicyGenerator()
     else:
         return None
 
@@ -59,7 +59,7 @@ def init_data_generator(tag: DataGenerators, path_to_build_inner):
     if tag == DataGenerators.DATAGOLF:
         return DataGolfGenerator("datagolf", path_to_build_inner)
     elif tag == DataGenerators.DATAGENERATOR:
-        return DataGenGenerator("gen_data", path_to_build_inner)
+        return SignatureGenerator("gen_data", path_to_build_inner)
     else:
         print("Not implemented yet")
 

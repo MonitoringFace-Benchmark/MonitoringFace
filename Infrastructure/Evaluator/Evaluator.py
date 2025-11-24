@@ -1,10 +1,10 @@
 import os.path
 
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import \
+    PolicyGeneratorContract
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
-from Infrastructure.DataTypes.Contracts.BenchmarkContract import DataGenerators, CaseStudyBenchmarkContract, \
-    SyntheticBenchmarkContract, PolicyGenerators
-from Infrastructure.DataTypes.Contracts.SubContracts.DataGeneratorContract import Signature
-from Infrastructure.DataTypes.Contracts.SubContracts.PolicyGeneratorContract import PolicyGeneratorContract
+from Infrastructure.DataTypes.Contracts.BenchmarkContract import DataGenerators, SyntheticBenchmarkContract, PolicyGenerators
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGeneratorContract import Signature
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
 from Infrastructure.DataTypes.Types.custome_type import ExperimentType, BranchOrRelease
@@ -48,6 +48,8 @@ class Evaluator:
         #            Including Temporal Data Golf and RV20
         # Case Study: instruct fixed generators to either download data from hosted place or run one setting
 
+
+
         #data_setup = Patterns(
         #    trace_length=1000,seed=None,event_rate=1000,index_rate=None, time_stamp=None,linear=1, interval=None,
         #    star=None,triangle=None,pattern=None,violations=1.0,zipf="x=1.5+3,z=2", prob_a=0.2,  prob_b=0.3, prob_c=0.5
@@ -73,15 +75,16 @@ class Evaluator:
         # rethink practicals, lattice of operations
         # comparing to the fragments
 
-        formula_setup = PolicyGeneratorContract()
+        formula_setup = PolicyGeneratorContract().default_contract()
         formula_setup.num_preds = 4
         formula_setup.prob_eand = None
         formula_setup.prob_rand = None
 
-        synthetic_experiment = SyntheticExperiment(num_operators=[5],
-                                                   num_fvs=[2],
-                                                   num_setting=[0, 1],
-                                                   num_data_set_sizes=[50])
+
+
+        synthetic_experiment = SyntheticExperiment(
+            num_operators=[5], num_fvs=[2], num_setting=[0, 1], num_data_set_sizes=[50]
+        )
 
         #init = CaseStudyBenchmarkContract("Nokia", DataGenerators.CASESTUDY, "Nokia")
         init = SyntheticBenchmarkContract("test", DataGenerators.DATAGENERATOR, PolicyGenerators.MFOTLGENERATOR, formula_setup)

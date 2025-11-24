@@ -1,9 +1,22 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Optional, AnyStr
+
+from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
 
 @dataclass
-class PolicyGeneratorContract:
+class PolicyGeneratorContract(AbstractContract):
+    def default_contract(self):
+        return PolicyGeneratorContract()
+
+    def instantiate_contract(self, params):
+        if not params:
+            return self.default_contract()
+        valid_field_names = {f.name for f in fields(self)}
+        for key, value in params.items():
+            if key in valid_field_names:
+                setattr(self, key, value)
+
     sig_file: Optional[str] = None
     out_file: Optional[str] = None
     seed: Optional[int] = None

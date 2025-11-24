@@ -2,7 +2,7 @@ import re
 from dataclasses import fields
 from typing import AnyStr
 
-from Infrastructure.DataTypes.Contracts.SubContracts.DataGeneratorContract import DataGolfContract
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGeneratorContract import DataGolfContract
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from Infrastructure.DataTypes.Contracts.SubContracts.PolicyGeneratorContract import PolicyGeneratorContract
+from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
 
 class BenchmarkContractAbstract:
@@ -24,7 +24,7 @@ class SyntheticBenchmarkContract(BenchmarkContractAbstract):
     name: str
     data_source: DataGenerators
     policy_source: PolicyGenerators
-    policy_setup: PolicyGeneratorContract
+    policy_setup: AbstractContract
 
 
 @dataclass

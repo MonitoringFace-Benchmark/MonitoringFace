@@ -3,7 +3,7 @@ from typing import AnyStr
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 
 
-class PatternsGenerator(PolicyGeneratorTemplate):
+class PatternPolicyGenerator(PolicyGeneratorTemplate):
     def __init__(self):
         super().__init__()
 
@@ -16,9 +16,10 @@ class PatternsGenerator(PolicyGeneratorTemplate):
 
 def patterns_to_policy(pat) -> AnyStr:
     interval = pat["interval"] if pat["interval"] is not None else "[0,30)"
-    if pat["linear"] is not None:
+    policy = pat.get("policy")
+    if policy == "linear":
         return f"((ONCE {interval} A(w,x)) AND B(x,y)) AND (EVENTUALLY {interval} C(y,z))"
-    elif pat["triangle"] is not None:
+    elif policy == "triangle":
         return f"((ONCE {interval} A(x,y)) AND B(y,z)) AND (EVENTUALLY {interval} C(z,x))"
     else:
         return f"((ONCE {interval} A(w,x)) AND B(w,y)) AND (EVENTUALLY {interval} C(w,z))"
