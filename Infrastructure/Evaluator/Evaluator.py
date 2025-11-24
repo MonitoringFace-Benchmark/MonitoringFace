@@ -12,10 +12,7 @@ from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
 
 from Infrastructure.Monitors.MonPoly.MonPoly import MonPoly
 from Infrastructure.Monitors.MonitorManager import MonitorManager
-from Infrastructure.Monitors.TimelyMon.TimelyMon import TimelyMon
 from Infrastructure.Oracles.OracleManager import OracleManager
-from Infrastructure.Oracles.VeriMonOracle.VeriMonOracle import VeriMonOracle
-from Infrastructure.Parser.ParserTypes import deconstruct_tool_manager
 
 
 # must be the entry point, either creating or recreating experiments, organizing bootstrapping and so on
@@ -50,7 +47,7 @@ class Evaluator:
         #            Including Temporal Data Golf and RV20
         # Case Study: instruct fixed generators to either download data from hosted place or run one setting
 
-
+        # todo contract manager
 
         #data_setup = Patterns(
         #    trace_length=1000,seed=None,event_rate=1000,index_rate=None, time_stamp=None,linear=1, interval=None,
@@ -102,7 +99,6 @@ class Evaluator:
             ]
         )
 
-        # todo contract manager
         oracle_manager = OracleManager(
             oracles_to_build=[("VeriMonOracle", "VeriMonOracle", MonPoly, {"replayer": "gen_data", "verified": (), "path_to_build": path_to_build})],
             monitor_manager=monitor_manager
@@ -116,7 +112,7 @@ class Evaluator:
         benchmark = BenchmarkBuilder(
             init, path_to_build, path_to_experiments,
             data_setup, synthetic_experiment, ExperimentType.Signature,
-            time_guarded, oracle_manager.get_oracle("VeriMonOracle")
+            time_guarded, (oracle_manager, "VeriMonOracle")
         )
 
         # oracle needs timeout and potential lower bound
@@ -124,8 +120,9 @@ class Evaluator:
         print(x)
 
         # performance
-        #   online/offline peak mem and latency    (not there yet)
+        #   offline peak mem and latency    (ok)
         #   measure different stages pre/exec/post (ok)
+        #   online (not implemented)
 
         # correction
         #  conversion to VeriMon for correctness (is the format)
@@ -133,9 +130,9 @@ class Evaluator:
 
         # store and load experiments
 
-        # dejavu/monpoly/timelymon/whymon/enfguard(?)
+        # dejavu/enfguard(?)
 
-        # stream rv side quest
+        # stream rv side quest (lola)
 
         # do analysis
 

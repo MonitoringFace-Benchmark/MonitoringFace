@@ -84,7 +84,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             self.formula_gen = init_policy_generator(contract.policy_source, path_to_build)
             self.experiment = experiment
 
-        self.oracle = oracle
+        self.oracle = oracle[0].get_oracle(oracle[1]) if oracle else None
         self.gen_mode = gen_mode
 
         self.time_guard = time_guard
