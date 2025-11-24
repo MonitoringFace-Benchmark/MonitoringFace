@@ -1,8 +1,11 @@
 import os.path
 
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfContract import DataGolfContract
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGeneratorContract import Patterns
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import PolicyGeneratorContract
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
-from Infrastructure.DataTypes.Contracts.BenchmarkContract import DataGenerators, SyntheticBenchmarkContract, PolicyGenerators
+from Infrastructure.DataTypes.Contracts.BenchmarkContract import DataGenerators, SyntheticBenchmarkContract, \
+    PolicyGenerators, CaseStudyBenchmarkContract
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGeneratorContract import Signature
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
@@ -29,8 +32,6 @@ class Evaluator:
         if not os.path.exists(path_to_experiments):
             os.mkdir(path_to_experiments)
 
-        # read experiment
-        # tool builder
         tool_manager = ToolManager([
             ("TimelyMon", "input_optims", BranchOrRelease.Branch),
             ("TimelyMon", "development", BranchOrRelease.Branch),
@@ -38,38 +39,25 @@ class Evaluator:
         ], path_to_build)
 
         # todo get/create and build experiment/case study
-
         # todo analyze
-
-        # ------- do something to variables -------
-        # the benchmark should work over multiple types of creation
-        # Synthetic: instruct customizable generators (either single or multiple) to create data given a schema
-        #            Including Temporal Data Golf and RV20
-        # Case Study: instruct fixed generators to either download data from hosted place or run one setting
 
         # todo contract manager
 
-        #data_setup = Patterns(
-        #    trace_length=1000,seed=None,event_rate=1000,index_rate=None, time_stamp=None,linear=1, interval=None,
-        #    star=None,triangle=None,pattern=None,violations=1.0,zipf="x=1.5+3,z=2", prob_a=0.2,  prob_b=0.3, prob_c=0.5
-        #)
+        data_setup = Patterns(
+            trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None, linear=1, interval=None,
+            star=None, triangle=None, pattern=None, violations=1.0, zipf="x=1.5+3,z=2", prob_a=0.2, prob_b=0.3, prob_c=0.5
+        )
+
+        data_setup = DataGolfContract(
+            path=path_to_experiments, sig_file="signature.sig", formula="formula.mfotl",
+            tup_ts=[0, 1, 2, 3, 4, 5, 6], tup_amt=100, tup_val=1,
+            oracle=True, no_rewrite=None, trace_length=5
+        )
 
         data_setup = Signature(
             trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None,
             sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None
         )
-
-        """data_setup = DataGolfContract(
-            path=path_to_experiments,
-            sig_file="signature.sig",
-            formula="formula.mfotl",
-            tup_ts=[0, 1, 2, 3, 4, 5, 6],
-            tup_amt=100,
-            tup_val=1,
-            oracle=True,
-            no_rewrite=None,
-            trace_length=5
-        )"""
 
         # rethink practicals, lattice of operations
         # comparing to the fragments
@@ -79,14 +67,13 @@ class Evaluator:
         formula_setup.prob_eand = None
         formula_setup.prob_rand = None
 
-        synthetic_experiment = SyntheticExperiment(
-            num_operators=[5], num_fvs=[2], num_setting=[0, 1], num_data_set_sizes=[50]
+        ################################ todo
+        init = CaseStudyBenchmarkContract(experiment_name="Nokia", case_study_name="Nokia")
+        init = SyntheticBenchmarkContract(
+            "test", DataGenerators.DATAGENERATOR, PolicyGenerators.MFOTLGENERATOR, formula_setup,
+            SyntheticExperiment(num_operators=[5], num_fvs=[2], num_setting=[0, 1], num_data_set_sizes=[50])
         )
-
-        #init = CaseStudyBenchmarkContract("Nokia", DataGenerators.CASESTUDY, "Nokia")
-        init = SyntheticBenchmarkContract("test", DataGenerators.DATAGENERATOR, PolicyGenerators.MFOTLGENERATOR, formula_setup)
-        #data_setup = {}
-
+        ################################
         # Store and reload Benchmark: (tools and parameters, experiments) list
 
         monitor_manager = MonitorManager(
@@ -111,13 +98,13 @@ class Evaluator:
 
         benchmark = BenchmarkBuilder(
             init, path_to_build, path_to_experiments,
-            data_setup, synthetic_experiment, ExperimentType.Signature,
+            data_setup, ExperimentType.Signature,
             time_guarded, (oracle_manager, "VeriMonOracle")
         )
 
         # oracle needs timeout and potential lower bound
-        x = benchmark.run(monitor_manager.get_monitors(["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly"]), {})
-        print(x)
+        res = benchmark.run(monitor_manager.get_monitors(["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly"]), {})
+        print(res)
 
         # performance
         #   offline peak mem and latency    (ok)

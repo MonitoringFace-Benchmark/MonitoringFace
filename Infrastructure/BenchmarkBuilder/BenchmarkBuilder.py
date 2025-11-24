@@ -66,23 +66,23 @@ def init_data_generator(tag: DataGenerators, path_to_build_inner):
 
 class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
     def __init__(self, contract, path_to_build, path_to_experiment, data_setup,
-                 experiment: SyntheticExperiment, gen_mode: ExperimentType, time_guard: TimeGuarded, oracle=None):
+                 gen_mode: ExperimentType, time_guard: TimeGuarded, oracle=None):
         print("\n" + "=" * 15 + " Benchmark Init" + "=" * 15)
         self.contract = contract
 
         self.path_to_build = path_to_build
         self.path_to_experiment = path_to_experiment
-        self.path_to_named_experiment = self.path_to_experiment + "/" + self.contract.name
+        self.path_to_named_experiment = self.path_to_experiment + "/" + self.contract.experiment_name
 
         self.data_setup = data_setup if isinstance(data_setup, dict) else asdict(data_setup)
 
         if isinstance(contract, CaseStudyBenchmarkContract):
             self.data_gen = CaseStudyGenerator(contract.case_study_name, path_to_build)
-            self.data_setup["path"] = f"{self.path_to_named_experiment}/{contract.name}"
+            self.data_setup["path"] = f"{self.path_to_named_experiment}/{contract.experiment_name}"
         else:
             self.data_gen = init_data_generator(contract.data_source, path_to_build)
             self.formula_gen = init_policy_generator(contract.policy_source, path_to_build)
-            self.experiment = experiment
+            self.experiment = contract.experiment
 
         self.oracle = oracle[0].get_oracle(oracle[1]) if oracle else None
         self.gen_mode = gen_mode

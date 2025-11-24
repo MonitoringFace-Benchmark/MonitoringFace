@@ -44,7 +44,7 @@ class AbstractMonitorTemplate(ABC):
 def run_monitor(mon: AbstractMonitorTemplate, guarded,
                 path_to_folder: AnyStr, data_file: AnyStr,
                 signature_file: AnyStr, formula_file: AnyStr, oracle=None):
-    print("\n" + "="*50)
+    print("\n" + "="*75)
     print(mon.name)
     start = time.perf_counter()
     mon.pre_processing(path_to_folder, data_file, signature_file, formula_file)
@@ -73,11 +73,11 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
             raise ResultErrorException(msg)
 
     print(postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed)
-    print("="*50 + "\n")
+    print("="*75 + "\n")
     return preprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed
 
-# match tool to oracle
 
+# match tool to oracle
 def check(tool_res: list[AnyStr], oracle_res: list[AnyStr]):
     oracle_len = len(oracle_res)
     tool_len = len(tool_res)
@@ -90,6 +90,5 @@ def check(tool_res: list[AnyStr], oracle_res: list[AnyStr]):
 
 
 def verify(tool_res: list[AnyStr], oracle_res: list[AnyStr]) -> (bool, AnyStr):
-
     # todo verify and check
     pass
