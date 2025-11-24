@@ -25,3 +25,7 @@ class AbstractOracleTemplate(ABC):
     @abstractmethod
     def post_process_data(self, std_out_str, output_file_name):
         pass
+
+    @abstractmethod
+    def verify(self, path_to_data, result_file_oracle, tool_input):
+        pass

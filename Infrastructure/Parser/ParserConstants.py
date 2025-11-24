@@ -1,0 +1,13 @@
+TOOL_MANAGER = "tool_manager"
+MONITORS = "monitors"
+ORACLES = "oracles"
+TIME_GUARD = "time_guard"
+
+DATA_GENERATORS = "data_generators"
+DATA_CONVERTERS = "data_converters"
+POLICY_GENERATORS = "policy_generators"
+POLICY_CONVERTERS = "policy_converters"
+CASE_STUDIES = "case_studies"
+UTILITIES = "utilities"
+
+CONTRACT = "contract"

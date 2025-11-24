@@ -26,3 +26,6 @@ class VeriMonOracle(AbstractOracleTemplate):
     def post_process_data(self, std_out_str, output_file_name):
         with open(output_file_name, "w") as file:
             file.write(std_out_str)
+
+    def verify(self, path_to_data, result_file_oracle, tool_input):
+        pass
