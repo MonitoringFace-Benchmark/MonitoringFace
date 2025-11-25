@@ -66,7 +66,7 @@ def init_data_generator(tag: DataGenerators, path_to_build_inner):
 
 class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
     def __init__(self, contract, path_to_build, path_to_experiment, data_setup,
-                 gen_mode: ExperimentType, time_guard: TimeGuarded, oracle=None):
+                 gen_mode: ExperimentType, time_guard: TimeGuarded, tools_to_build, oracle=None):
         print("\n" + "=" * 20 + " Benchmark Init " + "=" * 20)
         self.contract = contract
 
@@ -89,6 +89,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
 
         self.time_guard = time_guard
         self.time_out = self.time_guard.upper_bound
+        self.tools_to_build = tools_to_build
 
         print("=" * 20 + " Benchmark Init (done) " + "=" * 20)
         self._build()

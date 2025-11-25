@@ -1,6 +1,7 @@
 import json
 from dataclasses import asdict
 
+from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfContract import DataGolfContract
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGeneratorContract import Patterns
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGeneratorContract import \
@@ -12,7 +13,7 @@ from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchm
     DataGenerators, PolicyGenerators
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
-from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
+from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, ExperimentType
 from Infrastructure.Monitors.MonPoly.MonPoly import MonPoly
 from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Monitors.TimelyMon.TimelyMon import TimelyMon
@@ -20,7 +21,7 @@ from Infrastructure.Oracles.DataGolfOracle.DataGolfOracle import DataGolfOracle
 from Infrastructure.Oracles.OracleManager import OracleManager
 from Infrastructure.Oracles.VeriMonOracle.VeriMonOracle import VeriMonOracle
 from Infrastructure.Parser.ParserConstants import TOOL_MANAGER, MONITORS, ORACLES, TIME_GUARD, DATA_SETUP, POLICY_SETUP, \
-    BENCHMARK_CONTRACT
+    BENCHMARK_CONTRACT, BENCHMARK_BUILDER
 
 
 def deconstruct_tool_manager(tool_manager: ToolManager):
@@ -230,9 +231,34 @@ def construct_benchmark_contract(json_dump):
         )
 
 
+def deconstruct_benchmark(benchmark: BenchmarkBuilder):
+    return {BENCHMARK_BUILDER: {
+        "experiment_type": str(benchmark.gen_mode),
+        "tools_to_build": benchmark.tools_to_build,
+        "oracle_name": benchmark.oracle[1] if benchmark.oracle else None
+    }}
+
+
+def construct_benchmark(json_dump, benchmark, path_to_build, path_to_experiment, data_setup, time_guard, oracle_manager):
+    def str_to_experiment_type(name):
+        if name == "ExperimentType.Signature":
+            return ExperimentType.Signature
+        elif name == "ExperimentType.Signature":
+            return ExperimentType.Pattern
+        elif name == "ExperimentType.CaseStudy":
+            return ExperimentType.CaseStudy
+
+    vals = json_dump[BENCHMARK_BUILDER]
+    experiment_type = str_to_experiment_type(vals["experiment_type"])
+    oracle_name = vals["oracle_name"]
+    oracle = (oracle_manager, oracle_name) if oracle_name else None
+    return BenchmarkBuilder(
+        benchmark, path_to_build, path_to_experiment, data_setup, experiment_type,
+        time_guard, vals["tools_to_build"], oracle
+    )
+
+
 if __name__ == "__main__":
-    #val = {TOOL_MANAGER: {'0': {'name': 'TimelyMon', 'branch': 'input_optims', 'release': 'BranchOrRelease.Branch'}, '1': {'name': 'TimelyMon', 'branch': 'development', 'release': 'BranchOrRelease.Branch'}, '2': {'name': 'MonPoly', 'branch': 'master', 'release': 'BranchOrRelease.Branch'}}}
-    #print(construct_tool_manager(val, ""))
     y = Signature(
             trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None,
             sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None

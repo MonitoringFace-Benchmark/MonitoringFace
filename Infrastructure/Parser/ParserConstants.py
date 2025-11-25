@@ -5,6 +5,7 @@ TIME_GUARD = "time_guard"
 DATA_SETUP = "data_setup"
 POLICY_SETUP = "policy_setup"
 BENCHMARK_CONTRACT = "benchmark_contract"
+BENCHMARK_BUILDER = "benchmark_builder"
 
 DATA_GENERATORS = "data_generators"
 DATA_CONVERTERS = "data_converters"
