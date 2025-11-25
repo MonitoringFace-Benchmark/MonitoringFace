@@ -1,4 +1,16 @@
+import json
+from dataclasses import asdict
+
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfContract import DataGolfContract
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGeneratorContract import Patterns
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGeneratorContract import \
+    Signature
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import \
+    PolicyGeneratorContract
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
+from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract, SyntheticBenchmarkContract, \
+    DataGenerators, PolicyGenerators
+from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
 from Infrastructure.Monitors.MonPoly.MonPoly import MonPoly
@@ -7,7 +19,8 @@ from Infrastructure.Monitors.TimelyMon.TimelyMon import TimelyMon
 from Infrastructure.Oracles.DataGolfOracle.DataGolfOracle import DataGolfOracle
 from Infrastructure.Oracles.OracleManager import OracleManager
 from Infrastructure.Oracles.VeriMonOracle.VeriMonOracle import VeriMonOracle
-from Infrastructure.Parser.ParserConstants import TOOL_MANAGER, MONITORS, ORACLES, TIME_GUARD
+from Infrastructure.Parser.ParserConstants import TOOL_MANAGER, MONITORS, ORACLES, TIME_GUARD, DATA_SETUP, POLICY_SETUP, \
+    BENCHMARK_CONTRACT
 
 
 def deconstruct_tool_manager(tool_manager: ToolManager):
@@ -114,6 +127,118 @@ def construct_time_guarded(json_dump, monitor_manager: MonitorManager):
     )
 
 
+def deconstruct_data_setup(data_setup):
+    def data_setup_to_str(data_setup_):
+        if isinstance(data_setup_, Patterns):
+            return "Patterns"
+        elif isinstance(data_setup_, Signature):
+            return "Signature"
+        elif isinstance(data_setup_, DataGolfContract):
+            return "DataGolfContract"
+
+    return {DATA_SETUP: {
+        data_setup_to_str(data_setup): asdict(data_setup)
+    }}
+
+
+def construct_data_setup(json_dump):
+    def str_to_data_setup(contract_name_, vals_):
+        if contract_name_ == "Patterns":
+            return Patterns(**vals_)
+        elif contract_name_ == "Signature":
+            return Signature(**vals_)
+        elif contract_name_ == "DataGolfContract":
+            return DataGolfContract(**vals_)
+
+    contract_name = list(json_dump[DATA_SETUP].keys())[0]
+    vals = json_dump[DATA_SETUP][contract_name]
+    return str_to_data_setup(contract_name, vals)
+
+
+def deconstruct_policy_setup(policy_setup):
+    def policy_setup_to_str(data_setup_):
+        if isinstance(data_setup_, PolicyGeneratorContract):
+            return "PolicyGeneratorContract"
+
+    return {POLICY_SETUP: {
+        policy_setup_to_str(policy_setup): asdict(policy_setup)
+    }}
+
+
+def construct_policy_setup(json_dump):
+    def str_to_policy_setup(contract_name_, vals_):
+        if contract_name_ == "PolicyGeneratorContract":
+            return PolicyGeneratorContract(**vals_)
+
+    contract_name = list(json_dump[POLICY_SETUP].keys())[0]
+    vals = json_dump[POLICY_SETUP][contract_name]
+    return str_to_policy_setup(contract_name, vals)
+
+
+def deconstruct_synthetic_experiment(experiment):
+    return json.dumps(experiment.__dict__)
+
+
+def construct_synthetic_experiment(json_dump):
+    return SyntheticExperiment(**json.loads(json_dump))
+
+
+def deconstruct_benchmark_contract(benchmark_contract):
+    if isinstance(benchmark_contract, CaseStudyBenchmarkContract):
+        return {BENCHMARK_CONTRACT: {"CaseStudyBenchmarkContract": {
+            "experiment_name": benchmark_contract.experiment_name,
+            "case_study_name": benchmark_contract.case_study_name
+        }}}
+    elif isinstance(benchmark_contract, SyntheticBenchmarkContract):
+        return {BENCHMARK_CONTRACT: {"SyntheticBenchmarkContract": {
+            "experiment_name": benchmark_contract.experiment_name,
+            "data_source": str(benchmark_contract.data_source),
+            "policy_source": str(benchmark_contract.policy_source),
+            "policy_setup": deconstruct_policy_setup(benchmark_contract.policy_setup),
+            "experiment": deconstruct_synthetic_experiment(benchmark_contract.experiment)
+        }}}
+
+
+def construct_benchmark_contract(json_dump):
+    def str_data_generators(datagen):
+        if datagen == "DataGenerators.DATAGOLF":
+            return DataGenerators.DATAGOLF
+        elif datagen == "DataGenerators.DATAGENERATOR":
+            return DataGenerators.DATAGENERATOR
+
+    def str_policy_generators(policygen):
+        if policygen == "PolicyGenerators.MFOTLGENERATOR":
+            return PolicyGenerators.MFOTLGENERATOR
+        elif policygen == "PolicyGenerators.PATTERNS":
+            return PolicyGenerators.PATTERNS
+
+    vals = json_dump[BENCHMARK_CONTRACT]
+    if "CaseStudyBenchmarkContract" in vals:
+        inner_vals = vals["CaseStudyBenchmarkContract"]
+        return CaseStudyBenchmarkContract(
+            experiment_name=inner_vals["experiment_name"],
+            case_study_name=inner_vals["case_study_name"]
+        )
+    else:
+        inner_vals = vals["SyntheticBenchmarkContract"]
+        return SyntheticBenchmarkContract(
+            experiment_name=inner_vals["experiment_name"],
+            experiment=construct_synthetic_experiment(inner_vals["experiment"]),
+            policy_setup=construct_policy_setup(inner_vals["policy_setup"]),
+            policy_source=str_policy_generators(inner_vals["policy_source"]),
+            data_source=str_data_generators(inner_vals["data_source"])
+        )
+
+
 if __name__ == "__main__":
-    val = {TOOL_MANAGER: {'0': {'name': 'TimelyMon', 'branch': 'input_optims', 'release': 'BranchOrRelease.Branch'}, '1': {'name': 'TimelyMon', 'branch': 'development', 'release': 'BranchOrRelease.Branch'}, '2': {'name': 'MonPoly', 'branch': 'master', 'release': 'BranchOrRelease.Branch'}}}
-    print(construct_tool_manager(val, ""))
+    #val = {TOOL_MANAGER: {'0': {'name': 'TimelyMon', 'branch': 'input_optims', 'release': 'BranchOrRelease.Branch'}, '1': {'name': 'TimelyMon', 'branch': 'development', 'release': 'BranchOrRelease.Branch'}, '2': {'name': 'MonPoly', 'branch': 'master', 'release': 'BranchOrRelease.Branch'}}}
+    #print(construct_tool_manager(val, ""))
+    y = Signature(
+            trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None,
+            sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None
+        )
+    x = deconstruct_data_setup(y)
+    y_ = construct_data_setup(x)
+    print(y_)
+    print(y == y_)
+

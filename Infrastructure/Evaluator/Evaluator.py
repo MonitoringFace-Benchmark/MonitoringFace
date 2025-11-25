@@ -62,15 +62,16 @@ class Evaluator:
         # rethink practicals, lattice of operations
         # comparing to the fragments
 
-        formula_setup = PolicyGeneratorContract().default_contract()
-        formula_setup.num_preds = 4
-        formula_setup.prob_eand = None
-        formula_setup.prob_rand = None
+        policy_setup = PolicyGeneratorContract().default_contract()
+        policy_setup.num_preds = 4
+        policy_setup.prob_eand = None
+        policy_setup.prob_rand = None
 
         ################################ todo
         init = CaseStudyBenchmarkContract(experiment_name="Nokia", case_study_name="Nokia")
+
         init = SyntheticBenchmarkContract(
-            "test", DataGenerators.DATAGENERATOR, PolicyGenerators.MFOTLGENERATOR, formula_setup,
+            "test", DataGenerators.DATAGENERATOR, PolicyGenerators.MFOTLGENERATOR, policy_setup,
             SyntheticExperiment(num_operators=[5], num_fvs=[2], num_setting=[0, 1], num_data_set_sizes=[50])
         )
         ################################
@@ -95,6 +96,8 @@ class Evaluator:
             time_guarded=False, lower_bound=None, upper_bound=200, monitor_manager=monitor_manager,
             guard_type=TimeGuardingTool.Monitor, guard_name="TimelyMon 6"
         )
+
+        # todo data_setup to experiment type
 
         benchmark = BenchmarkBuilder(
             init, path_to_build, path_to_experiments,
