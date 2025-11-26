@@ -284,15 +284,3 @@ def construct_benchmark(json_dump, benchmark, path_to_build, path_to_experiment,
         benchmark, path_to_build, path_to_experiment, data_setup, experiment_type,
         time_guard, vals["tools_to_build"], oracle
     )
-
-
-if __name__ == "__main__":
-    y = Signature(
-            trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None,
-            sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None
-        )
-    x = deconstruct_data_setup(y)
-    y_ = construct_data_setup(x)
-    print(y_)
-    print(y == y_)
-
