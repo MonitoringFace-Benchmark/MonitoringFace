@@ -38,4 +38,4 @@ COPY --from=builder /home/opam/dist/bin/ /usr/local/bin/
 COPY --from=builder /home/opam/dist/lib/ /usr/local/lib/
 
 # Set the entry point
-CMD ["EnfGuard"]
+CMD ["enfguard"]
