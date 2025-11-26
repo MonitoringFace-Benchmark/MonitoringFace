@@ -31,6 +31,7 @@ FROM debian:12-slim
 RUN apt-get update && apt-get install -y \
     libgmp10 \
     libffi8 \
+    time \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed binaries from builder stag
