@@ -26,7 +26,7 @@ from Infrastructure.Parser.ParserComponents import construct_tool_manager, const
 class Evaluator:
     def __init__(self):
         # setup folders todo generalize
-        your_path_to_mfb = "/Users/krq770/PycharmProjects/MonitoringFace"
+        your_path_to_mfb = os.getcwd()
         self.path_to_build = f"{your_path_to_mfb}/Infrastructure/build"
         if not os.path.exists(self.path_to_build):
             os.mkdir(self.path_to_build)
@@ -38,7 +38,8 @@ class Evaluator:
         tool_manager = ToolManager([
             ("TimelyMon", "input_optims", BranchOrRelease.Branch),
             ("TimelyMon", "development", BranchOrRelease.Branch),
-            ("MonPoly", "master", BranchOrRelease.Branch)
+            ("MonPoly", "master", BranchOrRelease.Branch),
+            ("WhyMon", "main", BranchOrRelease.Branch)
         ], self.path_to_build)
 
         data_setup = Patterns(
@@ -61,10 +62,14 @@ class Evaluator:
         # rethink practicals, lattice of operations
         # comparing to the fragments
 
+
         policy_setup = PolicyGeneratorContract().default_contract()
         policy_setup.num_preds = 4
-        policy_setup.prob_eand = None
-        policy_setup.prob_rand = None
+        policy_setup.prob_eand = 0
+        policy_setup.prob_rand = 0
+        policy_setup.prob_let = 0
+        policy_setup.prob_matchF = 0
+        policy_setup.prob_matchP = 0
         print(policy_setup)
 
         init = CaseStudyBenchmarkContract(experiment_name="Nokia", case_study_name="Nokia")
@@ -80,8 +85,8 @@ class Evaluator:
                 ("TimelyMon", "TimelyMon 1", "development", {"worker": 1, "output_mode": 1}),
                 ("TimelyMon", "TimelyMon 6", "development", {"worker": 6, "output_mode": 1}),
                 ("MonPoly", "MonPoly", "master", {"replayer": "gen_data", "path_to_build": self.path_to_build}),
-                ("MonPoly", "VeriMon", "master",
-                 {"replayer": "gen_data", "verified": (), "path_to_build": self.path_to_build})
+                ("MonPoly", "VeriMon", "master", {"replayer": "gen_data", "verified": (), "path_to_build": self.path_to_build}),
+                ("WhyMon", "WhyMon", "main", {"replayer": "gen_data", "path_to_build": self.path_to_build})
             ]
         )
 
@@ -104,8 +109,7 @@ class Evaluator:
             time_guarded, ["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly"], (oracle_manager, "VeriMonOracle")
         )
 
-        # oracle needs timeout and potential lower bound
-        res = benchmark.run(monitor_manager.get_monitors(["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly"]), {})
+        res = benchmark.run(monitor_manager.get_monitors(["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly", "WhyMon"]), {})
         print(res)
 
         # performance

@@ -1,5 +1,6 @@
 from Infrastructure.Monitors.MonPoly.MonPoly import MonPoly
 from Infrastructure.Monitors.TimelyMon.TimelyMon import TimelyMon
+from Infrastructure.Monitors.WhyMon.WhyMon import WhyMon
 
 
 def identifier_to_monitor(tool_manager, identifier, branch, name, params):
@@ -7,6 +8,8 @@ def identifier_to_monitor(tool_manager, identifier, branch, name, params):
         return TimelyMon(tool_manager.get_image(identifier, branch), name, params)
     elif identifier == "MonPoly":
         return MonPoly(tool_manager.get_image(identifier, branch), name, params)
+    elif identifier == "WhyMon":
+        return WhyMon(tool_manager.get_image(identifier, branch), name, params)
 
 
 class MonitorManager:
