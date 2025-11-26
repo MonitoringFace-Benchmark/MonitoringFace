@@ -48,7 +48,7 @@ class WhyMon(AbstractMonitorTemplate, ABC):
             elif val == "light":
                 cmd += ["light"]
             else:
-                cmd += ["unverified"]
+                cmd += ["light"]
 
         if "measure" in self.params:
             val = self.params["measure"]
@@ -61,7 +61,6 @@ class WhyMon(AbstractMonitorTemplate, ABC):
                 cmd += ["size"]
 
         out, code = self.image.run(self.params["folder"], cmd, time_on, time_out)
-        print(out.split("\n"))
         return out, code
 
     def post_processing(self, stdout_input: AnyStr) -> list[AnyStr]:
