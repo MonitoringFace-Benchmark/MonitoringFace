@@ -15,4 +15,5 @@ class TimeGuarded:
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
-        self.guard = monitor_manager.get_monitor(guard_name)
+        self.guard_name = guard_name
+        self.guard = monitor_manager.get_monitor(self.guard_name)

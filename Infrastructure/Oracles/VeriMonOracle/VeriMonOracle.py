@@ -8,7 +8,7 @@ class VeriMonOracle(AbstractOracleTemplate):
     def __init__(self, veri_mon: AbstractMonitorTemplate, parameters):
         super().__init__()
         self.verimon = veri_mon
-        self.verimon.name = "verimon"
+        self.verimon.name = "VeriMon"
         self.parameters = parameters
 
     def pre_process_data(self, path_to_folder_inner: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
@@ -29,3 +29,10 @@ class VeriMonOracle(AbstractOracleTemplate):
 
     def verify(self, path_to_data, result_file_oracle, tool_input):
         pass
+
+# Output data structures
+# return variable order on stdout, split in post-process
+# timely data structure: variable order, (tp, ts, assignment(s)) list    name:oooverdicts
+# MonPoly/VeriMon: variable order, (ts, assignments) list                name:verdicts
+# WhyMon: (tp, ts, pdt booleans) list                                    name:boolean-pdt
+# DejaVu: tp/ts(?) list                                                  name:boolean-list
