@@ -60,9 +60,7 @@ class WhyMon(AbstractMonitorTemplate, ABC):
             else:
                 cmd += ["size"]
 
-        out, code = self.image.run(self.params["folder"], cmd, time_on, time_out)
-        print(out.split("\n"))
-        return out, code
+        return self.image.run(self.params["folder"], cmd, time_on, time_out)
 
     def post_processing(self, stdout_input: AnyStr) -> list[AnyStr]:
         return stdout_input.split("\n")
