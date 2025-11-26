@@ -1,5 +1,4 @@
 from abc import ABC
-from time import sleep
 from typing import Dict, AnyStr, Any
 
 from Infrastructure.Builders.ToolBuilder import ToolImageManager
@@ -8,7 +7,7 @@ from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTempl
 import os
 
 
-class WhyMon(AbstractMonitorTemplate, ABC):
+class EnfGuard(AbstractMonitorTemplate, ABC):
     def __init__(self, image: ToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
         self.replayer = ReplayerConverter(self.params["replayer"], self.params["path_to_build"])
@@ -23,13 +22,13 @@ class WhyMon(AbstractMonitorTemplate, ABC):
         self.replayer.convert(
             path_to_folder,
             data_file,
-            "monpoly",
+            self.name.lower(),
             trimmed_data_file,
             dest=f"{path_to_folder}/scratch",
             params=["-a", "0"]
         )
 
-        self.params["data"] = f"scratch/{trimmed_data_file}.monpoly"
+        self.params["data"] = f"scratch/{trimmed_data_file}.{self.name.lower()}"
 
     def run_offline(self, time_on=None, time_out=None) -> (AnyStr, int):
         cmd = [
@@ -38,30 +37,12 @@ class WhyMon(AbstractMonitorTemplate, ABC):
             "-log", str(self.params["data"])
         ]
 
-        if "mode" in self.params:
-            val = self.params["mode"]
-            cmd += ["-mode"]
-            if val == "unverified":
-                cmd += ["unverified"]
-            elif val == "verified":
-                cmd += ["verified"]
-            elif val == "light":
-                cmd += ["light"]
-            else:
-                cmd += ["light"]
+        cmd += ["-monitoring"]
 
-        if "measure" in self.params:
-            val = self.params["measure"]
-            cmd += ["-measure"]
-            if val == "size":
-                cmd += ["size"]
-            elif val == "none":
-                cmd += ["none"]
-            else:
-                cmd += ["size"]
+        if "func" in self.params:
+            cmd += ["-func", str(self.params["func"])]
 
-        out, code = self.image.run(self.params["folder"], cmd, time_on, time_out)
-        return out, code
+        return self.image.run(self.params["folder"], cmd, time_on, time_out)
 
     def post_processing(self, stdout_input: AnyStr) -> list[AnyStr]:
         return stdout_input.split("\n")

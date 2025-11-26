@@ -39,7 +39,8 @@ class Evaluator:
             ("TimelyMon", "input_optims", BranchOrRelease.Branch),
             ("TimelyMon", "development", BranchOrRelease.Branch),
             ("MonPoly", "master", BranchOrRelease.Branch),
-            ("WhyMon", "main", BranchOrRelease.Branch)
+            ("WhyMon", "main", BranchOrRelease.Branch),
+            ("EnfGuard", "enfguard", BranchOrRelease.Branch),
         ], self.path_to_build)
 
         data_setup = Patterns(
@@ -86,7 +87,8 @@ class Evaluator:
                 ("TimelyMon", "TimelyMon 6", "development", {"worker": 6, "output_mode": 1}),
                 ("MonPoly", "MonPoly", "master", {"replayer": "gen_data", "path_to_build": self.path_to_build}),
                 ("MonPoly", "VeriMon", "master", {"replayer": "gen_data", "verified": (), "path_to_build": self.path_to_build}),
-                ("WhyMon", "WhyMon", "main", {"replayer": "gen_data", "path_to_build": self.path_to_build})
+                ("WhyMon", "WhyMon", "main", {"replayer": "gen_data", "path_to_build": self.path_to_build}),
+                ("EnfGuard", "EnfGuard", "enfguard", {"replayer": "gen_data", "path_to_build": self.path_to_build})
             ]
         )
 
@@ -109,7 +111,7 @@ class Evaluator:
             time_guarded, ["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly"], (oracle_manager, "VeriMonOracle")
         )
 
-        res = benchmark.run(monitor_manager.get_monitors(["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly", "WhyMon"]), {})
+        res = benchmark.run(monitor_manager.get_monitors(["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly", "WhyMon", "EnfGuard"]), {})
         print(res)
 
         # performance
