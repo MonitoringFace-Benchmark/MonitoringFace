@@ -16,6 +16,9 @@ from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
 from Infrastructure.Monitors.MonPoly.MonPoly import MonPoly
 from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Oracles.OracleManager import OracleManager
+from Infrastructure.Parser.ParserComponents import construct_tool_manager, construct_data_setup, construct_policy_setup, \
+    construct_benchmark_contract, construct_monitor_manager, construct_oracle_manager, construct_time_guarded, \
+    construct_benchmark
 
 
 # must be the entry point, either creating or recreating experiments, organizing bootstrapping and so on
@@ -23,33 +26,30 @@ from Infrastructure.Oracles.OracleManager import OracleManager
 class Evaluator:
     def __init__(self):
         # setup folders todo generalize
-        your_path_to_mfb = "/Users/krq770/PycharmProjects/MonitoringFace"
-        path_to_build = f"{your_path_to_mfb}/Infrastructure/build"
-        if not os.path.exists(path_to_build):
-            os.mkdir(path_to_build)
+        your_path_to_mfb = os.getcwd()
+        self.path_to_build = f"{your_path_to_mfb}/Infrastructure/build"
+        if not os.path.exists(self.path_to_build):
+            os.mkdir(self.path_to_build)
 
-        path_to_experiments = f"{your_path_to_mfb}/Infrastructure/experiments"
-        if not os.path.exists(path_to_experiments):
-            os.mkdir(path_to_experiments)
+        self.path_to_experiments = f"{your_path_to_mfb}/Infrastructure/experiments"
+        if not os.path.exists(self.path_to_experiments):
+            os.mkdir(self.path_to_experiments)
 
         tool_manager = ToolManager([
             ("TimelyMon", "input_optims", BranchOrRelease.Branch),
             ("TimelyMon", "development", BranchOrRelease.Branch),
-            ("MonPoly", "master", BranchOrRelease.Branch)
-        ], path_to_build)
-
-        # todo get/create and build experiment/case study
-        # todo analyze
-
-        # todo contract manager
+            ("MonPoly", "master", BranchOrRelease.Branch),
+            ("WhyMon", "main", BranchOrRelease.Branch)
+        ], self.path_to_build)
 
         data_setup = Patterns(
             trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None, linear=1, interval=None,
-            star=None, triangle=None, pattern=None, violations=1.0, zipf="x=1.5+3,z=2", prob_a=0.2, prob_b=0.3, prob_c=0.5
+            star=None, triangle=None, pattern=None, violations=1.0, zipf="x=1.5+3,z=2", prob_a=0.2, prob_b=0.3,
+            prob_c=0.5
         )
 
         data_setup = DataGolfContract(
-            path=path_to_experiments, sig_file="signature.sig", formula="formula.mfotl",
+            path=self.path_to_experiments, sig_file="signature.sig", formula="formula.mfotl",
             tup_ts=[0, 1, 2, 3, 4, 5, 6], tup_amt=100, tup_val=1,
             oracle=True, no_rewrite=None, trace_length=5
         )
@@ -62,32 +62,37 @@ class Evaluator:
         # rethink practicals, lattice of operations
         # comparing to the fragments
 
-        formula_setup = PolicyGeneratorContract().default_contract()
-        formula_setup.num_preds = 4
-        formula_setup.prob_eand = None
-        formula_setup.prob_rand = None
 
-        ################################ todo
+        policy_setup = PolicyGeneratorContract().default_contract()
+        policy_setup.num_preds = 4
+        policy_setup.prob_eand = 0
+        policy_setup.prob_rand = 0
+        policy_setup.prob_let = 0
+        policy_setup.prob_matchF = 0
+        policy_setup.prob_matchP = 0
+        print(policy_setup)
+
         init = CaseStudyBenchmarkContract(experiment_name="Nokia", case_study_name="Nokia")
+
         init = SyntheticBenchmarkContract(
-            "test", DataGenerators.DATAGENERATOR, PolicyGenerators.MFOTLGENERATOR, formula_setup,
+            "test", DataGenerators.DATAGENERATOR, PolicyGenerators.MFOTLGENERATOR, policy_setup,
             SyntheticExperiment(num_operators=[5], num_fvs=[2], num_setting=[0, 1], num_data_set_sizes=[50])
         )
-        ################################
-        # Store and reload Benchmark: (tools and parameters, experiments) list
 
         monitor_manager = MonitorManager(
             tool_manager=tool_manager,
             monitors_to_build=[
                 ("TimelyMon", "TimelyMon 1", "development", {"worker": 1, "output_mode": 1}),
                 ("TimelyMon", "TimelyMon 6", "development", {"worker": 6, "output_mode": 1}),
-                ("MonPoly", "MonPoly", "master", {"replayer": "gen_data", "path_to_build": path_to_build}),
-                ("MonPoly", "VeriMon", "master", {"replayer": "gen_data", "verified": (), "path_to_build": path_to_build})
+                ("MonPoly", "MonPoly", "master", {"replayer": "gen_data", "path_to_build": self.path_to_build}),
+                ("MonPoly", "VeriMon", "master", {"replayer": "gen_data", "verified": (), "path_to_build": self.path_to_build}),
+                ("WhyMon", "WhyMon", "main", {"replayer": "gen_data", "path_to_build": self.path_to_build})
             ]
         )
 
         oracle_manager = OracleManager(
-            oracles_to_build=[("VeriMonOracle", "VeriMonOracle", MonPoly, {"replayer": "gen_data", "verified": (), "path_to_build": path_to_build})],
+            oracles_to_build=[("VeriMonOracle", "VeriMonOracle", MonPoly,
+                               {"replayer": "gen_data", "verified": (), "path_to_build": self.path_to_build})],
             monitor_manager=monitor_manager
         )
 
@@ -96,14 +101,15 @@ class Evaluator:
             guard_type=TimeGuardingTool.Monitor, guard_name="TimelyMon 6"
         )
 
+        # todo data_setup to experiment type
+
         benchmark = BenchmarkBuilder(
-            init, path_to_build, path_to_experiments,
+            init, self.path_to_build, self.path_to_experiments,
             data_setup, ExperimentType.Signature,
-            time_guarded, (oracle_manager, "VeriMonOracle")
+            time_guarded, ["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly"], (oracle_manager, "VeriMonOracle")
         )
 
-        # oracle needs timeout and potential lower bound
-        res = benchmark.run(monitor_manager.get_monitors(["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly"]), {})
+        res = benchmark.run(monitor_manager.get_monitors(["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly", "WhyMon"]), {})
         print(res)
 
         # performance
@@ -122,6 +128,23 @@ class Evaluator:
         # stream rv side quest (lola)
 
         # do analysis
+
+    def build_from_structure(self, structure):
+        tool_manager = construct_tool_manager(structure, self.path_to_build)
+        data_setup = construct_data_setup(structure)
+
+        benchmark_contract = construct_benchmark_contract(structure)
+        monitor_manager = construct_monitor_manager(structure, tool_manager)
+        oracle_manager = construct_oracle_manager(structure, monitor_manager)
+        time_guarded = construct_time_guarded(structure, monitor_manager)
+
+        benchmark = construct_benchmark(
+            structure, benchmark_contract, self.path_to_build, self.path_to_experiments,
+            data_setup, time_guarded, oracle_manager
+        )
+
+        res = benchmark.run(monitor_manager.get_monitors(benchmark.tools_to_build), {})
+        print(res)
 
 
 if __name__ == "__main__":

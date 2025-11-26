@@ -52,7 +52,7 @@ def init_policy_generator(name: PolicyGenerators, path_to_build_inner):
     elif name == PolicyGenerators.PATTERNS:
         return PatternPolicyGenerator()
     else:
-        return None
+        print("Not implemented yet")
 
 
 def init_data_generator(tag: DataGenerators, path_to_build_inner):
@@ -66,8 +66,8 @@ def init_data_generator(tag: DataGenerators, path_to_build_inner):
 
 class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
     def __init__(self, contract, path_to_build, path_to_experiment, data_setup,
-                 gen_mode: ExperimentType, time_guard: TimeGuarded, oracle=None):
-        print("\n" + "=" * 15 + " Benchmark Init" + "=" * 15)
+                 gen_mode: ExperimentType, time_guard: TimeGuarded, tools_to_build, oracle=None):
+        print("\n" + "=" * 20 + " Benchmark Init " + "=" * 20)
         self.contract = contract
 
         self.path_to_build = path_to_build
@@ -89,12 +89,13 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
 
         self.time_guard = time_guard
         self.time_out = self.time_guard.upper_bound
+        self.tools_to_build = tools_to_build
 
-        print("=" * 15 + " Benchmark Init (done)" + "=" * 15)
+        print("=" * 20 + " Benchmark Init (done) " + "=" * 20)
         self._build()
 
     def _build(self):
-        print("\n" + "=" * 15 + " Benchmark Build" + "=" * 15)
+        print("\n" + "=" * 20 + " Benchmark Build " + "=" * 20)
         if not os.path.exists(self.path_to_experiment):
             os.mkdir(self.path_to_experiment)
 
@@ -113,7 +114,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                 construct_case_study(self.data_gen, self.data_setup, self.path_to_named_experiment, self.oracle, self.time_out)
             else:
                 print("Not implemented")
-            print("\n" + "=" * 15 + " Benchmark Build (done)" + "=" * 15)
+            print("\n" + "=" * 20 + " Benchmark Build (done) " + "=" * 20)
         except (BaseException, FileNotFoundError):
             raise BenchmarkCreationFailed()
 

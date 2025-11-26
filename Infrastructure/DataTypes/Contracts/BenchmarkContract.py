@@ -8,13 +8,11 @@ from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import Sy
 @dataclass
 class BenchmarkContractAbstract:
     experiment_name: str
-    pass
 
 
 class DataGenerators(Enum):
     DATAGOLF = 1,
-    DATAGENERATOR = 2,
-    CASESTUDY = 3
+    DATAGENERATOR = 2
 
 
 class PolicyGenerators(Enum):

@@ -8,7 +8,7 @@ class PatternPolicyGenerator(PolicyGeneratorTemplate):
         super().__init__()
 
     def generate_policy(self, policy_contract, time_on=None, time_out=None):
-        sig = "A(int,int)\nB(int,int)\nC(int,int)"
+        sig = "A(x0:int,x1:int)\nB(x0:int,x1:int)\nC(x0:int,x1:int)"
         policy = patterns_to_policy(policy_contract)
         seed = 1
         return seed, sig, policy
