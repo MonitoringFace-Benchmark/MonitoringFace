@@ -22,13 +22,13 @@ class EnfGuard(AbstractMonitorTemplate, ABC):
         self.replayer.convert(
             path_to_folder,
             data_file,
-            self.name.lower(),
+            "monpoly",
             trimmed_data_file,
             dest=f"{path_to_folder}/scratch",
             params=["-a", "0"]
         )
 
-        self.params["data"] = f"scratch/{trimmed_data_file}.{self.name.lower()}"
+        self.params["data"] = f"scratch/{trimmed_data_file}.monpoly"
 
     def run_offline(self, time_on=None, time_out=None) -> (AnyStr, int):
         cmd = [

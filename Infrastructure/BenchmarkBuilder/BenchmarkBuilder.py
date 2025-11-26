@@ -188,9 +188,9 @@ def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_fi
             wall_time, max_mem, cpu
         ]
         return settings_result
-    except TimedOut:
-        pass
-    except ToolException:
-        pass
-    except ResultErrorException:
-        pass
+    except TimedOut as e:
+        print(f"Monitor {tool.name} timed out: {e}")        
+    except ToolException as e:
+        print(f"ToolException for monitor {tool.name}: {e}")
+    except ResultErrorException as e:
+        print(f"ResultErrorException for monitor {tool.name}: {e}")
