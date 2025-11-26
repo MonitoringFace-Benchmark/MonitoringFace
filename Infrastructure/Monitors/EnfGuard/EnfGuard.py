@@ -28,7 +28,7 @@ class EnfGuard(AbstractMonitorTemplate, ABC):
             params=["-a", "0"]
         )
 
-        self.params["data"] = f"scratch/{trimmed_data_file}.{self.name.lower()}"
+        self.params["data"] = f"scratch/{trimmed_data_file}.monpoly"
 
     def run_offline(self, time_on=None, time_out=None) -> (AnyStr, int):
         cmd = [
