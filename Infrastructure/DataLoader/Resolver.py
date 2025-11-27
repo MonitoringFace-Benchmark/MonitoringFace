@@ -21,14 +21,16 @@ class Resolver(ABC):
 
 
 class ToolResolver(Resolver):
-    def __init__(self, name, branch, path_to_build_inner):
+    def __init__(self, name, branch, path_to_build_inner, path_to_archive):
         self.image_name = f"{name.lower()}_{branch.lower()}{IMAGE_POSTFIX}"
         self.name = name
         self.path = path_to_build_inner
+        self.path_archive = path_to_archive
 
     def resolve(self) -> Optional[Location]:
-        # check local
-        if os.path.exists(f"{self.path}/Dockerfile"):
+        docker_file_exists = os.path.exists(f"{self.path_archive}/Dockerfile")
+        prop_file_exists = os.path.exists(f"{self.path_archive}/tool.properties")
+        if docker_file_exists and prop_file_exists:
             return Location.Local
 
         # check online

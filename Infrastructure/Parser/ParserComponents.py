@@ -38,7 +38,7 @@ def deconstruct_tool_manager(tool_manager: ToolManager):
     return {TOOL_MANAGER: tools}
 
 
-def construct_tool_manager(json_dump, path_to_build):
+def construct_tool_manager(json_dump, path_to_build, path_to_archive):
     def parse_branch_or_release(val_):
         if val_ == "BranchOrRelease.Branch":
             return BranchOrRelease.Branch
@@ -47,7 +47,7 @@ def construct_tool_manager(json_dump, path_to_build):
 
     tools = json_dump[TOOL_MANAGER]
     tools_to_build = [[items["name"], items["branch"], parse_branch_or_release(items["release"])] for items in tools.values()]
-    return ToolManager(tools_to_build=tools_to_build, path_to_build=path_to_build)
+    return ToolManager(tools_to_build=tools_to_build, path_to_build=path_to_build, path_to_archive=path_to_archive)
 
 
 def deconstruct_monitor_manager(monitor_manager: MonitorManager):

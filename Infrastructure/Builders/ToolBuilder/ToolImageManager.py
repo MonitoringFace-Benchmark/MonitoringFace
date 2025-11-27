@@ -22,10 +22,11 @@ def to_prop_file(path, name, content: dict):
 
 
 class ToolImageManager(AbstractToolImageManager):
-    def __init__(self, name, branch, release, path_to_repo):
+    def __init__(self, name, branch, release, path_to_repo, path_to_archive):
         self.name = name
         self.branch = branch
         self.release = release
+        self.path_to_archive = f"{path_to_archive}/Tools/{self.name}"
         self.image_name = f"{self.name.lower()}_{self.branch.lower()}{IMAGE_POSTFIX}"
 
         path_to_monitor = f"{path_to_repo}/Monitor"
@@ -36,39 +37,45 @@ class ToolImageManager(AbstractToolImageManager):
         self.path = f"{self.parent_path}/{self.branch}"
         self.args = {BUILD_ARG_GIT_BRANCH: branch}
 
-        self.location = ToolResolver(self.name, self.branch, self.path).resolve()
+        self.location = ToolResolver(self.name, self.branch, self.path, self.path_to_archive).resolve()
         if self.location == Location.Unavailable:
             raise BuildException(f"{self.name} does not exists either Local or Remote")
-
-        if not os.path.exists(self.parent_path):
-            # tool is remote
-            os.mkdir(self.parent_path)
-            os.mkdir(self.path)
-            self._build_image()
-        elif not os.path.exists(self.path):
-            # branch is remote
-            os.mkdir(self.path)
-            self._build_image()
-        else:
-            # tool and branch are either local or previously downloaded
-            prop_file_exists = os.path.exists(self.path + "/tool.properties")
-            docker_file_exists = os.path.exists(self.path + "/Dockerfile")
-            if not (prop_file_exists and docker_file_exists):
+        elif self.location == Location.Local:
+            in_build = os.path.exists(f"{self.path}/meta.properties")
+            if not in_build:
                 self._build_image()
             else:
-                print(f"Exists {self.name} - {self.branch}")
+                current_version = PropertiesHandler.from_file(f"{self.path}/meta.properties").get_attr("version")
+                fl = PropertiesHandler.from_file(self.path_to_archive + f"/tool.properties")
+                version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(self.branch)
+                if not current_version == version:
+                    self._build_image()
+                else:
+                    print(f"Exists {self.name} - {self.branch}")
+        else:
+            if not os.path.exists(self.path_to_archive):
+                os.mkdir(self.path_to_archive)
+            if not os.path.exists(self.parent_path):
+                # tool is remote
+                os.mkdir(self.parent_path)
+                os.mkdir(self.path)
+                self._build_image()
+            elif not os.path.exists(self.path):
+                # branch is remote
+                os.mkdir(self.path)
+                self._build_image()
 
     def _build_image(self):
         if self.location == Location.Remote:
             content = MonitoringFaceDownloader().get_content(self.name)
             if content is None:
                 raise BuildException("Cannot fetch data from Repository")
-            to_file(self.path, "/tool.properties", content["tool.properties"])
-            fl = PropertiesHandler.from_file(self.path + f"/tool.properties")
+            to_file(self.path_to_archive, "/tool.properties", content["tool.properties"])
+            fl = PropertiesHandler.from_file(self.path_to_archive + f"/tool.properties")
+            to_file(self.path_to_archive, "/Dockerfile", content["Dockerfile"])
             version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(self.branch)
-            to_file(self.path, "/Dockerfile", content["Dockerfile"])
             to_prop_file(self.path, "/meta.properties", {"version": version})
-        return image_building(self.image_name, self.path, self.args)
+        return image_building(self.image_name, self.path_to_archive, self.args)
 
     def run(self, path_to_data, parameters, time_on=None, time_out=None):
         inner_contract_ = dict()
