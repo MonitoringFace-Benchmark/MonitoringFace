@@ -42,15 +42,18 @@ class ToolResolver(Resolver):
 
 
 class ProcessorResolver(Resolver):
-    def __init__(self, name, path_to_build_inner, processor_type):
+    def __init__(self, name, path_to_build_inner, processor_type, path_to_archive):
         self.image_name = f"{name.lower()}{IMAGE_POSTFIX}"
         self.name = name
         self.path = path_to_build_inner
         self.processor_type = processor_type
+        self.path_archive = path_to_archive
 
     def resolve(self) -> Optional[Location]:
+        docker_file_exists = os.path.exists(f"{self.path_archive}/{self.processor_type}/Dockerfile")
+        prop_file_exists = os.path.exists(f"{self.path_archive}/{self.processor_type}/tool.properties")
         # check local
-        if os.path.exists(f"{self.path}/{self.name}/Dockerfile"):
+        if docker_file_exists and prop_file_exists:
             return Location.Local
 
         # check online

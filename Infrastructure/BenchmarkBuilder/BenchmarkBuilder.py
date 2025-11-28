@@ -55,33 +55,33 @@ def init_policy_generator(name: PolicyGenerators, path_to_build_inner):
         print("Not implemented yet")
 
 
-def init_data_generator(tag: DataGenerators, path_to_build_inner):
+def init_data_generator(tag: DataGenerators, path_to_project):
     if tag == DataGenerators.DATAGOLF:
-        return DataGolfGenerator("datagolf", path_to_build_inner)
+        return DataGolfGenerator("datagolf", path_to_project)
     elif tag == DataGenerators.DATAGENERATOR:
-        return SignatureGenerator("gen_data", path_to_build_inner)
+        return SignatureGenerator("gen_data", path_to_project)
     else:
         print("Not implemented yet")
 
 
 class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
-    def __init__(self, contract, path_to_build, path_to_experiment, data_setup,
+    def __init__(self, contract, path_to_project, data_setup,
                  gen_mode: ExperimentType, time_guard: TimeGuarded, tools_to_build, oracle=None):
         print("\n" + "=" * 20 + " Benchmark Init " + "=" * 20)
         self.contract = contract
 
-        self.path_to_build = path_to_build
-        self.path_to_experiment = path_to_experiment
+        self.path_to_build = path_to_project + "/Infrastructure/build"
+        self.path_to_experiment = path_to_project + "/Infrastructure/experiments"
         self.path_to_named_experiment = self.path_to_experiment + "/" + self.contract.experiment_name
 
         self.data_setup = data_setup if isinstance(data_setup, dict) else asdict(data_setup)
 
         if isinstance(contract, CaseStudyBenchmarkContract):
-            self.data_gen = CaseStudyGenerator(contract.case_study_name, path_to_build)
+            self.data_gen = CaseStudyGenerator(contract.case_study_name, path_to_project)
             self.data_setup["path"] = f"{self.path_to_named_experiment}/{contract.experiment_name}"
         else:
-            self.data_gen = init_data_generator(contract.data_source, path_to_build)
-            self.formula_gen = init_policy_generator(contract.policy_source, path_to_build)
+            self.data_gen = init_data_generator(contract.data_source, path_to_project)
+            self.formula_gen = init_policy_generator(contract.policy_source, path_to_project)
             self.experiment = contract.experiment
 
         if oracle:

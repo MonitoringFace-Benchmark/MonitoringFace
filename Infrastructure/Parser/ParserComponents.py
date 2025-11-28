@@ -38,7 +38,7 @@ def deconstruct_tool_manager(tool_manager: ToolManager):
     return {TOOL_MANAGER: tools}
 
 
-def construct_tool_manager(json_dump, path_to_build, path_to_archive):
+def construct_tool_manager(json_dump, path_to_project):
     def parse_branch_or_release(val_):
         if val_ == "BranchOrRelease.Branch":
             return BranchOrRelease.Branch
@@ -47,7 +47,7 @@ def construct_tool_manager(json_dump, path_to_build, path_to_archive):
 
     tools = json_dump[TOOL_MANAGER]
     tools_to_build = [[items["name"], items["branch"], parse_branch_or_release(items["release"])] for items in tools.values()]
-    return ToolManager(tools_to_build=tools_to_build, path_to_build=path_to_build, path_to_archive=path_to_archive)
+    return ToolManager(tools_to_build=tools_to_build, path_to_project=path_to_project)
 
 
 def deconstruct_monitor_manager(monitor_manager: MonitorManager):
@@ -63,7 +63,10 @@ def deconstruct_monitor_manager(monitor_manager: MonitorManager):
 
     monitors = dict()
     for key in monitor_manager.monitors.keys():
+        print(key)
         monitor = monitor_manager.monitors[key]
+        print(monitor)
+        print(monitor.image)
         monitors[key] = {
             "identifier": monitor_to_identifier(monitor), "name": key,
             "branch": monitor.image.branch, "params": json.dumps(monitor.params)
@@ -71,13 +74,13 @@ def deconstruct_monitor_manager(monitor_manager: MonitorManager):
     return {MONITORS: monitors}
 
 
-def construct_monitor_manager(json_dump, tool_manager: ToolManager, path_to_build):
+def construct_monitor_manager(json_dump, tool_manager: ToolManager, path_to_project):
     monitors_to_build = []
     monitors = json_dump[MONITORS]
     for key in monitors.keys():
         items = monitors[key]
         params = json.loads(items["params"])
-        params["path_to_build"] = path_to_build
+        params["path_to_project"] = path_to_project
         monitors_to_build.append([items["identifier"], items["name"], items["branch"], params])
     return MonitorManager(tool_manager=tool_manager, monitors_to_build=monitors_to_build)
 
@@ -101,14 +104,14 @@ def deconstruct_oracle_manager(oracle_manager: OracleManager):
     return {ORACLES: oracles}
 
 
-def construct_oracle_manager(json_dump, monitor_manager: MonitorManager, path_to_build):
+def construct_oracle_manager(json_dump, monitor_manager: MonitorManager, path_to_project):
     oracles_to_build = []
     oracles_dump = json_dump[ORACLES]
     for key in oracles_dump.keys():
         items = oracles_dump[key]
         params = items["params"]
         params = json.loads(params)
-        params["path_to_build"] = path_to_build
+        params["path_to_project"] = path_to_project
         oracles_to_build.append([key, items["identifier"], items["name"], params])
     return OracleManager(monitor_manager=monitor_manager, oracles_to_build=oracles_to_build)
 
@@ -267,7 +270,7 @@ def deconstruct_benchmark(benchmark: BenchmarkBuilder):
     }}
 
 
-def construct_benchmark(json_dump, benchmark, path_to_build, path_to_experiment, data_setup, time_guard, oracle_manager):
+def construct_benchmark(json_dump, benchmark, path_to_project, data_setup, time_guard, oracle_manager):
     def str_to_experiment_type(name):
         if name == "ExperimentType.Signature":
             return ExperimentType.Signature
@@ -281,6 +284,6 @@ def construct_benchmark(json_dump, benchmark, path_to_build, path_to_experiment,
     oracle_name = vals["oracle_name"]
     oracle = (oracle_manager, oracle_name) if oracle_name else None
     return BenchmarkBuilder(
-        benchmark, path_to_build, path_to_experiment, data_setup, experiment_type,
+        benchmark, path_to_project, data_setup, experiment_type,
         time_guard, vals["tools_to_build"], oracle
     )

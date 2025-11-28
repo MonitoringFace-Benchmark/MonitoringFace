@@ -3,7 +3,7 @@ import os.path
 from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import ToolResolver, Location
-from Infrastructure.Builders.BuilderUtilities import image_building, run_image
+from Infrastructure.Builders.BuilderUtilities import image_building, run_image, to_prop_file
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.Monitors.MonitorExceptions import BuildException
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
@@ -13,12 +13,6 @@ from Infrastructure.constants import IMAGE_POSTFIX, BUILD_ARG_GIT_BRANCH, VOLUME
 def to_file(path, name, content):
     with open(path + f"{name}", mode='w') as f:
         f.write(content)
-
-
-def to_prop_file(path, name, content: dict):
-    with open(path + f"{name}", mode='w') as f:
-        for (k, v) in content.items():
-            f.write(f"{k}={v}\n")
 
 
 class ToolImageManager(AbstractToolImageManager):
