@@ -18,7 +18,8 @@ from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Oracles.OracleManager import OracleManager
 from Infrastructure.Parser.ParserComponents import construct_tool_manager, construct_data_setup, construct_policy_setup, \
     construct_benchmark_contract, construct_monitor_manager, construct_oracle_manager, construct_time_guarded, \
-    construct_benchmark
+    construct_benchmark, deconstruct_benchmark, deconstruct_time_guarded, deconstruct_oracle_manager, \
+    deconstruct_monitor_manager, deconstruct_tool_manager, deconstruct_data_setup, deconstruct_benchmark_contract
 
 
 # must be the entry point, either creating or recreating experiments, organizing bootstrapping and so on
@@ -26,12 +27,14 @@ from Infrastructure.Parser.ParserComponents import construct_tool_manager, const
 class Evaluator:
     def __init__(self):
         # setup folders todo generalize
-        your_path_to_mfb = os.getcwd()
-        self.path_to_build = f"{your_path_to_mfb}/Infrastructure/build"
+        #your_path_to_project =
+        self.path_to_project = os.getcwd()#"/Users/krq770/PycharmProjects/MonitoringFace_curr"
+        self.path_to_build = self.path_to_project + "/Infrastructure/build"
+        self.path_to_archive = self.path_to_project + "/Archive"
         if not os.path.exists(self.path_to_build):
             os.mkdir(self.path_to_build)
 
-        self.path_to_experiments = f"{your_path_to_mfb}/Infrastructure/experiments"
+        self.path_to_experiments = f"/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments"
         if not os.path.exists(self.path_to_experiments):
             os.mkdir(self.path_to_experiments)
 
@@ -40,8 +43,8 @@ class Evaluator:
             ("TimelyMon", "development", BranchOrRelease.Branch),
             ("MonPoly", "master", BranchOrRelease.Branch),
             ("WhyMon", "main", BranchOrRelease.Branch),
-            ("EnfGuard", "enfguard", BranchOrRelease.Branch),
-        ], self.path_to_build)
+            #("EnfGuard", "enfguard", BranchOrRelease.Branch),
+        ], self.path_to_project)
 
         data_setup = Patterns(
             trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None, linear=1, interval=None,
@@ -68,10 +71,10 @@ class Evaluator:
         policy_setup.num_preds = 4
         policy_setup.prob_eand = 0
         policy_setup.prob_rand = 0
+        policy_setup.prob_and = 0.4
         policy_setup.prob_let = 0
         policy_setup.prob_matchF = 0
         policy_setup.prob_matchP = 0
-        print(policy_setup)
 
         init = CaseStudyBenchmarkContract(experiment_name="Nokia", case_study_name="Nokia")
 
@@ -85,16 +88,16 @@ class Evaluator:
             monitors_to_build=[
                 ("TimelyMon", "TimelyMon 1", "development", {"worker": 1, "output_mode": 1}),
                 ("TimelyMon", "TimelyMon 6", "development", {"worker": 6, "output_mode": 1}),
-                ("MonPoly", "MonPoly", "master", {"replayer": "gen_data", "path_to_build": self.path_to_build}),
-                ("MonPoly", "VeriMon", "master", {"replayer": "gen_data", "verified": (), "path_to_build": self.path_to_build}),
-                ("WhyMon", "WhyMon", "main", {"replayer": "gen_data", "path_to_build": self.path_to_build}),
-                ("EnfGuard", "EnfGuard", "enfguard", {"replayer": "gen_data", "path_to_build": self.path_to_build})
+                ("MonPoly", "MonPoly", "master", {"replayer": "gen_data", "path_to_project": self.path_to_project}),
+                ("MonPoly", "VeriMon", "master", {"replayer": "gen_data", "verified": (), "path_to_project": self.path_to_project}),
+                ("WhyMon", "WhyMon", "main", {"replayer": "gen_data", "path_to_project": self.path_to_project}),
+                #("EnfGuard", "EnfGuard", "enfguard", {"replayer": "gen_data", "path_to_build": self.path_to_project})
             ]
         )
 
         oracle_manager = OracleManager(
-            oracles_to_build=[("VeriMonOracle", "VeriMonOracle", MonPoly,
-                               {"replayer": "gen_data", "verified": (), "path_to_build": self.path_to_build})],
+            oracles_to_build=[("VeriMonOracle", "VeriMonOracle", "MonPoly",
+                               {"replayer": "gen_data", "verified": (), "path_to_project": self.path_to_project})],
             monitor_manager=monitor_manager
         )
 
@@ -106,10 +109,28 @@ class Evaluator:
         # todo data_setup to experiment type
 
         benchmark = BenchmarkBuilder(
-            init, self.path_to_build, self.path_to_experiments,
+            init, self.path_to_project,
             data_setup, ExperimentType.Signature,
             time_guarded, ["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly", "EnfGuard"], (oracle_manager, "VeriMonOracle")
         )
+
+        benchmark_contract_structure = deconstruct_benchmark_contract(benchmark_contract=init)
+        print(benchmark_contract_structure)
+        data_setup_structure = deconstruct_data_setup(data_setup=data_setup)
+        print(data_setup_structure)
+        tool_manager_structure = deconstruct_tool_manager(tool_manager=tool_manager)
+        print(tool_manager_structure)
+        monitor_manager_structure = deconstruct_monitor_manager(monitor_manager=monitor_manager)
+        print(monitor_manager_structure)
+        oracle_manager_structure = deconstruct_oracle_manager(oracle_manager=oracle_manager)
+        print(oracle_manager_structure)
+        time_guarded_structure = deconstruct_time_guarded(time_guarded=time_guarded)
+        print(time_guarded_structure)
+        benchmark_deconstructed = deconstruct_benchmark(benchmark=benchmark)
+
+        structure = benchmark_contract_structure | data_setup_structure | tool_manager_structure | monitor_manager_structure
+        structure = structure | oracle_manager_structure | time_guarded_structure | benchmark_deconstructed
+        print(structure)
 
         res = benchmark.run(monitor_manager.get_monitors(["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly", "WhyMon", "EnfGuard"]), {})
         print(res)
@@ -131,17 +152,31 @@ class Evaluator:
 
         # do analysis
 
+    def export_to_structure(
+            self, synthetic_contract, data_setup, tool_manager, monitor_manager,
+            oracle_manager, time_guarded
+    ):
+        benchmark_contract_structure = deconstruct_benchmark_contract(benchmark_contract=synthetic_contract)
+        data_setup_structure = deconstruct_data_setup(data_setup=data_setup)
+        tool_manager_structure = deconstruct_tool_manager(tool_manager=tool_manager)
+        monitor_manager_structure = deconstruct_monitor_manager(monitor_manager=monitor_manager)
+        oracle_manager_structure = deconstruct_oracle_manager(oracle_manager=oracle_manager)
+        time_guarded_structure = deconstruct_time_guarded(time_guarded=time_guarded)
+
+        structure = benchmark_contract_structure | data_setup_structure | tool_manager_structure | monitor_manager_structure
+        return structure | oracle_manager_structure | time_guarded_structure
+
     def build_from_structure(self, structure):
-        tool_manager = construct_tool_manager(structure, self.path_to_build)
+        tool_manager = construct_tool_manager(structure, self.path_to_project)
         data_setup = construct_data_setup(structure)
 
         benchmark_contract = construct_benchmark_contract(structure)
-        monitor_manager = construct_monitor_manager(structure, tool_manager)
-        oracle_manager = construct_oracle_manager(structure, monitor_manager)
+        monitor_manager = construct_monitor_manager(structure, tool_manager, self.path_to_project)
+        oracle_manager = construct_oracle_manager(structure, monitor_manager, self.path_to_project)
         time_guarded = construct_time_guarded(structure, monitor_manager)
 
         benchmark = construct_benchmark(
-            structure, benchmark_contract, self.path_to_build, self.path_to_experiments,
+            structure, benchmark_contract, self.path_to_project,
             data_setup, time_guarded, oracle_manager
         )
 
@@ -150,4 +185,5 @@ class Evaluator:
 
 
 if __name__ == "__main__":
-    Evaluator()
+    dump = {'benchmark_contract': {'SyntheticBenchmarkContract': {'experiment_name': 'test', 'data_source': 'DataGenerators.DATAGENERATOR', 'policy_source': 'PolicyGenerators.MFOTLGENERATOR', 'policy_setup': {'policy_setup': {'PolicyGeneratorContract': {'sig_file': None, 'out_file': None, 'seed': None, 'size': 5, 'num_preds': 4, 'max_arity': 2, 'non_zero': False, 'aggregation': False, 'prob_and': 0.4, 'prob_or': None, 'prob_eand': 0, 'prob_nand': None, 'prob_rand': 0, 'prob_prev': None, 'prob_once': None, 'prob_next': None, 'prob_eventually': None, 'prob_since': None, 'prob_until': None, 'prob_exists': None, 'prob_let': 0, 'prob_aggreg': None, 'regex': False, 'prob_matchP': 0, 'prob_matchF': 0}}}, 'experiment': '{"num_operators": [5], "num_fvs": [2], "num_setting": [0, 1], "num_data_set_sizes": [50]}'}}, 'data_setup': {'Signature': {'trace_length': 1000, 'seed': None, 'event_rate': 1000, 'index_rate': None, 'time_stamp': None, 'sig': '', 'sample_queue': None, 'fresh_value_rate': None, 'domain': None, 'string_length': None}}, 'tool_manager': {'0': {'name': 'TimelyMon', 'branch': 'input_optims', 'release': 'BranchOrRelease.Branch'}, '1': {'name': 'TimelyMon', 'branch': 'development', 'release': 'BranchOrRelease.Branch'}, '2': {'name': 'MonPoly', 'branch': 'master', 'release': 'BranchOrRelease.Branch'}, '3': {'name': 'WhyMon', 'branch': 'main', 'release': 'BranchOrRelease.Branch'}, '4': {'name': 'EnfGuard', 'branch': 'enfguard', 'release': 'BranchOrRelease.Branch'}}, 'monitors': {'TimelyMon 1': {'identifier': 'TimelyMon', 'name': 'TimelyMon 1', 'branch': 'development', 'params': '{"worker": 1, "output_mode": 1}'}, 'TimelyMon 6': {'identifier': 'TimelyMon', 'name': 'TimelyMon 6', 'branch': 'development', 'params': '{"worker": 6, "output_mode": 1}'}, 'MonPoly': {'identifier': 'MonPoly', 'name': 'MonPoly', 'branch': 'master', 'params': '{"replayer": "gen_data", "path_to_build": "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/build", "folder": "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/test/operators_5/free_vars_2/num_1", "signature": "signature.sig", "formula": "formula.mfotl", "data": "scratch/data_50.csv.verimon"}'}, 'VeriMon': {'identifier': 'MonPoly', 'name': 'VeriMon', 'branch': 'master', 'params': '{"replayer": "gen_data", "verified": [], "path_to_build": "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/build"}'}, 'WhyMon': {'identifier': 'WhyMon', 'name': 'WhyMon', 'branch': 'main', 'params': '{"replayer": "gen_data", "path_to_build": "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/build"}'}}, 'oracles': {'VeriMonOracle': {'identifier': 'VeriMonOracle', 'name': 'VeriMon', 'params': '{"replayer": "gen_data", "verified": [], "path_to_build": "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/build"}'}}, 'time_guard': {'time_guarded': 'False', 'guard_type': 'Monitor', 'lower_bound': None, 'upper_bound': 200, 'guard_name': 'TimelyMon 6'}, 'benchmark_builder': {'experiment_type': 'ExperimentType.Signature', 'tools_to_build': ['TimelyMon 1', 'TimelyMon 6', 'VeriMon', 'MonPoly'], 'oracle_name': 'VeriMonOracle'}}
+    Evaluator()#.build_from_structure(dump)
