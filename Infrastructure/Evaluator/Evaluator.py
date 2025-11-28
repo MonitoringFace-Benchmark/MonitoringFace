@@ -27,8 +27,8 @@ from Infrastructure.Parser.ParserComponents import construct_tool_manager, const
 class Evaluator:
     def __init__(self):
         # setup folders todo generalize
-        #your_path_to_project =
-        self.path_to_project = os.getcwd()#"/Users/krq770/PycharmProjects/MonitoringFace_curr"
+        your_path_to_project = os.path.dirname(os.path.dirname(os.getcwd()))
+        self.path_to_project = your_path_to_project
         self.path_to_build = self.path_to_project + "/Infrastructure/build"
         self.path_to_archive = self.path_to_project + "/Archive"
         if not os.path.exists(self.path_to_build):
