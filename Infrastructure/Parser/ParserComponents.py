@@ -63,10 +63,7 @@ def deconstruct_monitor_manager(monitor_manager: MonitorManager):
 
     monitors = dict()
     for key in monitor_manager.monitors.keys():
-        print(key)
         monitor = monitor_manager.monitors[key]
-        print(monitor)
-        print(monitor.image)
         monitors[key] = {
             "identifier": monitor_to_identifier(monitor), "name": key,
             "branch": monitor.image.branch, "params": json.dumps(monitor.params)
