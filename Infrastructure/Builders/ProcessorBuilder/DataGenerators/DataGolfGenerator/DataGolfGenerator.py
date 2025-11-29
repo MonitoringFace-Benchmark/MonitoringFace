@@ -94,6 +94,9 @@ def data_golf_contract_to_command(contract) -> list[AnyStr]:
     args += ["-nonewlastts", "-tup-ts", ",".join(map(str, contract.tup_ts)), "-tup-amt",
              str(contract.tup_amt), "-tup-val", str(contract.tup_val)]
 
+    if contract.seed:
+        args += ["-tg_seed", str(contract.seed)]
+
     if contract.oracle:
         args += ["-tup-out", f"result/result_{str(contract.trace_length)}.res"]
 
