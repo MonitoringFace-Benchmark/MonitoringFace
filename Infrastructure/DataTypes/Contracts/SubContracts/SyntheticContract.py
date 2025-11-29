@@ -47,7 +47,6 @@ def construct_synthetic_experiment_pattern(
             (seed, sig, formula), _ = policy_source.generate_policy({})
             sh.add_seed_policy(seed)
 
-            to_file(num_path, seed, "policy_seed", "seed")
             to_file(num_path, sig, "signature", "sig")
             to_file(num_path, formula, "formula", "mfotl")
 
@@ -153,7 +152,6 @@ def guarded_synthetic_experiment_inner(num_path, data_source, data_setup, num_da
     time_out_in_for_loop = False
     for (num_len, num_name) in num_data_set_sizes:
         data_setup["trace_length"] = num_len
-
         sh = SeedHandler(num_path)
         if guard_type == TimeGuardingTool.Generator:
             try:
@@ -217,7 +215,6 @@ def synthetic_formula_guard(inner_path, num_ops_, num_fv_, formula_setup_, formu
         (seed, sig, formula), _ = formula_source_.generate_policy(formula_setup_)
         sh.add_seed_policy(seed)
 
-        to_file(inner_path, seed, "policy_seed", "seed")
         to_file(inner_path, sig, "signature", "sig")
         to_file(inner_path, formula, "formula", "mfotl")
 

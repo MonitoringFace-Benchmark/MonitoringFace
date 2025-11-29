@@ -20,7 +20,8 @@ class PatternsGenerator(DataGeneratorTemplate):
         inner_contract[COMMAND_KEY] = (["java", "-cp", "classes:libs/*", "org.entry.Dispatcher", "Generator"]
                                        + pattern_contract_to_commands(contract_inner))
         inner_contract[ENTRYPOINT_KEY] = ""
-        seed = contract_inner["seed"] if "seed" in contract_inner else DEFAULT_SEED
+        seed_raw = contract_inner["seed"]
+        seed = seed_raw if seed_raw else DEFAULT_SEED
         out, code = self.image.run(inner_contract, time_on=time_on, time_out=time_out)
         return seed, out, code
 

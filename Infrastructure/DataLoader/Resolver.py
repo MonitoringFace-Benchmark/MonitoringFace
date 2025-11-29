@@ -5,6 +5,7 @@ from typing import Optional
 
 from Infrastructure.DataLoader.DataLoader import DataLoader
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
+from Infrastructure.DataTypes.Types.custome_type import processor_to_identifier
 from Infrastructure.constants import IMAGE_POSTFIX
 
 
@@ -50,8 +51,8 @@ class ProcessorResolver(Resolver):
         self.path_archive = path_to_archive
 
     def resolve(self) -> Optional[Location]:
-        docker_file_exists = os.path.exists(f"{self.path_archive}/{self.processor_type}/Dockerfile")
-        prop_file_exists = os.path.exists(f"{self.path_archive}/{self.processor_type}/tool.properties")
+        docker_file_exists = os.path.exists(f"{self.path_archive}/Dockerfile")
+        prop_file_exists = os.path.exists(f"{self.path_archive}/tool.properties")
         # check local
         if docker_file_exists and prop_file_exists:
             return Location.Local

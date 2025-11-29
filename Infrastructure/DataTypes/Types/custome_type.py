@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import AnyStr
 
 
 class ExperimentType(Enum):
@@ -20,3 +21,17 @@ class Processor(Enum):
     CaseStudies = 5,
     GeneralUtilities = 6
 
+
+def processor_to_identifier(p: Processor) -> AnyStr:
+    if p == Processor.DataGenerators:
+        return "DataGenerators"
+    elif p == Processor.DataConverters:
+        return "DataConverters"
+    elif p == Processor.PolicyGenerators:
+        return "PolicyGenerators"
+    elif p == Processor.PolicyConverters:
+        return "PolicyConverters"
+    elif p == Processor.CaseStudies:
+        return "CaseStudies"
+    else:
+        return "GeneralUtilities"

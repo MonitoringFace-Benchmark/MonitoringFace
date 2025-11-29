@@ -5,26 +5,11 @@ from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.DataLoader import DataLoader
 from Infrastructure.DataLoader.Resolver import ProcessorResolver, Location
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
-from Infrastructure.DataTypes.Types.custome_type import Processor
+from Infrastructure.DataTypes.Types.custome_type import Processor, processor_to_identifier
 from Infrastructure.Builders.ProcessorBuilder.AbstractImageManager import AbstractImageManager
 from Infrastructure.Builders.BuilderUtilities import image_exists, image_building, run_image, to_prop_file
 from Infrastructure.Monitors.MonitorExceptions import BuildException
 from Infrastructure.constants import IMAGE_POSTFIX
-
-
-def processor_to_identifier(p: Processor) -> AnyStr:
-    if p == Processor.DataGenerators:
-        return "DataGenerators"
-    elif p == Processor.DataConverters:
-        return "DataConverters"
-    elif p == Processor.PolicyGenerators:
-        return "PolicyGenerators"
-    elif p == Processor.PolicyConverters:
-        return "PolicyConverters"
-    elif p == Processor.CaseStudies:
-        return "CaseStudies"
-    else:
-        return "GeneralUtilities"
 
 
 def to_file(file, content):
@@ -36,7 +21,6 @@ class ImageManager(AbstractImageManager):
     def __init__(self, name, proc: Processor, path_to_project_inner):
         super().__init__()
         self.downloader = DataLoader(proc)
-        print(path_to_project_inner)
         self.name = name
         self.processor = proc
         self.identifier = processor_to_identifier(proc)
@@ -44,7 +28,7 @@ class ImageManager(AbstractImageManager):
         self.path_archive = path_to_project_inner + f"/Archive/{self.identifier}/{self.name}"
         self.image_name = f"{name.lower()}_{self.identifier.lower()}{IMAGE_POSTFIX}"
 
-        self.location = ProcessorResolver(self.name, self.path, self.processor, self.path_archive).resolve()
+        self.location = ProcessorResolver(self.name, self.path_archive, self.processor, self.path_archive).resolve()
         self.path_to_build = f"{self.path}/{self.identifier}/{self.name}"
         if self.location == Location.Unavailable:
             raise BuildException(f"{self.identifier} - {self.name} does not exists either Local or Remote")
