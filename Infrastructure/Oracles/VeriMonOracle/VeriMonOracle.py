@@ -1,3 +1,4 @@
+import copy
 from typing import AnyStr
 
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
@@ -7,7 +8,7 @@ from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 class VeriMonOracle(AbstractOracleTemplate):
     def __init__(self, veri_mon: AbstractMonitorTemplate, parameters):
         super().__init__()
-        self.verimon = veri_mon
+        self.verimon = copy.deepcopy(veri_mon)
         self.verimon.name = "VeriMon"
         self.parameters = parameters
 

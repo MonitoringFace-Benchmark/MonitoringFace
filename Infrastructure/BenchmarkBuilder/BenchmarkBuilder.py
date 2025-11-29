@@ -191,7 +191,6 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                         oracle=self.oracle, path_to_folder=path_to_folder,
                         data_file=data_file, signature_file=signature_file, formula_file=formula_file
                     )
-
                     sfh.clean_up_folder()
             sfh.remove_folder()
         return settings_result
