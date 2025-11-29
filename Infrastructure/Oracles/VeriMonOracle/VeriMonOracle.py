@@ -29,10 +29,3 @@ class VeriMonOracle(AbstractOracleTemplate):
 
     def verify(self, path_to_data, result_file_oracle, tool_input):
         pass
-
-# Output data structures
-# return variable order on stdout, split in post-process
-# timely data structure: variable order, (tp, ts, assignment(s)) list    name:oooverdicts
-# MonPoly/VeriMon: variable order, (ts, assignments) list                name:verdicts
-# WhyMon: (tp, ts, pdt booleans) list                                    name:boolean-pdt
-# DejaVu: tp/ts(?) list                                                  name:boolean-list

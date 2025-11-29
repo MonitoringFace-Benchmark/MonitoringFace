@@ -20,12 +20,15 @@ from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchm
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import construct_case_study
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment, \
     construct_synthetic_experiment_sig, construct_synthetic_experiment_pattern, TimeGuarded
+from Infrastructure.DataTypes.FileRepresenters.FingerPrintHandler import FingerPrintHandler
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
+from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 from Infrastructure.DataTypes.Types.custome_type import ExperimentType
 
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate, run_monitor
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
+from Infrastructure.constants import FINGERPRINT_DATA, FINGERPRINT_EXPERIMENT
 
 
 class BenchmarkBuilderTemplate(ABC):
@@ -74,16 +77,6 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         self.path_to_experiment = path_to_project + "/Infrastructure/experiments"
         self.path_to_named_experiment = self.path_to_experiment + "/" + self.contract.experiment_name
 
-        self.data_setup = data_setup if isinstance(data_setup, dict) else asdict(data_setup)
-
-        if isinstance(contract, CaseStudyBenchmarkContract):
-            self.data_gen = CaseStudyGenerator(contract.case_study_name, path_to_project)
-            self.data_setup["path"] = f"{self.path_to_named_experiment}/{contract.experiment_name}"
-        else:
-            self.data_gen = init_data_generator(contract.data_source, path_to_project)
-            self.formula_gen = init_policy_generator(contract.policy_source, path_to_project)
-            self.experiment = contract.experiment
-
         if oracle:
             self.oracle_name = oracle[1]
             self.oracle = oracle[0].get_oracle(self.oracle_name)
@@ -93,16 +86,50 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         self.time_out = self.time_guard.upper_bound
         self.tools_to_build = tools_to_build
 
-        print("=" * 20 + " Benchmark Init (done) " + "=" * 20)
-        self._build()
-
-    def _build(self):
-        print("\n" + "=" * 20 + " Benchmark Build " + "=" * 20)
         if not os.path.exists(self.path_to_experiment):
             os.mkdir(self.path_to_experiment)
 
         if not os.path.exists(self.path_to_named_experiment):
             os.mkdir(self.path_to_named_experiment)
+
+        self.data_setup = data_setup if isinstance(data_setup, dict) else asdict(data_setup)
+        fingerprint_location = self.path_to_named_experiment + "/fingerprint"
+        new_experiment_fingerprint = data_class_to_finger_print(contract)
+        if isinstance(contract, CaseStudyBenchmarkContract):
+            self.data_gen = CaseStudyGenerator(contract.case_study_name, path_to_project)
+            self.data_setup["path"] = f"{self.path_to_named_experiment}/{contract.experiment_name}"
+            print("=" * 20 + " Benchmark Init (done) " + "=" * 20)
+            if os.path.exists(fingerprint_location):
+                fph = FingerPrintHandler.from_file(fingerprint_location)
+                old_experiment_fingerprint = fph.get_attr(FINGERPRINT_EXPERIMENT)
+                if not new_experiment_fingerprint == old_experiment_fingerprint:
+                    self._build()
+            else:
+                fph = FingerPrintHandler({FINGERPRINT_EXPERIMENT: new_experiment_fingerprint}).to_file(fingerprint_location)
+                fph.to_file(fingerprint_location)
+                self._build()
+        else:
+            self.data_gen = init_data_generator(contract.data_source, path_to_project)
+            self.formula_gen = init_policy_generator(contract.policy_source, path_to_project)
+            self.experiment = contract.experiment
+            print("=" * 20 + " Benchmark Init (done) " + "=" * 20)
+            if os.path.exists(fingerprint_location):
+                fph = FingerPrintHandler.from_file(fingerprint_location)
+                old_data_setup_fingerprint = fph.get_attr(FINGERPRINT_DATA)
+                old_experiment_fingerprint = fph.get_attr(FINGERPRINT_EXPERIMENT)
+                new_data_setup_fingerprint = data_class_to_finger_print(data_setup)
+                if not (old_experiment_fingerprint == new_experiment_fingerprint
+                        and old_data_setup_fingerprint == new_data_setup_fingerprint):
+                    self._build()
+            else:
+                new_data_setup_fingerprint = data_class_to_finger_print(data_setup)
+                fph = FingerPrintHandler(
+                    {FINGERPRINT_DATA: new_data_setup_fingerprint, FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
+                fph.to_file(fingerprint_location)
+                self._build()
+
+    def _build(self):
+        print("\n" + "=" * 20 + " Benchmark Build " + "=" * 20)
         try:
             if self.gen_mode == ExperimentType.Signature:
                 construct_synthetic_experiment_sig(self.experiment, self.path_to_named_experiment,

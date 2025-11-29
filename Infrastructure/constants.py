@@ -13,3 +13,7 @@ ORACLE_KEY = "oracle"
 ENTRYPOINT_KEY = "entrypoint"
 VOLUMES_KEY = "volumes"
 COMMAND_KEY = "command"
+
+
+FINGERPRINT_DATA = "fingerprint_data"
+FINGERPRINT_EXPERIMENT = "fingerprint_experiment"

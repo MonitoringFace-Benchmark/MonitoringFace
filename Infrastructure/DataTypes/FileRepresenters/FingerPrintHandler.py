@@ -1,6 +1,7 @@
+from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 
 
-class PropertiesHandler:
+class FingerPrintHandler:
     def __init__(self, in_dict):
         self.in_dict: dict = in_dict
 
@@ -13,12 +14,13 @@ class PropertiesHandler:
                 tmp_dict[name.strip()] = val.strip()
         return cls(tmp_dict)
 
-    @classmethod
-    def from_dict(cls, in_dict):
-        return cls(in_dict)
-
     def get_attr(self, name):
         return self.in_dict.get(name)
 
     def set_attr(self, k, v):
-        self.in_dict[k] = v
+        self.in_dict[k] = data_class_to_finger_print(v)
+
+    def to_file(self, file):
+        with open(file, "w") as f:
+            for k, v in self.in_dict.items():
+                f.write(f"{k}={v}\n")
