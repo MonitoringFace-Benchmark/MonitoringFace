@@ -2,7 +2,7 @@ import dataclasses
 import os.path
 from abc import ABC, abstractmethod
 from dataclasses import asdict
-from typing import AnyStr, Any, List
+from typing import AnyStr, Any, List, Optional
 
 import pandas
 import pandas as pd
@@ -68,8 +68,11 @@ def init_data_generator(tag: DataGenerators, path_to_project):
 
 
 class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
-    def __init__(self, contract, path_to_project, data_setup,
-                 gen_mode: ExperimentType, time_guard: TimeGuarded, tools_to_build, oracle=None):
+    def __init__(
+            self, contract, path_to_project, data_setup,
+            gen_mode: ExperimentType, time_guard: TimeGuarded,
+            tools_to_build, oracle=None
+    ):
         print("\n" + "=" * 20 + " Benchmark Init " + "=" * 20)
         self.contract = contract
 
@@ -85,6 +88,8 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         self.time_guard = time_guard
         self.time_out = self.time_guard.upper_bound
         self.tools_to_build = tools_to_build
+
+        self.seeds = dict()
 
         if not os.path.exists(self.path_to_experiment):
             os.mkdir(self.path_to_experiment)
@@ -132,23 +137,59 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         print("\n" + "=" * 20 + " Benchmark Build " + "=" * 20)
         try:
             if self.gen_mode == ExperimentType.Signature:
-                construct_synthetic_experiment_sig(self.experiment, self.path_to_named_experiment,
-                                                   self.data_setup, self.data_gen,
-                                                   self.contract.policy_setup, self.formula_gen,
-                                                   self.oracle, self.time_guard)
+                construct_synthetic_experiment_sig(
+                    self.experiment, self.path_to_named_experiment, self.data_setup, self.data_gen,
+                    self.contract.policy_setup, self.formula_gen, self.oracle, self.time_guard
+                )
             elif self.gen_mode == ExperimentType.Pattern:
-                construct_synthetic_experiment_pattern(self.experiment, self.path_to_named_experiment,
-                                                       self.data_setup, self.data_gen, self.oracle, self.time_guard)
+                construct_synthetic_experiment_pattern(
+                    self.experiment, self.path_to_named_experiment,
+                    self.data_setup, self.data_gen, self.oracle, self.time_guard
+                )
+
             elif self.gen_mode == ExperimentType.CaseStudy:
                 construct_case_study(self.data_gen, self.data_setup, self.path_to_named_experiment, self.oracle, self.time_out)
             else:
-                print("Not implemented")
+                raise BenchmarkCreationFailed("Not implemented")
             print("\n" + "=" * 20 + " Benchmark Build (done) " + "=" * 20)
         except (BaseException, FileNotFoundError):
             raise BenchmarkCreationFailed()
 
-    def run(self, tools: List[AbstractMonitorTemplate],
-            parameters: dict[AnyStr, dict[AnyStr, Any]]) -> pandas.DataFrame:
+    def seed_retriever(self):
+        operator_prefix = "operators_"
+        free_vars_prefix = "free_vars_"
+        num_prefix = "num_"
+
+        def _read_file(path_) -> int:
+            with open(path_, "r") as f:
+                return int(f.read())
+
+        def _apply_decoders(string: AnyStr) -> Optional[int]:
+            if string.startswith(operator_prefix):
+                return int(string.removeprefix(operator_prefix))
+            elif string.startswith(free_vars_prefix):
+                return int(string.removeprefix(free_vars_prefix))
+            elif string.startswith(num_prefix):
+                return int(string.removeprefix(num_prefix))
+            else:
+                return None
+
+        seed_dict = dict()
+        for path in path_generator(self.gen_mode, self.experiment, self.path_to_named_experiment):
+            gen_seed = _read_file(f"{path}/Seeds/generator.seed")
+            policy_seed = _read_file(f"{path}/Seeds/policy.seed")
+
+            clean_path = path.removeprefix(self.path_to_named_experiment)
+            clean_list = list(filter(None, clean_path.split("/")))
+            setting_raw = list(filter(None, map(lambda x: _apply_decoders(x), clean_list)))
+            setting_key = str(setting_raw)
+            seed_dict[setting_key] = (gen_seed, policy_seed)
+        return seed_dict
+
+    def run(
+            self, tools: List[AbstractMonitorTemplate],
+            parameters: dict[AnyStr, dict[AnyStr, Any]]
+    ) -> pandas.DataFrame:
         print("====== Run Experiments ======")
         settings_result = pd.DataFrame(columns=["Name", "Setting", "pre", "runtime", "post", "wall time", "max mem", "cpu"])
 
@@ -166,22 +207,10 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             sfh.remove_folder()
             return settings_result
 
-        paths = []
-        if self.gen_mode == ExperimentType.Pattern:
-            for num_ops in self.experiment.num_operators:
-                for num_set in self.experiment.num_setting:
-                    paths.append(f"{self.path_to_named_experiment}/operators_{num_ops}/num_{num_set}")
-        elif self.gen_mode == ExperimentType.Signature:
-            for num_ops in self.experiment.num_operators:
-                for num_fv in self.experiment.num_fvs:
-                    for num_set in self.experiment.num_setting:
-                        paths.append((f"{self.path_to_named_experiment}/operators_{num_ops}"
-                                      + f"/free_vars_{num_fv}/num_{num_set}"))
-
         signature_file = f"signature.sig"
         formula_file = f"formula.mfotl"
 
-        for path_to_folder in paths:
+        for path_to_folder in path_generator(self.gen_mode, self.experiment, self.path_to_named_experiment):
             sfh = ScratchFolderHandler(path_to_folder)
             for num_len in self.experiment.num_data_set_sizes:
                 data_file = f"data_{num_len}.csv"
@@ -220,3 +249,17 @@ def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_fi
         print(f"ToolException for monitor {tool.name}: {e}")
     except ResultErrorException as e:
         print(f"ResultErrorException for monitor {tool.name}: {e}")
+
+
+def path_generator(mode: ExperimentType, experiment, path_to_named_experiment: AnyStr) -> list[AnyStr]:
+    paths = []
+    if mode == ExperimentType.Pattern:
+        for num_ops in experiment.num_operators:
+            for num_set in experiment.num_setting:
+                paths += [f"{path_to_named_experiment}/operators_{num_ops}/num_{num_set}"]
+    elif mode == ExperimentType.Signature:
+        for num_ops in experiment.num_operators:
+            for num_fv in experiment.num_fvs:
+                for num_set in experiment.num_setting:
+                    paths += [f"{path_to_named_experiment}/operators_{num_ops}/free_vars_{num_fv}/num_{num_set}"]
+    return paths

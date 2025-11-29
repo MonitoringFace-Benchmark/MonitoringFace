@@ -2,7 +2,7 @@ import math
 import os
 
 from dataclasses import dataclass
-from typing import AnyStr, Optional
+from typing import AnyStr, Optional, Dict, Any
 
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import PolicyGeneratorContract
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
@@ -26,10 +26,8 @@ class SyntheticExperiment:
 
 def construct_synthetic_experiment_pattern(
         experiment: SyntheticExperiment,
-        path_to_folder: AnyStr,
-        data_setup, data_source,
-        oracle: Optional[AbstractOracleTemplate],
-        time_guard
+        path_to_folder: AnyStr, data_setup, data_source,
+        oracle: Optional[AbstractOracleTemplate], time_guard
 ):
     policy_source = PatternPolicyGenerator()
     sh = SeedHandler(path_to_folder)
@@ -62,7 +60,10 @@ def construct_synthetic_experiment_pattern(
                                                      experiment.num_data_set_sizes, oracle, time_guard)
 
 
-def guarded_synthetic_experiment_pattern(num_path, data_source, data_setup, num_data_set_sizes, oracle, time_guard):
+def guarded_synthetic_experiment_pattern(
+        num_path, data_source, data_setup,
+        num_data_set_sizes, oracle, time_guard
+):
     time_on = time_guard.lower_bound
     time_out = time_guard.upper_bound
 
@@ -90,7 +91,8 @@ def guarded_synthetic_experiment_pattern(num_path, data_source, data_setup, num_
 def construct_synthetic_experiment_sig(
         experiment: SyntheticExperiment, path_to_folder: AnyStr, data_setup, data_source,
         policy_setup: PolicyGeneratorContract, policy_source,
-        oracle: Optional[AbstractOracleTemplate], time_guard: TimeGuarded):
+        oracle: Optional[AbstractOracleTemplate], time_guard: TimeGuarded,
+):
     for num_ops in experiment.num_operators:
         ops_path = path_to_folder + "/" + f"operators_{num_ops}"
         if not os.path.exists(ops_path):
@@ -122,8 +124,10 @@ def construct_synthetic_experiment_sig(
                                                      oracle, time_guard)
 
 
-def guarded_synthetic_experiment_sig(num_path, num_ops, num_fv, formula_setup, formula_source,
-                                     data_source, data_setup, num_data_set_sizes, oracle, time_guard):
+def guarded_synthetic_experiment_sig(
+        num_path, num_ops, num_fv, formula_setup, formula_source,
+        data_source, data_setup, num_data_set_sizes, oracle, time_guard
+):
     time_on = time_guard.lower_bound
     time_out = time_guard.upper_bound
 
@@ -147,8 +151,10 @@ def guarded_synthetic_experiment_sig(num_path, num_ops, num_fv, formula_setup, f
             sfh.clean_up_folder()
 
 
-def guarded_synthetic_experiment_inner(num_path, data_source, data_setup, num_data_set_sizes,
-                                       oracle, time_on, time_out, guard_type, guard):
+def guarded_synthetic_experiment_inner(
+        num_path, data_source, data_setup, num_data_set_sizes,
+        oracle, time_on, time_out, guard_type, guard
+):
     time_out_in_for_loop = False
     for (num_len, num_name) in num_data_set_sizes:
         data_setup["trace_length"] = num_len
@@ -206,7 +212,10 @@ def guarded_synthetic_experiment_inner(num_path, data_source, data_setup, num_da
     return time_out_in_for_loop
 
 
-def synthetic_formula_guard(inner_path, num_ops_, num_fv_, formula_setup_, formula_source_, data_source_, data_setup_):
+def synthetic_formula_guard(
+        inner_path, num_ops_, num_fv_, formula_setup_,
+        formula_source_, data_source_, data_setup_
+):
     sh = SeedHandler(inner_path)
     while True:
         formula_setup_.size = num_ops_
@@ -223,17 +232,23 @@ def synthetic_formula_guard(inner_path, num_ops_, num_fv_, formula_setup_, formu
             break
 
 
-def unguarded_synthetic_experiment_sig(num_path, num_ops, num_fv, formula_setup, formula_source,
-                                       data_source, data_setup, num_data_set_sizes, oracle, time_out):
+def unguarded_synthetic_experiment_sig(
+        num_path, num_ops, num_fv, formula_setup, formula_source,
+        data_source, data_setup, num_data_set_sizes, oracle, time_out
+):
     synthetic_formula_guard(num_path, num_ops, num_fv, formula_setup, formula_source, data_source, data_setup)
     unguarded_synthetic_experiments_inner(num_path, num_data_set_sizes, data_source, data_setup, oracle, time_out)
 
 
-def unguarded_synthetic_experiment_pattern(num_path, num_data_set_sizes, data_source, data_setup, oracle, time_out):
+def unguarded_synthetic_experiment_pattern(
+        num_path, num_data_set_sizes, data_source, data_setup, oracle, time_out
+):
     unguarded_synthetic_experiments_inner(num_path, num_data_set_sizes, data_source, data_setup, oracle, time_out)
 
 
-def unguarded_synthetic_experiments_inner(num_path, num_data_set_sizes, data_source, data_setup, oracle, time_out):
+def unguarded_synthetic_experiments_inner(
+        num_path, num_data_set_sizes, data_source, data_setup, oracle, time_out
+):
     sfh = ScratchFolderHandler(num_path)
     sh = SeedHandler(num_path)
     for num_len in num_data_set_sizes:

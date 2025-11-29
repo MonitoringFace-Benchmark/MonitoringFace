@@ -263,10 +263,12 @@ def construct_benchmark_contract(json_dump):
 
 def deconstruct_benchmark(benchmark: BenchmarkBuilder):
     name = benchmark.oracle_name if hasattr(benchmark, "oracle") else None
+    seeds = benchmark.seed_retriever()
     return {BENCHMARK_BUILDER: {
         "experiment_type": str(benchmark.gen_mode),
         "tools_to_build": benchmark.tools_to_build,
-        "oracle_name": name
+        "oracle_name": name,
+        "seeds": seeds
     }}
 
 
