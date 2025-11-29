@@ -154,14 +154,14 @@ def guarded_synthetic_experiment_inner(num_path, data_source, data_setup, num_da
 
         if guard_type == TimeGuardingTool.Generator:
             try:
-                result_csv, code = data_source.run_generator(data_setup, time_on, time_out)
+                seed, result_csv, code = data_source.run_generator(data_setup, time_on, time_out)
                 if code != 0:
                     raise GeneratorException(result_csv)
             except TimedOut:
                 time_out_in_for_loop = True
                 break
         else:
-            result_csv, code = data_source.run_generator(data_setup)
+            seed, result_csv, code = data_source.run_generator(data_setup)
             if code != 0:
                 raise GeneratorException(result_csv)
 
@@ -234,7 +234,7 @@ def unguarded_synthetic_experiments_inner(num_path, num_data_set_sizes, data_sou
     for num_len in num_data_set_sizes:
         data_setup["trace_length"] = num_len
 
-        result_csv, code = data_source.run_generator(data_setup)
+        seed, result_csv, code = data_source.run_generator(data_setup)
         if code != 0:
             raise GeneratorException(result_csv)
 

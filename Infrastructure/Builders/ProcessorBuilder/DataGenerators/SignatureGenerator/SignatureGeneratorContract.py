@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields
-from typing import AnyStr, Optional
+from typing import AnyStr, Optional, Dict, Any
 
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
@@ -12,7 +12,7 @@ class Signature(AbstractContract):
             sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None
         )
 
-    def instantiate_contract(self, params):
+    def instantiate_contract(self, params: Dict[AnyStr, Any]):
         if not params:
             return self.default_contract()
         valid_field_names = {f.name for f in fields(self)}
@@ -33,7 +33,7 @@ class Signature(AbstractContract):
     string_length: Optional[int]
 
 
-def signature_to_commands(contract):
+def signature_to_commands(contract: Signature) -> list[AnyStr]:
     args = []
     if contract.seed is not None:
         args.extend(["-seed", str(contract.seed)])
@@ -53,11 +53,10 @@ def signature_to_commands(contract):
     if contract.string_length is not None:
         args.extend(["-strlen", str(contract.string_length)])
     args.append(str(contract.trace_length))
-
     return args
 
 
-def signature_contract_to_commands(contract_params) -> list[AnyStr]:
+def signature_contract_to_commands(contract_params: Dict[AnyStr, Any]) -> list[AnyStr]:
     valid_fields = {f.name for f in fields(Signature)}
     contract = Signature(**{k: v for k, v in contract_params.items() if k in valid_fields})
     return signature_to_commands(contract)

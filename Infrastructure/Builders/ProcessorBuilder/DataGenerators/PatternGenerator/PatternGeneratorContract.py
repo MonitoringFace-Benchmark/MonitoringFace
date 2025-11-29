@@ -1,5 +1,5 @@
 from dataclasses import fields, dataclass
-from typing import AnyStr, Optional
+from typing import AnyStr, Optional, Dict, Any
 
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
@@ -9,10 +9,10 @@ class Patterns(AbstractContract):
     def default_contract(self):
         return Patterns(
             trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None, linear=1, interval=None,
-            star=None,triangle=None,pattern=None,violations=1.0,zipf="x=1.5+3,z=2", prob_a=0.2,  prob_b=0.3, prob_c=0.5
+            star=None, triangle=None, pattern=None, violations=1.0, zipf="x=1.5+3,z=2", prob_a=0.2,  prob_b=0.3, prob_c=0.5
         )
 
-    def instantiate_contract(self, params):
+    def instantiate_contract(self, params: Dict[AnyStr, Any]):
         if not params:
             return self.default_contract()
         valid_field_names = {f.name for f in fields(self)}
@@ -40,7 +40,7 @@ class Patterns(AbstractContract):
     prob_c: float
 
 
-def patterns_to_commands(contract):
+def patterns_to_commands(contract: Patterns) -> list[AnyStr]:
     args = []
     if contract.seed is not None:
         args.extend(["-seed", str(contract.seed)])
@@ -65,11 +65,10 @@ def patterns_to_commands(contract):
     args.extend(["-pB", str(contract.prob_b)])
     args.extend(["-z", contract.zipf])
     args.append(str(contract.trace_length))
-
     return args
 
 
-def pattern_contract_to_commands(contract_params) -> list[AnyStr]:
+def pattern_contract_to_commands(contract_params: Dict[AnyStr, Any]) -> list[AnyStr]:
     valid_fields = {f.name for f in fields(Patterns)}
     contract = Patterns(**{k: v for k, v in contract_params.items() if k in valid_fields})
     return patterns_to_commands(contract)

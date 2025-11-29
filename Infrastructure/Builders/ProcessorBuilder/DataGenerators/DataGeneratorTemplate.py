@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
+from typing import AnyStr, Dict, Any, Optional
 
 
 class DataGeneratorTemplate(ABC):
     @abstractmethod
-    def run_generator(self, contract_inner, time_on=None, time_out=None):
+    def run_generator(self, contract_inner: Dict[AnyStr, Any], time_on=None, time_out=None) -> (int, AnyStr, int):
         pass
 
     @abstractmethod
