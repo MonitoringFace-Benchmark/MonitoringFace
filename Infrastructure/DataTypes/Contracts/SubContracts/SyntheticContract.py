@@ -4,12 +4,12 @@ import os
 from dataclasses import dataclass
 from typing import AnyStr, Optional
 
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import \
-    PolicyGeneratorContract
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator import PatternPolicyGenerator
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import PolicyGeneratorContract
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
+from Infrastructure.DataTypes.FileRepresenters.SeedHandler import SeedHandler
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException, TimedOut, ToolException
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.Oracles.OracleExceptions import RunOracleException
@@ -32,6 +32,7 @@ def construct_synthetic_experiment_pattern(
         time_guard
 ):
     policy_source = PatternPolicyGenerator()
+    sh = SeedHandler(path_to_folder)
     for num_ops in experiment.num_operators:
         ops_path = path_to_folder + "/" + f"operators_{num_ops}"
         if not os.path.exists(ops_path):
@@ -43,7 +44,8 @@ def construct_synthetic_experiment_pattern(
             if not os.path.exists(num_path):
                 os.mkdir(num_path)
 
-            (seed, sig, formula), _ = policy_source.generate_policy()
+            (seed, sig, formula), _ = policy_source.generate_policy({})
+            sh.add_seed_policy(seed)
 
             to_file(num_path, seed, "policy_seed", "seed")
             to_file(num_path, sig, "signature", "sig")
@@ -152,9 +154,11 @@ def guarded_synthetic_experiment_inner(num_path, data_source, data_setup, num_da
     for (num_len, num_name) in num_data_set_sizes:
         data_setup["trace_length"] = num_len
 
+        sh = SeedHandler(num_path)
         if guard_type == TimeGuardingTool.Generator:
             try:
                 seed, result_csv, code = data_source.run_generator(data_setup, time_on, time_out)
+                sh.add_seed_generator(seed)
                 if code != 0:
                     raise GeneratorException(result_csv)
             except TimedOut:
@@ -162,6 +166,7 @@ def guarded_synthetic_experiment_inner(num_path, data_source, data_setup, num_da
                 break
         else:
             seed, result_csv, code = data_source.run_generator(data_setup)
+            sh.add_seed_generator(seed)
             if code != 0:
                 raise GeneratorException(result_csv)
 
@@ -204,11 +209,13 @@ def guarded_synthetic_experiment_inner(num_path, data_source, data_setup, num_da
 
 
 def synthetic_formula_guard(inner_path, num_ops_, num_fv_, formula_setup_, formula_source_, data_source_, data_setup_):
+    sh = SeedHandler(inner_path)
     while True:
         formula_setup_.size = num_ops_
         formula_setup_.max_arity = num_fv_
 
         (seed, sig, formula), _ = formula_source_.generate_policy(formula_setup_)
+        sh.add_seed_policy(seed)
 
         to_file(inner_path, seed, "policy_seed", "seed")
         to_file(inner_path, sig, "signature", "sig")
@@ -231,10 +238,12 @@ def unguarded_synthetic_experiment_pattern(num_path, num_data_set_sizes, data_so
 
 def unguarded_synthetic_experiments_inner(num_path, num_data_set_sizes, data_source, data_setup, oracle, time_out):
     sfh = ScratchFolderHandler(num_path)
+    sh = SeedHandler(num_path)
     for num_len in num_data_set_sizes:
         data_setup["trace_length"] = num_len
 
         seed, result_csv, code = data_source.run_generator(data_setup)
+        sh.add_seed_generator(seed)
         if code != 0:
             raise GeneratorException(result_csv)
 
