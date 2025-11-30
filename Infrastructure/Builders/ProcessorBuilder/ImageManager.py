@@ -29,7 +29,13 @@ class ImageManager(AbstractImageManager):
         self.image_name = f"{name.lower()}_{self.identifier.lower()}{IMAGE_POSTFIX}"
 
         self.location = ProcessorResolver(self.name, self.path_archive, self.processor, self.path_archive).resolve()
+        if not os.path.exists(f"{self.path}/{self.identifier}"):
+            os.mkdir(f"{self.path}/{self.identifier}")
+
         self.path_to_build = f"{self.path}/{self.identifier}/{self.name}"
+        if not os.path.exists(self.path_to_build):
+            os.mkdir(self.path_to_build)
+
         if self.location == Location.Unavailable:
             raise BuildException(f"{self.identifier} - {self.name} does not exists either Local or Remote")
         elif self.location == Location.Local:
@@ -61,9 +67,9 @@ class ImageManager(AbstractImageManager):
             if content is None:
                 raise BuildException("Cannot fetch data from Repository")
             to_file(self.path_archive + "/Dockerfile", content)
-            fl = PropertiesHandler.from_file(self.path_archive + f"/tool.properties")
-            version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(fl.get_attr("branch"))
-            to_prop_file(f"{self.path}/{self.identifier}/{self.name}", "/meta.properties", {"version": version})
+        fl = PropertiesHandler.from_file(self.path_archive + f"/tool.properties")
+        version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(fl.get_attr("branch"))
+        to_prop_file(f"{self.path}/{self.identifier}/{self.name}", "/meta.properties", {"version": version})
         return image_building(self.image_name, self.path_archive)
 
     def run(self, generic_contract: Dict[AnyStr, Any], time_on=None, time_out=None):

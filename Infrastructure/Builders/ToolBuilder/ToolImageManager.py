@@ -28,7 +28,12 @@ class ToolImageManager(AbstractToolImageManager):
             os.mkdir(path_to_monitor)
 
         self.parent_path = f"{path_to_repo}/Monitor/{self.name}"
+        if not os.path.exists(self.parent_path):
+            os.mkdir(self.parent_path)
+
         self.path = f"{self.parent_path}/{self.branch}"
+        if not os.path.exists(self.path):
+            os.mkdir(self.path)
         self.args = {BUILD_ARG_GIT_BRANCH: branch}
 
         self.location = ToolResolver(self.name, self.branch, self.path, self.path_to_archive).resolve()
@@ -65,10 +70,10 @@ class ToolImageManager(AbstractToolImageManager):
             if content is None:
                 raise BuildException("Cannot fetch data from Repository")
             to_file(self.path_to_archive, "/tool.properties", content["tool.properties"])
-            fl = PropertiesHandler.from_file(self.path_to_archive + f"/tool.properties")
             to_file(self.path_to_archive, "/Dockerfile", content["Dockerfile"])
-            version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(self.branch)
-            to_prop_file(self.path, "/meta.properties", {"version": version})
+        fl = PropertiesHandler.from_file(self.path_to_archive + f"/tool.properties")
+        version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(self.branch)
+        to_prop_file(self.path, "/meta.properties", {"version": version})
         return image_building(self.image_name, self.path_to_archive, self.args)
 
     def run(self, path_to_data, parameters, time_on=None, time_out=None):
