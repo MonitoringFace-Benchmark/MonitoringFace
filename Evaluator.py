@@ -2,7 +2,7 @@ import os.path
 
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfContract import DataGolfContract
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGeneratorContract import Patterns
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import PolicyGeneratorContract
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import MfotlPolicyContract
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
 from Infrastructure.DataTypes.Contracts.BenchmarkContract import DataGenerators, SyntheticBenchmarkContract, \
     PolicyGenerators, CaseStudyBenchmarkContract
@@ -63,7 +63,7 @@ class Evaluator:
         # rethink practicals, lattice of operations
         # comparing to the fragments
 
-        formula_setup = PolicyGeneratorContract().default_contract()
+        formula_setup = MfotlPolicyContract().default_contract()
         formula_setup.num_preds = 4
         formula_setup.prob_eand = None
         formula_setup.prob_rand = None
