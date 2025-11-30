@@ -115,7 +115,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         else:
             self.data_gen = init_data_generator(contract.data_source, path_to_project)
             self.policy_gen = init_policy_generator(contract.policy_source, path_to_project)
-            contract.policy_setup = asdict(contract.policy_setup)
+            self.policy_setup = asdict(contract.policy_setup)
             self.experiment = contract.experiment
             print("=" * 20 + " Benchmark Init (done) " + "=" * 20)
             if os.path.exists(fingerprint_location):
@@ -128,8 +128,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                     self._build()
             else:
                 new_data_setup_fingerprint = data_class_to_finger_print(data_setup)
-                fph = FingerPrintHandler(
-                    {FINGERPRINT_DATA: new_data_setup_fingerprint, FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
+                fph = FingerPrintHandler({FINGERPRINT_DATA: new_data_setup_fingerprint, FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
                 fph.to_file(fingerprint_location)
                 self._build()
 
@@ -139,7 +138,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             if self.gen_mode == ExperimentType.Signature:
                 construct_synthetic_experiment_sig(
                     self.experiment, self.path_to_named_experiment, self.data_setup, self.data_gen,
-                    self.contract.policy_setup, self.policy_gen, self.oracle, self.time_guard, self.seeds
+                    self.policy_setup, self.policy_gen, self.oracle, self.time_guard, self.seeds
                 )
             elif self.gen_mode == ExperimentType.Pattern:
                 construct_synthetic_experiment_pattern(
