@@ -7,6 +7,7 @@ from typing import AnyStr, Any, List, Optional
 import pandas
 import pandas as pd
 
+from Infrastructure.Analysis.Formatting import parse_wall_time
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilderException import BenchmarkCreationFailed
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import \
     CaseStudyGenerator
@@ -239,7 +240,7 @@ def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_fi
 
         settings_result.loc[len(settings_result)] = [
             tool.name, "", prep, runtime, prop,
-            wall_time, max_mem, cpu
+            parse_wall_time(wall_time), max_mem, cpu
         ]
         return settings_result
     except TimedOut as e:
