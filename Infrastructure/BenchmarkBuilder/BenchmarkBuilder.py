@@ -71,10 +71,11 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
     def __init__(
             self, contract, path_to_project, data_setup,
             gen_mode: ExperimentType, time_guard: TimeGuarded,
-            tools_to_build, oracle=None
+            tools_to_build, oracle=None, seeds=None
     ):
         print("\n" + "=" * 20 + " Benchmark Init " + "=" * 20)
         self.contract = contract
+        self.seeds = seeds
 
         self.path_to_build = path_to_project + "/Infrastructure/build"
         self.path_to_experiment = path_to_project + "/Infrastructure/experiments"
@@ -88,8 +89,6 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         self.time_guard = time_guard
         self.time_out = self.time_guard.upper_bound
         self.tools_to_build = tools_to_build
-
-        self.seeds = dict()
 
         if not os.path.exists(self.path_to_experiment):
             os.mkdir(self.path_to_experiment)
@@ -115,7 +114,8 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                 self._build()
         else:
             self.data_gen = init_data_generator(contract.data_source, path_to_project)
-            self.formula_gen = init_policy_generator(contract.policy_source, path_to_project)
+            self.policy_gen = init_policy_generator(contract.policy_source, path_to_project)
+            contract.policy_setup = asdict(contract.policy_setup)
             self.experiment = contract.experiment
             print("=" * 20 + " Benchmark Init (done) " + "=" * 20)
             if os.path.exists(fingerprint_location):
@@ -139,12 +139,12 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             if self.gen_mode == ExperimentType.Signature:
                 construct_synthetic_experiment_sig(
                     self.experiment, self.path_to_named_experiment, self.data_setup, self.data_gen,
-                    self.contract.policy_setup, self.formula_gen, self.oracle, self.time_guard
+                    self.contract.policy_setup, self.policy_gen, self.oracle, self.time_guard, self.seeds
                 )
             elif self.gen_mode == ExperimentType.Pattern:
                 construct_synthetic_experiment_pattern(
                     self.experiment, self.path_to_named_experiment,
-                    self.data_setup, self.data_gen, self.oracle, self.time_guard
+                    self.data_setup, self.data_gen, self.oracle, self.time_guard, self.seeds
                 )
 
             elif self.gen_mode == ExperimentType.CaseStudy:
@@ -181,7 +181,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
 
             clean_path = path.removeprefix(self.path_to_named_experiment)
             clean_list = list(filter(None, clean_path.split("/")))
-            setting_raw = list(filter(None, map(lambda x: _apply_decoders(x), clean_list)))
+            setting_raw = list(filter(lambda x: x is not None, map(lambda x: _apply_decoders(x), clean_list)))
             setting_key = str(setting_raw)
             seed_dict[setting_key] = (gen_seed, policy_seed)
         return seed_dict

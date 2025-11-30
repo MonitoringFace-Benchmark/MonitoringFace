@@ -7,7 +7,7 @@ from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.Pa
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGeneratorContract import \
     Signature
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import \
-    PolicyGeneratorContract
+    MfotlPolicyContract
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyContract import \
     PatternPolicyContract
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
@@ -181,7 +181,7 @@ def construct_data_setup(json_dump):
 
 def deconstruct_policy_setup(policy_setup):
     def policy_setup_to_str(data_setup_):
-        if isinstance(data_setup_, PolicyGeneratorContract):
+        if isinstance(data_setup_, MfotlPolicyContract):
             return "PolicyGeneratorContract"
         elif isinstance(data_setup_, PatternPolicyContract):
             return "PatternPolicyContract"
@@ -196,7 +196,9 @@ def deconstruct_policy_setup(policy_setup):
 def construct_policy_setup(json_dump):
     def str_to_policy_setup(contract_name_, vals_):
         if contract_name_ == "PolicyGeneratorContract":
-            return PolicyGeneratorContract(**vals_)
+            return MfotlPolicyContract(**vals_)
+        else:
+            raise NotImplemented()
 
     contract_name = list(json_dump[POLICY_SETUP].keys())[0]
     vals = json_dump[POLICY_SETUP][contract_name]
@@ -280,9 +282,10 @@ def construct_benchmark(json_dump, benchmark, path_to_project, data_setup, time_
 
     vals = json_dump[BENCHMARK_BUILDER]
     experiment_type = str_to_experiment_type(vals["experiment_type"])
+    seed = vals["seeds"]
     oracle_name = vals["oracle_name"]
     oracle = (oracle_manager, oracle_name) if oracle_name else None
     return BenchmarkBuilder(
         benchmark, path_to_project, data_setup, experiment_type,
-        time_guard, vals["tools_to_build"], oracle
+        time_guard, vals["tools_to_build"], oracle, seed
     )

@@ -5,9 +5,9 @@ from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
 
 @dataclass
-class PolicyGeneratorContract(AbstractContract):
+class MfotlPolicyContract(AbstractContract):
     def default_contract(self):
-        return PolicyGeneratorContract()
+        return MfotlPolicyContract()
 
     def instantiate_contract(self, params):
         if not params:
@@ -50,7 +50,7 @@ class PolicyGeneratorContract(AbstractContract):
     prob_matchF: Optional[float] = None
 
 
-def policy_contract_to_commands(f_contract: PolicyGeneratorContract) -> list[AnyStr]:
+def policy_contract_to_commands(f_contract: MfotlPolicyContract) -> list[AnyStr]:
     args = []
 
     args += ["-pred", str(f_contract.num_preds)]

@@ -1,10 +1,11 @@
+import copy
 import math
 import os
 
 from dataclasses import dataclass
 from typing import AnyStr, Optional, Dict, Any
 
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import PolicyGeneratorContract
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import MfotlPolicyContract
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
@@ -26,11 +27,12 @@ class SyntheticExperiment:
 
 def construct_synthetic_experiment_pattern(
         experiment: SyntheticExperiment,
-        path_to_folder: AnyStr, data_setup, data_source,
-        oracle: Optional[AbstractOracleTemplate], time_guard
+        path_to_folder: AnyStr, data_setup_, data_source,
+        oracle: Optional[AbstractOracleTemplate], time_guard, seeds
 ):
     policy_source = PatternPolicyGenerator()
     sh = SeedHandler(path_to_folder)
+    data_setup = copy.copy(data_setup_)
     for num_ops in experiment.num_operators:
         ops_path = path_to_folder + "/" + f"operators_{num_ops}"
         if not os.path.exists(ops_path):
@@ -51,6 +53,11 @@ def construct_synthetic_experiment_pattern(
             if oracle is not None or data_setup["oracle"]:
                 if not os.path.exists(f"{num_path}/result"):
                     os.mkdir(f"{num_path}/result")
+
+            if seeds:
+                gen_seed, policy_seed = seeds[str([num_ops, num_set])]
+                if gen_seed:
+                    data_setup["seed"] = gen_seed
 
             if not time_guard.time_guarded:
                 unguarded_synthetic_experiment_pattern(num_path, experiment.num_data_set_sizes,
@@ -89,10 +96,12 @@ def guarded_synthetic_experiment_pattern(
 
 
 def construct_synthetic_experiment_sig(
-        experiment: SyntheticExperiment, path_to_folder: AnyStr, data_setup, data_source,
-        policy_setup: PolicyGeneratorContract, policy_source,
-        oracle: Optional[AbstractOracleTemplate], time_guard: TimeGuarded,
+        experiment: SyntheticExperiment, path_to_folder: AnyStr, data_setup_, data_source,
+        policy_setup_, policy_source,
+        oracle: Optional[AbstractOracleTemplate], time_guard: TimeGuarded, seeds=None
 ):
+    data_setup = copy.copy(data_setup_)
+    policy_setup = copy.copy(policy_setup_)
     for num_ops in experiment.num_operators:
         ops_path = path_to_folder + "/" + f"operators_{num_ops}"
         if not os.path.exists(ops_path):
@@ -109,10 +118,16 @@ def construct_synthetic_experiment_sig(
                 if not os.path.exists(num_path):
                     os.mkdir(num_path)
 
-                # if oracle is provided create a result folder first
                 if oracle is not None or data_setup.get(ORACLE_KEY):
                     if not os.path.exists(f"{num_path}/result"):
                         os.mkdir(f"{num_path}/result")
+
+                if seeds:
+                    gen_seed, policy_seed = seeds[str([num_ops, num_fv, num_set])]
+                    if policy_seed:
+                        policy_setup["seed"] = policy_seed
+                    if gen_seed:
+                        data_setup["seed"] = gen_seed
 
                 if not time_guard.time_guarded:
                     unguarded_synthetic_experiment_sig(num_path, num_ops, num_fv, policy_setup, policy_source,
@@ -218,8 +233,8 @@ def synthetic_formula_guard(
 ):
     sh = SeedHandler(inner_path)
     while True:
-        formula_setup_.size = num_ops_
-        formula_setup_.max_arity = num_fv_
+        formula_setup_["size"] = num_ops_
+        formula_setup_["max_arity"] = num_fv_
 
         (seed, sig, formula), _ = formula_source_.generate_policy(formula_setup_)
         sh.add_seed_policy(seed)
@@ -233,10 +248,10 @@ def synthetic_formula_guard(
 
 
 def unguarded_synthetic_experiment_sig(
-        num_path, num_ops, num_fv, formula_setup, formula_source,
+        num_path, num_ops, num_fv, policy_setup, policy_source,
         data_source, data_setup, num_data_set_sizes, oracle, time_out
 ):
-    synthetic_formula_guard(num_path, num_ops, num_fv, formula_setup, formula_source, data_source, data_setup)
+    synthetic_formula_guard(num_path, num_ops, num_fv, policy_setup, policy_source, data_source, data_setup)
     unguarded_synthetic_experiments_inner(num_path, num_data_set_sizes, data_source, data_setup, oracle, time_out)
 
 
