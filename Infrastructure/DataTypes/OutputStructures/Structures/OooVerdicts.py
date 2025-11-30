@@ -1,4 +1,4 @@
-from Infrastructure.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+from Infrastructure.DataTypes.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 
 
 class OooVerdicts(AbstractOutputStructure):

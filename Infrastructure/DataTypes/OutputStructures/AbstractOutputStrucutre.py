@@ -1,7 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Union
-
-from Infrastructure.OutputStructures.Assignment import Assignment
 
 
 class AbstractOutputStructure(ABC):
