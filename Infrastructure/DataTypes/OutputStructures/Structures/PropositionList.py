@@ -6,13 +6,9 @@ class PropositionList(AbstractOutputStructure):
         self.prop_list = dict()
         self.tp_to_ts = dict()
 
-    def retrieve_index(self, time_point):
-        if time_point not in self.prop_list:
-            return False
-        else:
-            return self.prop_list[time_point]
+    def retrieve(self, time_point):
+        return time_point, self.tp_to_ts[time_point], self.tp_to_ts[time_point]
 
-    def insert_index(self, value, time_point, time_stamp=None):
-        if time_stamp:
-            self.tp_to_ts[time_point] = time_stamp
+    def insert(self, value, time_point, time_stamp=None):
+        self.tp_to_ts[time_point] = time_stamp if time_stamp else time_point
         self.prop_list[time_point] = value
