@@ -14,7 +14,7 @@ from Infrastructure.DataTypes.FileRepresenters.SeedHandler import SeedHandler
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException, TimedOut, ToolException
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.Oracles.OracleExceptions import RunOracleException
-from Infrastructure.constants import ORACLE_KEY
+from Infrastructure.constants import ORACLE_KEY, PLACEHOLDER_EVENT
 
 
 @dataclass
@@ -239,6 +239,7 @@ def synthetic_formula_guard(
         (seed, sig, formula), _ = formula_source_.generate_policy(formula_setup_)
         sh.add_seed_policy(seed)
 
+        sig += f"\n{PLACEHOLDER_EVENT}"  # ensure that the placeholder event is available
         to_file(inner_path, sig, "signature", "sig")
         to_file(inner_path, formula, "formula", "mfotl")
 

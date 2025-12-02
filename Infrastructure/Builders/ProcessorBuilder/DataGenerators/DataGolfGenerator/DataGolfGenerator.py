@@ -53,6 +53,7 @@ class DataGolfGenerator(DataGeneratorTemplate):
         if code != 0:
             return False
         else:
+            out = out.strip()
             return out.__eq__(DATAGOLF_POLICY_CHECK)
 
 

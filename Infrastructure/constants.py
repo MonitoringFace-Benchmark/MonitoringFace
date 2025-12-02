@@ -17,3 +17,5 @@ COMMAND_KEY = "command"
 
 FINGERPRINT_DATA = "fingerprint_data"
 FINGERPRINT_EXPERIMENT = "fingerprint_experiment"
+
+PLACEHOLDER_EVENT = "Placeholder()"
