@@ -24,6 +24,7 @@ class MfotlPolicyGenerator(PolicyGeneratorTemplate):
         inner_dict[ENTRYPOINT_KEY] = ""
         out, code = self.image.run(inner_dict, time_on=time_on, time_out=time_out)
         if code != 0:
+            print(out)
             raise GeneratorException()
         else:
             return parse_gen_output(out), code

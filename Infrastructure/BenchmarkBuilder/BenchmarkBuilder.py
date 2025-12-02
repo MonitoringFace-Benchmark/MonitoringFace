@@ -110,9 +110,10 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                 if not new_experiment_fingerprint == old_experiment_fingerprint:
                     self._build()
             else:
-                fph = FingerPrintHandler({FINGERPRINT_EXPERIMENT: new_experiment_fingerprint}).to_file(fingerprint_location)
-                fph.to_file(fingerprint_location)
                 self._build()
+                fph = FingerPrintHandler({FINGERPRINT_EXPERIMENT: new_experiment_fingerprint}).to_file(
+                    fingerprint_location)
+                fph.to_file(fingerprint_location)
         else:
             self.data_gen = init_data_generator(contract.data_source, path_to_project)
             self.policy_gen = init_policy_generator(contract.policy_source, path_to_project)
@@ -128,10 +129,11 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                         and old_data_setup_fingerprint == new_data_setup_fingerprint):
                     self._build()
             else:
-                new_data_setup_fingerprint = data_class_to_finger_print(data_setup)
-                fph = FingerPrintHandler({FINGERPRINT_DATA: new_data_setup_fingerprint, FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
-                fph.to_file(fingerprint_location)
                 self._build()
+                new_data_setup_fingerprint = data_class_to_finger_print(data_setup)
+                fph = FingerPrintHandler(
+                    {FINGERPRINT_DATA: new_data_setup_fingerprint, FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
+                fph.to_file(fingerprint_location)
 
     def _build(self):
         print("\n" + "=" * 20 + " Benchmark Build " + "=" * 20)

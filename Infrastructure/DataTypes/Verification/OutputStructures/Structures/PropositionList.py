@@ -1,4 +1,4 @@
-from Infrastructure.DataTypes.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 
 
 class PropositionList(AbstractOutputStructure):

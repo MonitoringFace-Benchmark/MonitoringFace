@@ -46,7 +46,9 @@ class ImageManager(AbstractImageManager):
                 current_version = PropertiesHandler.from_file(f"{self.path_to_build}/meta.properties").get_attr("version")
                 fl = PropertiesHandler.from_file(self.path_archive + f"/tool.properties")
                 version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(fl.get_attr("branch"))
-                if not current_version == version:
+                if not image_exists(self.image_name):
+                    self._build_image()
+                elif not current_version == version:
                     self._build_image()
                 else:
                     print(f"Exists {self.identifier} - {self.name}")

@@ -3,7 +3,7 @@ import os.path
 from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import ToolResolver, Location
-from Infrastructure.Builders.BuilderUtilities import image_building, run_image, to_prop_file
+from Infrastructure.Builders.BuilderUtilities import image_building, run_image, to_prop_file, image_exists
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.Monitors.MonitorExceptions import BuildException
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
@@ -47,7 +47,9 @@ class ToolImageManager(AbstractToolImageManager):
                 current_version = PropertiesHandler.from_file(f"{self.path}/meta.properties").get_attr("version")
                 fl = PropertiesHandler.from_file(self.path_to_archive + f"/tool.properties")
                 version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(self.branch)
-                if not current_version == version:
+                if not image_exists(self.image_name):
+                    self._build_image()
+                elif not current_version == version:
                     self._build_image()
                 else:
                     print(f"Exists {self.name} - {self.branch}")
