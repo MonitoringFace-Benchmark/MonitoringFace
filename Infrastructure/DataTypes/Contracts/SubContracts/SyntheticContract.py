@@ -3,9 +3,8 @@ import math
 import os
 
 from dataclasses import dataclass
-from typing import AnyStr, Optional, Dict, Any
+from typing import AnyStr, Optional
 
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import MfotlPolicyContract
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
@@ -280,7 +279,8 @@ def unguarded_synthetic_experiments_inner(
         if oracle is not None:
             oracle.pre_process_data(
                 num_path, f"data_{num_len}.csv",
-                "signature.sig", "formula.mfotl")
+                "signature.sig", "formula.mfotl"
+            )
             out, code = oracle.compute_result(time_out)
             if code != 0:
                 raise RunOracleException(out)
