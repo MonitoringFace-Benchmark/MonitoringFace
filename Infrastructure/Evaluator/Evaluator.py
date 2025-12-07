@@ -45,9 +45,10 @@ class Evaluator:
             ("TimelyMon", "input_optims", BranchOrRelease.Branch),
             ("TimelyMon", "development", BranchOrRelease.Branch),
             ("MonPoly", "master", BranchOrRelease.Branch),
-            #("WhyMon", "main", BranchOrRelease.Branch),
+            ("WhyMon", "main", BranchOrRelease.Branch),
             #("EnfGuard", "enfguard", BranchOrRelease.Branch),
         ], self.path_to_project)
+        return
 
         data_setup = Patterns(
             trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None, linear=1, interval=None,
@@ -61,10 +62,10 @@ class Evaluator:
             oracle=True, no_rewrite=None, trace_length=5
         )
 
-        data_setup = Signature(
-            trace_length=1000, seed=None, event_rate=10000, index_rate=None, time_stamp=None,
-            sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None
-        )
+        #data_setup = Signature(
+        #    trace_length=1000, seed=None, event_rate=10000, index_rate=None, time_stamp=None,
+        #    sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None
+        #)
 
         # rethink practicals, lattice of operations
         # comparing to the fragments
@@ -82,8 +83,8 @@ class Evaluator:
         init = CaseStudyBenchmarkContract(experiment_name="Nokia", case_study_name="Nokia")
 
         init = SyntheticBenchmarkContract(
-            "test2", DataGenerators.DATAGENERATOR, PolicyGenerators.MFOTLGENERATOR, policy_setup,
-            SyntheticExperiment(num_operators=[5], num_fvs=[2], num_setting=[0, 1], num_data_set_sizes=[50])
+            "testtest", DataGenerators.DATAGOLF, PolicyGenerators.MFOTLGENERATOR, policy_setup,
+            SyntheticExperiment(num_operators=[2], num_fvs=[2], num_setting=[0, 1], num_data_set_sizes=[50])
         )
 
         monitor_manager = MonitorManager(
@@ -177,4 +178,4 @@ class Evaluator:
 
 if __name__ == "__main__":
     structure = {'benchmark_contract': {'SyntheticBenchmarkContract': {'experiment_name': 'test2', 'data_source': 'DataGenerators.DATAGENERATOR', 'policy_source': 'PolicyGenerators.MFOTLGENERATOR', 'policy_setup': {'policy_setup': {'PolicyGeneratorContract': {'sig_file': None, 'out_file': None, 'seed': None, 'size': None, 'num_preds': 4, 'max_arity': 4, 'non_zero': False, 'aggregation': False, 'prob_and': 0.4, 'prob_or': None, 'prob_eand': 0, 'prob_nand': None, 'prob_rand': 0, 'prob_prev': None, 'prob_once': None, 'prob_next': None, 'prob_eventually': None, 'prob_since': None, 'prob_until': None, 'prob_exists': None, 'prob_let': 0, 'prob_aggreg': None, 'regex': False, 'prob_matchP': 0, 'prob_matchF': 0}}}, 'experiment': '{"num_operators": [5], "num_fvs": [2], "num_setting": [0, 1], "num_data_set_sizes": [50]}'}}, 'data_setup': {'Signature': {'trace_length': 1000, 'seed': None, 'event_rate': 10000, 'index_rate': None, 'time_stamp': None, 'sig': '', 'sample_queue': None, 'fresh_value_rate': None, 'domain': None, 'string_length': None}}, 'tool_manager': {'0': {'name': 'TimelyMon', 'branch': 'input_optims', 'release': 'BranchOrRelease.Branch'}, '1': {'name': 'TimelyMon', 'branch': 'development', 'release': 'BranchOrRelease.Branch'}, '2': {'name': 'MonPoly', 'branch': 'master', 'release': 'BranchOrRelease.Branch'}}, 'monitors': {'TimelyMon 1': {'identifier': 'TimelyMon', 'name': 'TimelyMon 1', 'branch': 'development', 'params': '{"worker": 1, "output_mode": 1, "folder": "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/test2/operators_5/free_vars_2/num_1", "data": "data_50.csv", "signature": "signature.sig", "formula": "formula.mfotl"}'}, 'TimelyMon 6': {'identifier': 'TimelyMon', 'name': 'TimelyMon 6', 'branch': 'development', 'params': '{"worker": 6, "output_mode": 1, "folder": "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/test2/operators_5/free_vars_2/num_1", "data": "data_50.csv", "signature": "signature.sig", "formula": "formula.mfotl"}'}, 'MonPoly': {'identifier': 'MonPoly', 'name': 'MonPoly', 'branch': 'master', 'params': '{"replayer": "gen_data", "path_to_project": "/Users/krq770/PycharmProjects/MonitoringFace_curr", "folder": "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/test2/operators_5/free_vars_2/num_1", "signature": "signature.sig", "formula": "formula.mfotl", "data": "scratch/data_50.csv.monpoly"}'}, 'VeriMon': {'identifier': 'MonPoly', 'name': 'VeriMon', 'branch': 'master', 'params': '{"replayer": "gen_data", "verified": [], "path_to_project": "/Users/krq770/PycharmProjects/MonitoringFace_curr", "folder": "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/test2/operators_5/free_vars_2/num_1", "signature": "signature.sig", "formula": "formula.mfotl", "data": "scratch/data_50.csv.verimon"}'}}, 'oracles': {'VeriMonOracle': {'identifier': 'VeriMonOracle', 'name': 'VeriMon', 'params': '{"replayer": "gen_data", "verified": [], "path_to_project": "/Users/krq770/PycharmProjects/MonitoringFace_curr"}'}}, 'time_guard': {'time_guarded': 'False', 'guard_type': 'Generator', 'lower_bound': None, 'upper_bound': 200, 'guard_name': None}, 'benchmark_builder': {'experiment_type': 'ExperimentType.Signature', 'tools_to_build': ['TimelyMon 1', 'TimelyMon 6', 'MonPoly', 'VeriMon'], 'oracle_name': 'VeriMonOracle', 'seeds': {'[5, 2, 0]': (314159265, 36899), '[5, 2, 1]': (314159265, 34548)}}}
-    Evaluator(structure)
+    Evaluator()

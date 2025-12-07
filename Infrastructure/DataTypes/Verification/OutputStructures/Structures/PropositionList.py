@@ -7,7 +7,10 @@ class PropositionList(AbstractOutputStructure):
         self.tp_to_ts = dict()
 
     def retrieve(self, time_point):
-        return time_point, self.tp_to_ts[time_point], self.tp_to_ts[time_point]
+        if time_point in self.prop_list:
+            return time_point, self.tp_to_ts[time_point], self.prop_list[time_point]
+        else:
+            return None
 
     def insert(self, value, time_point, time_stamp=None):
         self.tp_to_ts[time_point] = time_stamp if time_stamp else time_point

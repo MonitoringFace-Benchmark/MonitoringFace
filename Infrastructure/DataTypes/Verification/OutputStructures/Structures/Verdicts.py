@@ -3,12 +3,15 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 
 class Verdicts(AbstractOutputStructure):
     def __init__(self):
-        self.verdict = dict()
+        self.verdict = list()
         self.tp_to_ts = dict()
 
     def retrieve(self, time_point):
-        return time_point, self.tp_to_ts[time_point], self.verdict[time_point]
+        selected = [val for (tp, _, val) in self.verdict if tp == time_point]
+        return time_point, self.tp_to_ts[time_point], selected
 
     def insert(self, value, time_point, time_stamp):
         self.tp_to_ts[time_point] = time_stamp
-        self.verdict[time_point].append(value)
+        self.verdict.append(
+            (time_point, time_stamp, value if isinstance(value, list) else [value])
+        )
