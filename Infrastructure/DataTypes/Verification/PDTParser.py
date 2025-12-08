@@ -9,27 +9,17 @@ from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Propositi
 
 
 def term_and_set(str_: AnyStr) -> (AnyStr, PDTSets):
-    str_ = str_.strip()
-    split_list = str_.split(IN_SYMBOL)
+    split_list = str_.strip().split(IN_SYMBOL)
     term_ = split_list[0].strip()
     pdt_set = resolve_set(split_list[1].strip())
     return term_, pdt_set
 
 
 def resolve_set(str_: AnyStr) -> PDTSets:
-    def complement_set(str__: AnyStr) -> PDTSets:
-        set_str = str__.strip()
-        set_str = set_str.removeprefix(COMPLEMENT_OF)
-        return PDTComplementSet(ast.literal_eval(set_str))
-
-    def normal_set(str__: AnyStr) -> PDTSets:
-        set_str = str__.strip()
-        return PDTSet(ast.literal_eval(set_str))
-
     if str_.__contains__(COMPLEMENT_OF):
-        return complement_set(str_)
+        return PDTComplementSet(ast.literal_eval(str_.strip().removeprefix(COMPLEMENT_OF)))
     else:
-        return normal_set(str_)
+        return PDTSet(ast.literal_eval(str_.strip()))
 
 
 COMPLEMENT_OF = "Complement of "
@@ -82,9 +72,9 @@ def time_extract(str_: AnyStr) -> (int, int):
 def file_to_proposition_tree(file: AnyStr) -> PropositionTree:
     with open(file, "r") as raw:
         clean = "\n".join(line for line in raw.read().splitlines() if line.strip())
-        parts = list(filter(None, re.split(r"(\d+:\d+)", clean)))
+        diff_explanations = list(filter(None, re.split(r"(\d+:\d+)", clean)))
         tree = PropositionTree()
-        for pair in [(parts[i], parts[i + 1]) for i in range(0, len(parts), 2)]:
+        for pair in [(diff_explanations[i], diff_explanations[i + 1]) for i in range(0, len(diff_explanations), 2)]:
             (tp, ts) = time_extract(pair[0])
             tree.insert(parse_tree(pair[1]), tp, ts)
         return tree
