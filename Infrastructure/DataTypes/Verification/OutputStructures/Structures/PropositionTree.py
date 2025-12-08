@@ -109,16 +109,17 @@ class PDTTree:
 
 
 class PropositionTree(AbstractOutputStructure):
-    def __init__(self):
+    def __init__(self, variable_order=None):
         self.forest: Dict[int, PDTTree] = dict()
         self.tp_to_ts: Dict[int, int] = dict()
+        self.variable_order = variable_order
 
-    def retrieve(self, time_point):
+    def retrieve(self, time_point: int):
         if time_point in self.forest:
             return self.forest[time_point]
         return None
 
-    def insert(self, value, time_point, time_stamp):
+    def insert(self, value, time_point: int, time_stamp: int):
         self.tp_to_ts[time_point] = time_stamp
         self.forest[time_point] = value
 
@@ -157,8 +158,4 @@ if __name__ == "__main__":
     ])
 
     tree = PDTTree(root)
-    #print(tree.walk_tree([("t1", 3), ("t2", 5)]))
     print(tree.walk_tree([("t1", 1), ("t2", 12)]))
-    #print(tree.walk_tree([("t1", 1), ("t2", 5)]))
-    #print(tree.terms)
-

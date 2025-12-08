@@ -2,9 +2,10 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 
 
 class Verdicts(AbstractOutputStructure):
-    def __init__(self):
+    def __init__(self, variable_order=None):
         self.verdict = list()
         self.tp_to_ts = dict()
+        self.variable_order = variable_order
 
     def retrieve(self, time_point):
         selected = [val for (tp, _, val) in self.verdict if tp == time_point]
@@ -14,6 +15,4 @@ class Verdicts(AbstractOutputStructure):
 
     def insert(self, value, time_point, time_stamp):
         self.tp_to_ts[time_point] = time_stamp
-        self.verdict.append(
-            (time_point, time_stamp, value if isinstance(value, list) else [value])
-        )
+        self.verdict.append((time_point, time_stamp, value if isinstance(value, list) else [value]))

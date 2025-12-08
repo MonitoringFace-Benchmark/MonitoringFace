@@ -1,6 +1,7 @@
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.ValueType import ValueType
 
 
-class Assignment:
+class Assignment(ValueType):
     def __init__(self, variable_order, values):
         self.order = list(variable_order)
         self.values = list(values)
