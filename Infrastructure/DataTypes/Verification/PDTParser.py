@@ -1,11 +1,9 @@
 import re
 import ast
 
-
 from typing import AnyStr, List
 
-from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTSets, PDTComplementSet, \
-    PDTSet, PDTNode, PDTLeave, PropositionTree
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTSets, PDTComplementSet, PDTSet, PDTNode, PDTLeave, PropositionTree
 
 
 def term_and_set(str_: AnyStr) -> (AnyStr, PDTSets):

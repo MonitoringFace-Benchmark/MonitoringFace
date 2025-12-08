@@ -116,8 +116,7 @@ class PropositionTree(AbstractOutputStructure):
     def retrieve(self, time_point):
         if time_point in self.forest:
             return self.forest[time_point]
-        else:
-            return None
+        return None
 
     def insert(self, value, time_point, time_stamp):
         self.tp_to_ts[time_point] = time_stamp

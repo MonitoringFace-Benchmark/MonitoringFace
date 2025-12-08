@@ -12,6 +12,4 @@ class OooVerdicts(AbstractOutputStructure):
 
     def insert(self, value, time_point, time_stamp):
         self.tp_to_ts[time_point] = time_stamp
-        self.ooo_verdict.append(
-            (time_point, time_stamp, value if isinstance(value, list) else [value])
-        )
+        self.ooo_verdict.append((time_point, time_stamp, value if isinstance(value, list) else [value]))

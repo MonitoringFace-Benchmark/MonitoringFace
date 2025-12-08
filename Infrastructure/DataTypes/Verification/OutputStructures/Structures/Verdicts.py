@@ -8,7 +8,9 @@ class Verdicts(AbstractOutputStructure):
 
     def retrieve(self, time_point):
         selected = [val for (tp, _, val) in self.verdict if tp == time_point]
-        return time_point, self.tp_to_ts[time_point], selected
+        if selected:
+            return time_point, self.tp_to_ts[time_point], selected
+        return None
 
     def insert(self, value, time_point, time_stamp):
         self.tp_to_ts[time_point] = time_stamp
