@@ -1,6 +1,8 @@
 import re
 import ast
 
+import pprint
+
 
 from typing import AnyStr, List
 
@@ -30,14 +32,14 @@ def parse_brackets_stack(s):
 
 def term_and_set(str_: AnyStr) -> (AnyStr, PDTSets):
     str_ = str_.strip()
-    split_list = str_.split("∈")
+    split_list = str_.split(IN_SYMBOL)
     term_ = split_list[0].strip()
     pdt_set = resolve_set(split_list[1].strip())
     return term_, pdt_set
 
 
 def resolve_set(str_: AnyStr) -> PDTSets:
-    if str_.__contains__("Complement of"):
+    if str_.__contains__(COMPLEMENT_OF):
         return complement_set(str_)
     else:
         return normal_set(str_)
@@ -45,7 +47,7 @@ def resolve_set(str_: AnyStr) -> PDTSets:
 
 def complement_set(str_: AnyStr) -> PDTSets:
     set_str = str_.strip()
-    set_str = set_str.removeprefix("Complement of ")
+    set_str = set_str.removeprefix(COMPLEMENT_OF)
     return PDTComplementSet(ast.literal_eval(set_str))
 
 
@@ -53,21 +55,43 @@ def normal_set(str_: AnyStr) -> PDTSets:
     set_str = str_.strip()
     return PDTSet(ast.literal_eval(set_str))
 
+COMPLEMENT_OF = "Complement of "
+OPEN_BRACKET = "❮"
+CLOSED_BRACKET = "❯"
+EXPLANATION_PREFIX = "Explanation:"
+IN_SYMBOL = "∈"
+
 
 def parse_tree(raw_string: AnyStr):
     raw_string = raw_string.strip()
-    string = raw_string.replace("Explanation:", "")
-    # recursive step
-    top_level_vals = parse_brackets_stack(string)[0]
-    terms = []
-    vals = []
-    inner_pairs = [(top_level_vals[i], top_level_vals[i + 1]) for i in range(0, len(top_level_vals), 2)]
-    for (term_set, sub_tree) in inner_pairs:
-        term_, set_ = term_and_set(term_set)
-        terms.append(term_)
-        vals.append((set_, parse_tree_inner(sub_tree)))
-    print(vals)
-    return PDTTree(root=PDTNode(term=unify_term(terms), values=vals))
+    string = raw_string.replace(EXPLANATION_PREFIX, "")
+
+    # the leading term is the Node term
+    # the choices are the values
+    def _inner_parse_tree(raw_str):
+        if raw_str == 'true' or raw_str.startswith("S"):
+            return PDTLeave(value=True)
+        elif raw_str.startswith("V"):
+            return PDTLeave(value=False)
+        raw_str = raw_str.strip().removeprefix(OPEN_BRACKET).removesuffix(CLOSED_BRACKET).strip()
+
+        tmp = raw_str.split(IN_SYMBOL, 1)
+        leading_term = tmp[0].strip()
+        pattern = f"{leading_term} {IN_SYMBOL}"
+
+        top_level_choices = re.split(rf'(?={pattern})', raw_str)
+        terms = []
+        values = []
+
+        for sub_tree_str in [part.strip() for part in top_level_choices if part.startswith(pattern)]:
+            tmp = sub_tree_str.split("\n", 1)
+            term_, set_ = term_and_set(tmp[0].strip())
+            terms.append(term_)
+
+            sub_tree_ = tmp[1].strip()
+            values.append((set_, _inner_parse_tree(sub_tree_)))
+        return PDTTree(root=PDTNode(term=unify_term(terms), values=values))
+    return _inner_parse_tree(string)
 
 
 def unify_term(terms: List[AnyStr]) -> AnyStr:
@@ -125,6 +149,9 @@ class PDTTree:
     def __init__(self, root):
         self.tree = root
 
+    def __repr__(self):
+        return f"{repr(self.tree)}"
+
 
 if __name__ == "__main__":
     with open("/Users/krq770/Desktop/tmp/t.txt", "r") as f:
@@ -134,23 +161,7 @@ if __name__ == "__main__":
         )
         parts = list(filter(None, re.split(r"(\d+:\d+)", cleaned)))
         pairs = [(parts[i], parts[i + 1]) for i in range(0, len(parts), 2)]
-        print(len(pairs))
         for pair in pairs:
-            parse_tree(pair[1])
-            """
-            x = pair[1]
-            x = x.strip()
-            x = x.replace("Explanation:", "")
-
-            for xxx in parse_brackets_stack(x):
-                #print(xxx)
-                _inner_pairs = [(xxx[i], xxx[i + 1]) for i in range(0, len(xxx), 2)]
-                for (str_part, list_part) in _inner_pairs:
-
-                    print(str_part)
-                    term, sets = term_and_set(str_part)
-                    print(list_part)
-                    #print(type(xx))
-                break
-            break
-            """
+            print(pair[0])
+            res = parse_tree(pair[1])
+            pprint.pprint(res, indent=2, width=50)

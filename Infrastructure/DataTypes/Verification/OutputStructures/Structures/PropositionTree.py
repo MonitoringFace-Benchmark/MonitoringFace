@@ -22,6 +22,9 @@ class PDTSet(PDTSets):
     def __init__(self, elems: Set):
         self.set = elems
 
+    def __repr__(self):
+        return f"PDTSet({repr(self.set)})"
+
     def is_member(self, value) -> bool:
         return value in self.set
 
@@ -29,6 +32,9 @@ class PDTSet(PDTSets):
 class PDTComplementSet(PDTSets):
     def __init__(self, elems: Set):
         self.complement_set = elems
+
+    def __repr__(self):
+        return f"PDTComplementSet({repr(self.complement_set)})"
 
     def is_member(self, value) -> bool:
         return value not in self.complement_set
@@ -42,11 +48,19 @@ class PDTLeave(PDTComponents):
     def __init__(self, value: bool):
         self.value = value
 
+    def __repr__(self):
+        return f"PDTLeave({repr(self.value)})"
+
 
 class PDTNode(PDTComponents):
     def __init__(self, term: AnyStr, values: List[Tuple[PDTSets, PDTComponents]]):
         self.term = term
         self.values = values
+
+    def __repr__(self):
+        vals = [f"({repr(s)}, {repr(val)})" for (s, val) in self.values]
+        joint = ", ".join(vals)
+        return f"PDTNode({self.term}, [{joint}])"
 
 
 class PDTTree:
