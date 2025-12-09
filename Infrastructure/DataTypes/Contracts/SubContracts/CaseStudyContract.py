@@ -24,7 +24,7 @@ class CaseStudyContract:
 
 def construct_case_study(data_gen, data_setup, path_to_named_experiment, oracle: AbstractOracleTemplate, time_out):
     data_setup["path"] = path_to_named_experiment
-    data_gen.run(data_setup)
+    data_gen.run_generator(data_setup)
 
     named_path_to_data = f"{path_to_named_experiment}/data"
 

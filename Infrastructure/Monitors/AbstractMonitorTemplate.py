@@ -60,6 +60,7 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
         if code == 124:
             raise TimedOut
         else:
+            print(out)
             raise ToolException
 
     start = time.perf_counter()

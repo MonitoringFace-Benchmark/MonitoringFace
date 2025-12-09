@@ -3,7 +3,7 @@ import os.path
 from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import ToolResolver, Location
-from Infrastructure.Builders.BuilderUtilities import image_building, run_image
+from Infrastructure.Builders.BuilderUtilities import image_building, run_image, image_exists
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.Monitors.MonitorExceptions import BuildException
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
@@ -54,6 +54,10 @@ class ToolImageManager(AbstractToolImageManager):
             prop_file_exists = os.path.exists(self.path + "/tool.properties")
             docker_file_exists = os.path.exists(self.path + "/Dockerfile")
             if not (prop_file_exists and docker_file_exists):
+                self._build_image()
+            elif not image_exists(self.image_name):
+                # Files exist but Docker image is missing - rebuild it
+                print(f"Dockerfile exists but image missing for {self.name} - {self.branch}, building...")
                 self._build_image()
             else:
                 print(f"Exists {self.name} - {self.branch}")

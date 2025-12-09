@@ -6,7 +6,7 @@ from typing import AnyStr, Optional
 
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import \
     PolicyGeneratorContract
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator import PatternPolicyGenerator
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
@@ -43,13 +43,13 @@ def construct_synthetic_experiment_pattern(
             if not os.path.exists(num_path):
                 os.mkdir(num_path)
 
-            (seed, sig, formula), _ = policy_source.generate_policy()
-
-            to_file(num_path, seed, "policy_seed", "seed")
+            seed, sig, formula = policy_source.generate_policy(data_setup)
+            
+            to_file(num_path, str(seed), "policy_seed", "seed")
             to_file(num_path, sig, "signature", "sig")
             to_file(num_path, formula, "formula", "mfotl")
 
-            if oracle is not None or data_setup["oracle"]:
+            if oracle is not None or data_setup.get("oracle"):
                 if not os.path.exists(f"{num_path}/result"):
                     os.mkdir(f"{num_path}/result")
 

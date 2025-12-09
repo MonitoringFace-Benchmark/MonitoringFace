@@ -12,6 +12,7 @@ from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGen
     CaseStudyGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGenerator import SignatureGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfGenerator import DataGolfGenerator
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGenerator import PatternsGenerator
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyGenerator import \
     MfotlPolicyGenerator
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
@@ -60,6 +61,8 @@ def init_data_generator(tag: DataGenerators, path_to_build_inner):
         return DataGolfGenerator("datagolf", path_to_build_inner)
     elif tag == DataGenerators.DATAGENERATOR:
         return SignatureGenerator("gen_data", path_to_build_inner)
+    elif tag == DataGenerators.PATTERNS:
+        return PatternsGenerator("gen_data", path_to_build_inner)
     else:
         print("Not implemented yet")
 
