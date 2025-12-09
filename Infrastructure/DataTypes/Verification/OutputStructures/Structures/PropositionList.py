@@ -1,0 +1,17 @@
+from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+
+
+class PropositionList(AbstractOutputStructure):
+    def __init__(self, variable_order=None):
+        self.prop_list = dict()
+        self.tp_to_ts = dict()
+        self.variable_order = None
+
+    def retrieve(self, time_point):
+        if time_point in self.prop_list:
+            return time_point, self.tp_to_ts[time_point], self.prop_list[time_point]
+        return None
+
+    def insert(self, value, time_point, time_stamp=None):
+        self.tp_to_ts[time_point] = time_stamp if time_stamp else time_point
+        self.prop_list[time_point] = value

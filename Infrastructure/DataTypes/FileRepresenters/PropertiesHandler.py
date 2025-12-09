@@ -22,9 +22,3 @@ class PropertiesHandler:
 
     def set_attr(self, k, v):
         self.in_dict[k] = v
-
-    @staticmethod
-    def to_file(file):
-        with open(file) as f:
-            for (k, v) in f:
-                f.write(f"{k}={v}\n")

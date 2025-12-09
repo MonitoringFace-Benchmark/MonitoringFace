@@ -8,7 +8,7 @@ from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 class DataGolfContract(AbstractContract):
     def default_contract(self):
         return DataGolfContract(
-            sig_file="", formula="", path="", trace_length=10, oracle=False, no_rewrite=None,
+            sig_file="", formula="", path="", seed=None, trace_length=10, oracle=False, no_rewrite=None,
             tup_ts=list(range(0, 5)), tup_amt=10, tup_val=0
         )
 
@@ -23,6 +23,7 @@ class DataGolfContract(AbstractContract):
     sig_file: AnyStr
     formula: AnyStr
     path: AnyStr
+    seed: Optional[int]
 
     trace_length: int
     oracle: bool

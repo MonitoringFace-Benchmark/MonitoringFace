@@ -1,3 +1,4 @@
+import copy
 from typing import AnyStr
 
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
@@ -7,8 +8,8 @@ from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 class VeriMonOracle(AbstractOracleTemplate):
     def __init__(self, veri_mon: AbstractMonitorTemplate, parameters):
         super().__init__()
-        self.verimon = veri_mon
-        self.verimon.name = "verimon"
+        self.verimon = copy.deepcopy(veri_mon)
+        self.verimon.name = "VeriMon"
         self.parameters = parameters
 
     def pre_process_data(self, path_to_folder_inner: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):

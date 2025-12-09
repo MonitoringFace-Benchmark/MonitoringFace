@@ -1,6 +1,6 @@
 FROM rust:1.84.1 as builder
-RUN rustup install nightly-2025-06-01
-RUN rustup default nightly-2025-06-01
+RUN rustup install nightly
+RUN rustup default nightly
 
 RUN apt-get update && apt-get install -y pkg-config libssl-dev git && rm -rf /var/lib/apt/lists/*
 

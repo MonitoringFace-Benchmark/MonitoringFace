@@ -3,10 +3,12 @@ from Infrastructure.Oracles.VeriMonOracle.VeriMonOracle import VeriMonOracle
 
 
 def identifier_to_oracle(monitoring_manager, identifier, monitor_name, params):
-    if isinstance(identifier, VeriMonOracle):
+    if identifier == "VeriMonOracle":
         return VeriMonOracle(monitoring_manager.get_monitor(monitor_name), params)
-    elif isinstance(identifier, DataGolfOracle):
+    elif identifier == "DataGolfOracle":
         return DataGolfOracle()
+    else:
+        raise NotImplemented()
 
 
 class OracleManager:

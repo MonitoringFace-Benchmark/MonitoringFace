@@ -11,6 +11,12 @@ from Infrastructure.Monitors.MonitorExceptions import TimedOut
 from Infrastructure.constants import COMMAND_KEY, WORKDIR_KEY, VOLUMES_KEY, ENTRYPOINT_KEY
 
 
+def to_prop_file(path, name, content: dict):
+    with open(path + f"{name}", mode='w') as f:
+        for (k, v) in content.items():
+            f.write(f"{k}={v}\n")
+
+
 def verify_version(build_folder, image_name, location, release, branch):
     if location == Location.Local:
         return True
@@ -52,17 +58,23 @@ def image_building(image_name, build_dir, args=None):
             buildargs=args, nocache=True, rm=True, forcerm=True
         )
 
+        error_in_build = False
+
         for chunk in build_output:
             if 'stream' in chunk:
                 print(chunk['stream'], end='')
             elif 'error' in chunk:
+                error_in_build = True
                 print(f"Error: {chunk['error']}")
             elif 'status' in chunk:
                 msg = chunk.get('progress', chunk['status'])
                 print(msg)
-
-        print(f" Successfully built image: {image_name}")
-        return True
+        if error_in_build:
+            print(f" Failed to built image: {image_name}")
+            return False
+        else:
+            print(f" Successfully built image: {image_name}")
+            return True
     except BuildError as e:
         print(f" Docker build failed: {e}")
         return False

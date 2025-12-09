@@ -27,8 +27,7 @@ FROM alpine:3.15
 # Install runtime dependencies
 RUN apk add --update --no-cache \
     gmp \
-    libffi \
-    time
+    libffi
 
 # Copy installed binaries from builder stage
 COPY --from=builder /home/opam/dist/bin/ /usr/local/bin/

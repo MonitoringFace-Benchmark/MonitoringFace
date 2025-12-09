@@ -7,8 +7,8 @@ from Infrastructure.Monitors.MonitorExceptions import ReplayerException
 
 
 class ReplayerConverter(DataConverterTemplate):
-    def __init__(self, name, path_to_build):
-        self.image = ImageManager(name, Processor.DataConverters, path_to_build)
+    def __init__(self, name, path_to_project):
+        self.image = ImageManager(name, Processor.DataConverters, path_to_project)
 
     def convert(self, path_to_folder: AnyStr, data_file: AnyStr, tool: AnyStr, name: AnyStr, dest: AnyStr, params):
         command = ["docker", "run", "--rm", "--entrypoint", "java",

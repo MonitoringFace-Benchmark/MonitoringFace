@@ -9,6 +9,9 @@ from Infrastructure.Monitors.MonitorExceptions import GeneratorException
 from Infrastructure.constants import DATAGOLF_POLICY_CHECK, COMMAND_KEY, WORKDIR_KEY, WORKDIR_VAL, VOLUMES_KEY
 
 
+DEFAULT_SEED = -1
+
+
 class DataGolfGenerator(DataGeneratorTemplate):
     def __init__(self, name, path_to_build):
         self.image = ImageManager(name, Processor.DataGenerators, path_to_build)
@@ -24,7 +27,9 @@ class DataGolfGenerator(DataGeneratorTemplate):
         inner_contract[VOLUMES_KEY] = {data_golf_contract.path: {'bind': '/data', 'mode': 'rw'}}
         inner_contract[WORKDIR_KEY] = WORKDIR_VAL
 
-        out, code = self.image.run({}, time_on=time_on, time_out=time_out)
+        seed = data_golf_contract.seed if data_golf_contract.seed else DEFAULT_SEED
+
+        out, code = self.image.run(inner_contract, time_on=time_on, time_out=time_out)
         if code != 0:
             raise GeneratorException
 
@@ -36,7 +41,7 @@ class DataGolfGenerator(DataGeneratorTemplate):
                 file.write(prefix)
 
         remove_prefix = "@" + raw_split[1]
-        return stdout_to_csv(remove_prefix.split("Trace:")[0].rstrip()), code
+        return seed, stdout_to_csv(remove_prefix.split("Trace:")[0].rstrip()), code
 
     def check_policy(self, path_inner, signature, formula) -> bool:
         inner_contract = dict()
@@ -48,6 +53,7 @@ class DataGolfGenerator(DataGeneratorTemplate):
         if code != 0:
             return False
         else:
+            out = out.strip()
             return out.__eq__(DATAGOLF_POLICY_CHECK)
 
 
@@ -88,6 +94,9 @@ def data_golf_contract_to_command(contract) -> list[AnyStr]:
 
     args += ["-nonewlastts", "-tup-ts", ",".join(map(str, contract.tup_ts)), "-tup-amt",
              str(contract.tup_amt), "-tup-val", str(contract.tup_val)]
+
+    if contract.seed:
+        args += ["-tg_seed", str(contract.seed)]
 
     if contract.oracle:
         args += ["-tup-out", f"result/result_{str(contract.trace_length)}.res"]

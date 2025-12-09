@@ -11,7 +11,7 @@ import os
 class WhyMon(AbstractMonitorTemplate, ABC):
     def __init__(self, image: ToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
-        self.replayer = ReplayerConverter(self.params["replayer"], self.params["path_to_build"])
+        self.replayer = ReplayerConverter(self.params["replayer"], self.params["path_to_project"])
 
     def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
         self.params["folder"] = path_to_folder
