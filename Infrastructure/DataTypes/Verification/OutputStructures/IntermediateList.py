@@ -58,15 +58,3 @@ class IntermediateList:
 
         assignments = list(map(lambda ass: ass.retrieve_order(new_order=new_order), assignments))
         return _pdt_subtree_recurse(vars_=variables, fixed_vars=variables, assignments=assignments, current_assignment=[])
-
-
-def extract_sets(new_assignment, order):
-    collect_vals = []
-    for i in range(0, len(order)):
-        vals = set([val[i] for val in new_assignment])
-        collect_vals.append((PDTSet(vals), PDTComplementSet(vals)))
-    return collect_vals
-
-
-if __name__ == "__main__":
-    print(extract_sets([(1, 2), (3, 4), (5, 6), (7, 8)], ["x", "y"]))
