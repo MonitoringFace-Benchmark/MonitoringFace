@@ -136,8 +136,7 @@ Examples:
             # Create benchmark - note: parameter name is 'contract' not 'benchmark_contract'
             benchmark = BenchmarkBuilder(
                 contract=experiment_config['benchmark_contract'],
-                path_to_build=experiment_config['path_to_build'],
-                path_to_experiment=experiment_config['path_to_experiments'],
+                path_to_project=experiment_config['path_to_project'],
                 data_setup=experiment_config['data_setup'],
                 gen_mode=experiment_config['experiment_type'],
                 time_guard=experiment_config['time_guarded'],

@@ -7,11 +7,10 @@ from omegaconf import OmegaConf, DictConfig
 from hydra import compose, initialize_config_dir
 from hydra.core.global_hydra import GlobalHydra
 
-from Infrastructure.Parser.HydraConfig import ExperimentConfig, ExperimentSuiteConfig
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfContract import DataGolfContract
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGeneratorContract import Patterns
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGeneratorContract import Signature
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import PolicyGeneratorContract
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import MfotlPolicyContract
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
 from Infrastructure.DataTypes.Contracts.BenchmarkContract import (
     DataGenerators, SyntheticBenchmarkContract, PolicyGenerators, CaseStudyBenchmarkContract
@@ -46,6 +45,7 @@ class YamlParser:
         
         # Setup paths
         your_path_to_mfb = os.getcwd()
+        self.path_to_project = your_path_to_mfb
         self.path_to_build = path_to_build or f"{your_path_to_mfb}/Infrastructure/build"
         self.path_to_experiments = path_to_experiments or f"{your_path_to_mfb}/Infrastructure/experiments"
         
@@ -152,7 +152,7 @@ class YamlParser:
             
             tools_to_build.append((name, branch, self._parse_branch_or_release(release)))
         
-        return ToolManager(tools_to_build=tools_to_build, path_to_build=self.path_to_build)
+        return ToolManager(tools_to_build=tools_to_build, path_to_project=self.path_to_project)
     
     def parse_data_setup(self) -> Union[Signature, Patterns, DataGolfContract]:
         """Parse data setup configuration"""
@@ -177,7 +177,7 @@ class YamlParser:
         else:
             raise YamlParserException(f"Invalid data_setup type: {data_type}")
     
-    def parse_policy_setup(self) -> PolicyGeneratorContract:
+    def parse_policy_setup(self) -> MfotlPolicyContract:
         """Parse policy setup configuration"""
         if 'policy_setup' not in self.cfg:
             raise YamlParserException("Missing 'policy_setup' section in YAML configuration")
@@ -187,7 +187,7 @@ class YamlParser:
         
         if policy_type == 'PolicyGeneratorContract':
             # Start with default contract
-            contract = PolicyGeneratorContract().default_contract()
+            contract = MfotlPolicyContract().default_contract()
             # Update with provided config
             config = OmegaConf.to_container(policy_setup, resolve=True)
             for key, value in config.items():
@@ -259,9 +259,9 @@ class YamlParser:
             if not identifier or not name or not branch:
                 raise YamlParserException(f"Monitor configuration missing required fields: {monitor_dict}")
             
-            # Add path_to_build to params if not present
-            if 'path_to_build' not in params:
-                params['path_to_build'] = self.path_to_build
+            # Add path_to_project to params if not present (used by ImageManager internally)
+            if 'path_to_project' not in params:
+                params['path_to_project'] = self.path_to_project
             
             monitors_to_build.append((identifier, name, branch, params))
         
@@ -283,22 +283,8 @@ class YamlParser:
             if not identifier or not name:
                 raise YamlParserException(f"Oracle configuration missing required fields: {oracle_dict}")
             
-            # Add path_to_build to params if not present
-            if 'path_to_build' not in params:
-                params['path_to_build'] = self.path_to_build
-            
-            # Get the monitor class based on monitor_name
-            monitor_class = None
-            if monitor_name:
-                monitor = monitor_manager.get_monitor(monitor_name)
-                if monitor:
-                    monitor_class = type(monitor)
-            
-            if not monitor_class:
-                from Infrastructure.Monitors.MonPoly.MonPoly import MonPoly
-                monitor_class = MonPoly
-            
-            oracles_to_build.append((identifier, name, monitor_class, params))
+            # OracleManager expects: (oracle_name, identifier, monitor_name, params)
+            oracles_to_build.append((name, identifier, monitor_name, params))
         
         return OracleManager(oracles_to_build=oracles_to_build, monitor_manager=monitor_manager)
     
@@ -371,6 +357,7 @@ class YamlParser:
             'tools_to_build': tools_to_build,
             'experiment_type': experiment_type,
             'oracle': oracle_tuple,
+            'path_to_project': self.path_to_project,
             'path_to_build': self.path_to_build,
             'path_to_experiments': self.path_to_experiments
         }
