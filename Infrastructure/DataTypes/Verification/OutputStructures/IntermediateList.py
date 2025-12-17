@@ -1,4 +1,5 @@
-from typing import AnyStr, List
+from enum import Enum
+from typing import AnyStr, List, Union
 
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
@@ -6,13 +7,18 @@ from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Propositi
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Proposition import Proposition
-from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.ValueType import ValueType
+
+
+class ValueType(Enum):
+    PROP = 1
+    ASSIGNMENTS = 2
 
 
 class IntermediateList:
-    def __init__(self, values, variable_ordering: list[AnyStr]):
-        self.values: list[int, list[ValueType]] = values
+    def __init__(self, values, variable_ordering: list[AnyStr], t: ValueType):
+        self.values: list[int, Union[list[Assignment], Proposition]] = values
         self.variable_ordering = variable_ordering
+        self.value_type = t
 
     @classmethod
     def from_OOOVerdicts(cls, ooo_verdicts: OooVerdicts):
@@ -21,16 +27,16 @@ class IntermediateList:
             values.append([
                 tp, [val for (val_tp, _, vals) in ooo_verdicts.ooo_verdict if tp == val_tp for val in vals]
             ])
-        return cls(values, ooo_verdicts.variable_order)
+        return cls(values, ooo_verdicts.variable_order, ValueType.ASSIGNMENTS)
 
     @classmethod
     def from_Verdicts(cls, verdicts: Verdicts):
-        return cls(verdicts.verdict, verdicts.variable_order)
+        return cls(verdicts.verdict, verdicts.variable_order, ValueType.ASSIGNMENTS)
 
     @classmethod
     def from_PropositionList(cls, proposition_list: PropositionList):
-        values = [[tp, [Proposition(proposition_list.prop_list[tp])]] for tp in sorted(proposition_list.tp_to_ts.keys())]
-        return cls(values, proposition_list.variable_order)
+        values = [[tp, Proposition(proposition_list.prop_list[tp])] for tp in sorted(proposition_list.tp_to_ts.keys())]
+        return cls(values, proposition_list.variable_order, ValueType.PROP)
 
     def to_proposition_tree(self, new_order: List[AnyStr]):
         assignments, variables = self.values, self.variable_ordering

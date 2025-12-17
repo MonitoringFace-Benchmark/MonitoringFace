@@ -2,6 +2,7 @@ import dataclasses
 import os.path
 from abc import ABC, abstractmethod
 from dataclasses import asdict
+from enum import Enum
 from typing import AnyStr, Any, List, Optional
 
 import pandas
@@ -193,7 +194,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             parameters: dict[AnyStr, dict[AnyStr, Any]]
     ) -> pandas.DataFrame:
         print("====== Run Experiments ======")
-        settings_result = pd.DataFrame(columns=["Name", "Setting", "pre", "runtime", "post", "wall time", "max mem", "cpu"])
+        settings_result = pd.DataFrame(columns=["Status", "Name", "Setting", "pre", "runtime", "post", "wall time", "max mem", "cpu"])
 
         if self.gen_mode == ExperimentType.CaseStudy:
             path_to_folder = f"{self.path_to_named_experiment}/data"
@@ -228,8 +229,15 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         return settings_result
 
 
-def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file):
+class Status(Enum):
+    OK = "OK"
+    TO = "Time out"
+    TE = "Tool Error"
+    RE = "Result Error"
 
+
+def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file):
+    setting_id = ""
     try:
         prep, runtime, prop = run_monitor(
             tool, time_guard, path_to_folder, data_file,
@@ -243,17 +251,38 @@ def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_fi
             wall_time, max_mem, cpu = None, None, None
 
         settings_result.loc[len(settings_result)] = [
-            tool.name, "", prep, runtime, prop,
+            Status.OK, tool.name, setting_id, prep, runtime, prop,
             parse_wall_time(wall_time), max_mem, cpu
         ]
         return settings_result
     except TimedOut as e:
-
-        print(f"Monitor {tool.name} timed out: {e}")        
+        print(f"Monitor {tool.name} timed out: {e}")
+        settings_result.loc[len(settings_result)] = [
+            Status.TO, tool.name, setting_id, None, None, None,
+            None, None, None
+        ]
+        return settings_result
     except ToolException as e:
         print(f"ToolException for monitor {tool.name}: {e}")
+        settings_result.loc[len(settings_result)] = [
+            Status.TE, tool.name, setting_id, None, None, None,
+            None, None, None
+        ]
+        return settings_result
     except ResultErrorException as e:
-        print(f"ResultErrorException for monitor {tool.name}: {e}")
+        print(f"ResultErrorException for monitor {tool.name}: {e.args[1]}")
+        stats = StatsHandler(path_to_folder).get_stats()
+        if stats is not None:
+            wall_time, max_mem, cpu = stats
+        else:
+            wall_time, max_mem, cpu = None, None, None
+
+        (prep, runtime, prop) = e.args[0]
+        settings_result.loc[len(settings_result)] = [
+            Status.RE, tool.name, setting_id, prep, runtime, prop,
+            parse_wall_time(wall_time), max_mem, cpu
+        ]
+        return settings_result
 
 
 def path_generator(mode: ExperimentType, experiment, path_to_named_experiment: AnyStr) -> list[AnyStr]:
