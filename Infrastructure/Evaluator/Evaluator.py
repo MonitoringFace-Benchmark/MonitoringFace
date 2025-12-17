@@ -27,11 +27,11 @@ def validate_setup():
     try:
         urllib.request.urlopen('https://www.google.com', timeout=3).getcode()
     except Exception:
-        raise RuntimeError("Network connection is not available")
+        raise RuntimeError("Network connection is not available!")
 
     docker_ok = subprocess.call(['docker', 'info'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
     if not docker_ok:
-        raise RuntimeError("Docker is not available")
+        raise RuntimeError("Docker is not available!")
 
 
 # must be the entry point, either creating or recreating experiments, organizing bootstrapping and so on
