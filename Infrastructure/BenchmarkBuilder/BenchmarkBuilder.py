@@ -14,6 +14,7 @@ from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGen
     CaseStudyGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGenerator import SignatureGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfGenerator import DataGolfGenerator
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGenerator import PatternsGenerator
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyGenerator import \
     MfotlPolicyGenerator
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
@@ -65,6 +66,8 @@ def init_data_generator(tag: DataGenerators, path_to_project):
         return DataGolfGenerator("datagolf", path_to_project)
     elif tag == DataGenerators.DATAGENERATOR:
         return SignatureGenerator("gen_data", path_to_project)
+    elif tag == DataGenerators.PATTERNS:
+        return PatternsGenerator("gen_data", path_to_project)
     else:
         print("Not implemented yet")
 
@@ -83,6 +86,9 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         self.path_to_experiment = path_to_project + "/Infrastructure/experiments"
         self.path_to_named_experiment = self.path_to_experiment + "/" + self.contract.experiment_name
 
+        # Initialize oracle to None by default
+        self.oracle = None
+        self.oracle_name = None
         if oracle:
             self.oracle_name = oracle[1]
             self.oracle = oracle[0].get_oracle(self.oracle_name)

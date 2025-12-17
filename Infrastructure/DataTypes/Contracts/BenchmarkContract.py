@@ -12,7 +12,8 @@ class BenchmarkContractAbstract:
 
 class DataGenerators(Enum):
     DATAGOLF = 1,
-    DATAGENERATOR = 2
+    DATAGENERATOR = 2,
+    PATTERNS = 3
 
 
 class PolicyGenerators(Enum):

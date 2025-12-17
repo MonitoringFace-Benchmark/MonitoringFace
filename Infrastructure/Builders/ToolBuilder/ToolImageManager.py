@@ -43,6 +43,10 @@ class ToolImageManager(AbstractToolImageManager):
             in_build = os.path.exists(f"{self.path}/meta.properties")
             if not in_build:
                 self._build_image()
+            elif not image_exists(self.image_name):
+                # Files exist but Docker image is missing - rebuild it
+                print(f"Dockerfile exists but image missing for {self.name} - {self.branch}, building...")
+                self._build_image()
             else:
                 current_version = PropertiesHandler.from_file(f"{self.path}/meta.properties").get_attr("version")
                 fl = PropertiesHandler.from_file(self.path_to_archive + f"/tool.properties")

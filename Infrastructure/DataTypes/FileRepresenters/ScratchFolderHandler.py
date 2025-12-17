@@ -7,7 +7,7 @@ class ScratchFolderHandler:
         self.folder = f"{self.path}/scratch"
 
         if not os.path.exists(self.folder):
-            os.mkdir(self.folder)
+            os.makedirs(self.folder, exist_ok=True)
 
     def remove_folder(self):
         self.clean_up_folder()

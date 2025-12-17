@@ -43,13 +43,13 @@ def construct_synthetic_experiment_pattern(
             if not os.path.exists(num_path):
                 os.mkdir(num_path)
 
-            (seed, sig, formula), _ = policy_source.generate_policy({})
+            (seed, sig, formula), _ = policy_source.generate_policy(data_setup)
             sh.add_seed_policy(seed)
 
             to_file(num_path, sig, "signature", "sig")
             to_file(num_path, formula, "formula", "mfotl")
 
-            if oracle is not None or data_setup["oracle"]:
+            if oracle is not None or data_setup.get("oracle"):
                 if not os.path.exists(f"{num_path}/result"):
                     os.mkdir(f"{num_path}/result")
 
