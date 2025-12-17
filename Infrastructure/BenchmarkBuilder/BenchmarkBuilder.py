@@ -223,6 +223,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             for num_len in self.experiment.num_data_set_sizes:
                 data_file = f"data_{num_len}.csv"
                 for tool in tools:
+                    print(path_to_folder)
                     run_tools(
                         settings_result=settings_result, tool=tool, time_guard=self.time_guard,
                         oracle=self.oracle, path_to_folder=path_to_folder,
@@ -234,6 +235,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
 
 
 def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file):
+
     try:
         prep, runtime, prop = run_monitor(
             tool, time_guard, path_to_folder, data_file,
@@ -252,6 +254,7 @@ def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_fi
         ]
         return settings_result
     except TimedOut as e:
+
         print(f"Monitor {tool.name} timed out: {e}")        
     except ToolException as e:
         print(f"ToolException for monitor {tool.name}: {e}")

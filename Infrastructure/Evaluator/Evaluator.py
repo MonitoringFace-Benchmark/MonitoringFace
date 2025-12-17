@@ -1,4 +1,6 @@
 import os.path
+import subprocess
+import urllib.request
 
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfContract import DataGolfContract
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGeneratorContract import Patterns
@@ -21,10 +23,23 @@ from Infrastructure.Parser.ParserComponents import construct_tool_manager, const
     deconstruct_monitor_manager, deconstruct_tool_manager, deconstruct_data_setup, deconstruct_benchmark_contract
 
 
+def validate_setup():
+    try:
+        urllib.request.urlopen('https://www.google.com', timeout=3).getcode()
+    except Exception:
+        raise RuntimeError("Network connection is not available")
+
+    docker_ok = subprocess.call(['docker', 'info'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+    if not docker_ok:
+        raise RuntimeError("Docker is not available")
+
+
 # must be the entry point, either creating or recreating experiments, organizing bootstrapping and so on
 # first make a synthetic one work! can hard code the values for now
 class Evaluator:
     def __init__(self, structure=None):
+        validate_setup()
+
         # setup folders todo generalize
         your_path_to_project = os.path.dirname(os.path.dirname(os.getcwd()))
         self.path_to_project = your_path_to_project

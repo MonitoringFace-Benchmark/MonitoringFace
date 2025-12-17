@@ -29,5 +29,5 @@ pip install -r requirements.txt
 Congifure the Evaluator.py script, use the command from the folder containing the MonitoringFaceBootloader:
 
 ```
-python3 -m MonitoringFaceBootloader.Evaluator.Evaluator 
+python3 -m MonitoringFace.Evaluator.Evaluator 
 ```
