@@ -70,7 +70,7 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
     if oracle is not None and False:
         verified, msg = verify(res, oracle)
         if not verified:
-            raise ResultErrorException(msg)
+            raise ResultErrorException((postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
 
     print(postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed)
     print("="*75 + "\n")

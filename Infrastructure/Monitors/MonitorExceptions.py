@@ -25,8 +25,4 @@ class BuildException(Exception):
 
 
 class ResultErrorException(Exception):
-    def __init__(self, msg):
-        self.msg = msg
-
-    def error(self):
-        print(self.msg)
+    pass
