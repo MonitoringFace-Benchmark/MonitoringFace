@@ -1,0 +1,67 @@
+# Example YAML configuration for a case study benchmark experiment
+experiment_name: Nokia_case_study
+
+# Benchmark type: 'synthetic' or 'case_study'
+benchmark_type: case_study
+
+# Tools configuration
+tools:
+  - name: TimelyMon
+    branch: development
+    release: branch
+  - name: MonPoly
+    branch: master
+    release: branch
+
+# Monitors configuration
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 1
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
+    params:
+      replayer: gen_data
+
+# Time guard configuration
+time_guard:
+  enabled: false
+  lower_bound: null
+  upper_bound: 300
+  guard_type: Monitor
+  guard_name: TimelyMon 1
+
+# Case study specific configuration
+case_study_config:
+  case_study_name: Nokia
+
+# Data setup - for case studies - Hydra structured format
+data_setup:
+  type: Signature
+  Signature:
+    trace_length: 1000
+    seed: null
+    event_rate: 1000
+    index_rate: null
+    time_stamp: null
+    sig: ""
+    sample_queue: null
+    string_length: null
+    fresh_value_rate: null
+    domain: null
+
+# Experiment execution settings
+experiment_type: CaseStudy
+
+# Tools to build and run
+tools_to_build:
+  - TimelyMon 1
+  - MonPoly
+
+# No oracle needed for case study
+oracle:
+  enabled: false
