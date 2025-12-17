@@ -1,0 +1,125 @@
+# Example YAML configuration for a synthetic benchmark experiment
+experiment_name: test_synthetic_experiment
+
+# Benchmark type: 'synthetic' or 'case_study'
+benchmark_type: synthetic
+
+# Tools configuration
+tools:
+  - name: TimelyMon
+    branch: development
+    release: branch
+  - name: MonPoly
+    branch: master
+    release: branch
+  - name: WhyMon
+    branch: main
+    release: branch
+  - name: EnfGuard
+    branch: enfguard
+    release: branch
+
+# Monitors configuration
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 1
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+  - identifier: TimelyMon
+    name: TimelyMon 6
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
+    params:
+      replayer: gen_data
+  - identifier: MonPoly
+    name: VeriMon
+    branch: master
+    params:
+      replayer: gen_data
+      verified: true
+  - identifier: WhyMon
+    name: WhyMon
+    branch: main
+    params:
+      replayer: gen_data
+  - identifier: EnfGuard
+    name: EnfGuard
+    branch: enfguard
+    params:
+      replayer: gen_data
+
+# Oracles configuration (optional)
+oracles:
+  - identifier: VeriMonOracle
+    name: VeriMonOracle
+    monitor_name: VeriMon
+    params:
+      replayer: gen_data
+      verified: true
+
+# Time guard configuration
+time_guard:
+  enabled: false
+  lower_bound: null  # null for None
+  upper_bound: 200
+  guard_type: Monitor  # Monitor, Oracle, or Generator
+  guard_name: TimelyMon 6
+
+# Data setup - Hydra structured format
+data_setup:
+  type: Signature
+  Signature:
+    trace_length: 1000
+    seed: null
+    event_rate: 1000
+    index_rate: null
+    time_stamp: null
+    sig: ""
+    sample_queue: null
+    string_length: null
+    fresh_value_rate: null
+    domain: null
+
+# Policy setup
+policy_setup:
+  type: PolicyGeneratorContract
+  num_preds: 4
+  prob_eand: 0
+  prob_rand: 0
+  prob_let: 0
+  prob_matchF: 0
+  prob_matchP: 0
+
+# Synthetic benchmark specific configuration
+synthetic_config:
+  data_source: DATAGENERATOR  # DATAGENERATOR or DATAGOLF
+  policy_source: MFOTLGENERATOR  # MFOTLGENERATOR or PATTERNS
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [0, 1]
+    num_data_set_sizes: [50]
+
+# Experiment execution settings
+experiment_type: Signature  # Pattern, Signature, or CaseStudy
+
+# Tools to build and run (list of monitor names)
+tools_to_build:
+  - TimelyMon 1
+  - TimelyMon 6
+  - VeriMon
+  - MonPoly
+  - WhyMon
+  - EnfGuard
+
+# Oracle to use (optional)
+oracle:
+  enabled: true
+  name: VeriMonOracle

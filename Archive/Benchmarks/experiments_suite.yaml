@@ -1,0 +1,20 @@
+# Suite of experiments to run
+# This file references multiple individual experiment configurations
+
+experiments:
+  - path: example_synthetic_experiment.yaml
+    enabled: true
+    description: "Basic synthetic experiment with Signature data generator"
+  
+  - path: example_patterns.yaml
+    enabled: true
+    description: "Experiment using Patterns data generator"
+  
+  - path: example_case_study.yaml
+    enabled: false  # Can be disabled without removing from the suite
+    description: "Nokia case study benchmark"
+  
+  # Add more experiments as needed
+  # - path: my_custom_experiment.yaml
+  #   enabled: true
+  #   description: "Custom experiment description"
