@@ -8,8 +8,8 @@ class ToolManager:
         print_headline("(Starting) Building ToolManager")
         path_to_build = path_to_project + f"/Infrastructure/build"
         path_to_archive = path_to_project + f"/Archive"
-        self.images = {}
 
+        self.images = {}
         failed_builds = []
         for (tool, branch, release) in tools_to_build:
             try:

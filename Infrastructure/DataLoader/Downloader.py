@@ -106,10 +106,7 @@ class MonitoringFaceDownloader(Downloader):
 
 def url_getter(url, addon, err) -> Optional[Any]:
     try:
-        headers = {
-            "Authorization": f"Bearer {GIT_TOKEN}"
-        }
-
+        headers = {"Authorization": f"Bearer {GIT_TOKEN}" } if GIT_TOKEN != "" else None
         response = requests.get(url + addon, headers=headers)
         response.raise_for_status()
         contents = response.json()

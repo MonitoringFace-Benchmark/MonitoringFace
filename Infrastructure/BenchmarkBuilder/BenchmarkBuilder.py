@@ -160,7 +160,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                 fph.to_file(fingerprint_location)
 
     def _build(self):
-        print("\n" + "=" * 20 + " Benchmark Build " + "=" * 20)
+        print_headline("(Starting) building Benchmark")
         try:
             if self.gen_mode == ExperimentType.Signature:
                 print(" ... Build Signature-based Setup")
@@ -174,13 +174,12 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                     self.experiment, self.path_to_named_experiment,
                     self.data_setup, self.data_gen, self.oracle, self.time_guard, self.seeds
                 )
-
             elif self.gen_mode == ExperimentType.CaseStudy:
                 print(" ... Build Case Study Setup")
                 construct_case_study(self.data_gen, self.data_setup, self.path_to_named_experiment, self.oracle, self.time_out)
             else:
                 raise BenchmarkCreationFailed("Not implemented")
-            print("\n" + "=" * 20 + " Benchmark Build (done) " + "=" * 20)
+            print_footline("(Finished) building Benchmark")
         except (BaseException, FileNotFoundError):
             raise BenchmarkCreationFailed()
 

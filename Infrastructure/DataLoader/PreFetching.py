@@ -67,9 +67,7 @@ class BitBucketFetcher(RepoFetcher):
 class GitHubFetcher(RepoFetcher):
     def __init__(self, owner, repo):
         self.url = f"https://api.github.com/repos/{owner}/{repo}"
-        self.header = {
-            "Authorization": f"Bearer {GIT_TOKEN}"
-        }
+        self.header = {"Authorization": f"Bearer {GIT_TOKEN}"} if GIT_TOKEN != "" else None
 
     def get_branches(self):
         try:
