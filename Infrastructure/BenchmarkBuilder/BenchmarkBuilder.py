@@ -20,7 +20,7 @@ from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenera
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
 from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract, PolicyGenerators, \
     DataGenerators
-from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import construct_case_study
+from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import construct_case_study, CaseStudyMapper
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment, \
     construct_synthetic_experiment_sig, construct_synthetic_experiment_pattern, TimeGuarded
 from Infrastructure.DataTypes.FileRepresenters.FingerPrintHandler import FingerPrintHandler
@@ -32,6 +32,7 @@ from Infrastructure.DataTypes.Types.custome_type import ExperimentType
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate, run_monitor
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.constants import FINGERPRINT_DATA, FINGERPRINT_EXPERIMENT
+from Infrastructure.printing import print_headline, print_footline
 
 
 class BenchmarkBuilderTemplate(ABC):
@@ -53,23 +54,35 @@ class TimeGuard:
 
 
 def init_policy_generator(name: PolicyGenerators, path_to_build_inner):
+    print(f"-> Attempting to initialize Policy Generator {name}")
     if name == PolicyGenerators.MFOTLGENERATOR:
-        return MfotlPolicyGenerator("gen_mfotl", path_to_build_inner)
+        mfotl_gen = MfotlPolicyGenerator("gen_mfotl", path_to_build_inner)
+        print("    -> (Success)")
+        return mfotl_gen
     elif name == PolicyGenerators.PATTERNS:
-        return PatternPolicyGenerator()
+        pattern_policy = PatternPolicyGenerator()
+        print("    -> (Success)")
+        return pattern_policy
     else:
         print("Not implemented yet")
 
 
 def init_data_generator(tag: DataGenerators, path_to_project):
+    print(f"-> Attempting to initialize Data Generator {tag}")
     if tag == DataGenerators.DATAGOLF:
-        return DataGolfGenerator("datagolf", path_to_project)
+        data_golf = DataGolfGenerator("datagolf", path_to_project)
+        print("    -> (Success)")
+        return data_golf
     elif tag == DataGenerators.DATAGENERATOR:
-        return SignatureGenerator("gen_data", path_to_project)
+        sig_gen = SignatureGenerator("gen_data", path_to_project)
+        print("    -> (Success)")
+        return sig_gen
     elif tag == DataGenerators.PATTERNS:
-        return PatternsGenerator("gen_data", path_to_project)
+        pattern_gen = PatternsGenerator("gen_data", path_to_project)
+        print("    -> (Success)")
+        return pattern_gen
     else:
-        print("Not implemented yet")
+        raise NotImplemented("Not implemented yet()")
 
 
 class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
@@ -78,7 +91,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             gen_mode: ExperimentType, time_guard: TimeGuarded,
             tools_to_build, oracle=None, seeds=None
     ):
-        print("\n" + "=" * 20 + " Benchmark Init " + "=" * 20)
+        print_headline("(Starting) Init Benchmark")
         self.contract = contract
         self.seeds = seeds
 
@@ -110,23 +123,27 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         if isinstance(contract, CaseStudyBenchmarkContract):
             self.data_gen = CaseStudyGenerator(contract.case_study_name, path_to_project)
             self.data_setup["path"] = f"{self.path_to_named_experiment}/{contract.experiment_name}"
-            print("=" * 20 + " Benchmark Init (done) " + "=" * 20)
+            print_footline("(Finished) Init Benchmark")
             if os.path.exists(fingerprint_location):
                 fph = FingerPrintHandler.from_file(fingerprint_location)
                 old_experiment_fingerprint = fph.get_attr(FINGERPRINT_EXPERIMENT)
                 if not new_experiment_fingerprint == old_experiment_fingerprint:
                     self._build()
+                else:
+                    self.data_setup["case_study_mapper"] = CaseStudyMapper(
+                        path_to_data=f"{self.path_to_named_experiment}/data",
+                        path_to_instructions=f"{self.path_to_named_experiment}/instructions.txt"
+                    )
             else:
                 self._build()
-                fph = FingerPrintHandler({FINGERPRINT_EXPERIMENT: new_experiment_fingerprint}).to_file(
-                    fingerprint_location)
+                fph = FingerPrintHandler({FINGERPRINT_EXPERIMENT: new_experiment_fingerprint}).to_file(fingerprint_location)
                 fph.to_file(fingerprint_location)
         else:
             self.data_gen = init_data_generator(contract.data_source, path_to_project)
             self.policy_gen = init_policy_generator(contract.policy_source, path_to_project)
             self.policy_setup = asdict(contract.policy_setup)
             self.experiment = contract.experiment
-            print("=" * 20 + " Benchmark Init (done) " + "=" * 20)
+            print_footline("(Finished) Init Benchmark")
             if os.path.exists(fingerprint_location):
                 fph = FingerPrintHandler.from_file(fingerprint_location)
                 old_data_setup_fingerprint = fph.get_attr(FINGERPRINT_DATA)
@@ -146,17 +163,20 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         print("\n" + "=" * 20 + " Benchmark Build " + "=" * 20)
         try:
             if self.gen_mode == ExperimentType.Signature:
+                print(" ... Build Signature-based Setup")
                 construct_synthetic_experiment_sig(
                     self.experiment, self.path_to_named_experiment, self.data_setup, self.data_gen,
                     self.policy_setup, self.policy_gen, self.oracle, self.time_guard, self.seeds
                 )
             elif self.gen_mode == ExperimentType.Pattern:
+                print(" ... Build Pattern-based Setup")
                 construct_synthetic_experiment_pattern(
                     self.experiment, self.path_to_named_experiment,
                     self.data_setup, self.data_gen, self.oracle, self.time_guard, self.seeds
                 )
 
             elif self.gen_mode == ExperimentType.CaseStudy:
+                print(" ... Build Case Study Setup")
                 construct_case_study(self.data_gen, self.data_setup, self.path_to_named_experiment, self.oracle, self.time_out)
             else:
                 raise BenchmarkCreationFailed("Not implemented")
@@ -199,7 +219,9 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             self, tools: List[AbstractMonitorTemplate],
             parameters: dict[AnyStr, dict[AnyStr, Any]]
     ) -> pandas.DataFrame:
-        print("====== Run Experiments ======")
+        print("-" * 50)
+        print("="*15 + "   Run Experiments  " + "="*15)
+        print("-" * 50)
         settings_result = pd.DataFrame(columns=["Status", "Name", "Setting", "pre", "runtime", "post", "wall time", "max mem", "cpu"])
 
         if self.gen_mode == ExperimentType.CaseStudy:

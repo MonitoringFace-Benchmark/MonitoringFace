@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Any
 import requests
 
-from Infrastructure.constants import DOWNLOADER_ERR_MSG
+from Infrastructure.constants import DOWNLOADER_ERR_MSG, GIT_TOKEN
 
 
 class Downloader(ABC):
@@ -106,7 +106,11 @@ class MonitoringFaceDownloader(Downloader):
 
 def url_getter(url, addon, err) -> Optional[Any]:
     try:
-        response = requests.get(url + addon)
+        headers = {
+            "Authorization": f"Bearer {GIT_TOKEN}"
+        }
+
+        response = requests.get(url + addon, headers=headers)
         response.raise_for_status()
         contents = response.json()
         return contents

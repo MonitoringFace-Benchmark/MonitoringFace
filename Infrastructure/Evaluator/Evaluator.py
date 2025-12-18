@@ -57,13 +57,12 @@ class Evaluator:
             return
 
         tool_manager = ToolManager([
-            ("TimelyMon", "input_optims", BranchOrRelease.Branch),
-            ("TimelyMon", "development", BranchOrRelease.Branch),
+            #("TimelyMon", "input_optims", BranchOrRelease.Branch),
+            #("TimelyMon", "development", BranchOrRelease.Branch),
             ("MonPoly", "master", BranchOrRelease.Branch),
-            ("WhyMon", "main", BranchOrRelease.Branch),
+            #("WhyMon", "main", BranchOrRelease.Branch),
             #("EnfGuard", "enfguard", BranchOrRelease.Branch),
         ], self.path_to_project)
-        return
 
         data_setup = Patterns(
             trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None, linear=1, interval=None,
@@ -97,7 +96,7 @@ class Evaluator:
 
         init = CaseStudyBenchmarkContract(experiment_name="Nokia", case_study_name="Nokia")
 
-        init = SyntheticBenchmarkContract(
+        init1 = SyntheticBenchmarkContract(
             "testtest", DataGenerators.DATAGOLF, PolicyGenerators.MFOTLGENERATOR, policy_setup,
             SyntheticExperiment(num_operators=[2], num_fvs=[2], num_setting=[0, 1], num_data_set_sizes=[50])
         )
@@ -105,8 +104,8 @@ class Evaluator:
         monitor_manager = MonitorManager(
             tool_manager=tool_manager,
             monitors_to_build=[
-                ("TimelyMon", "TimelyMon 1", "development", {"worker": 1, "output_mode": 1}),
-                ("TimelyMon", "TimelyMon 6", "development", {"worker": 6, "output_mode": 1}),
+                #("TimelyMon", "TimelyMon 1", "development", {"worker": 1, "output_mode": 1}),
+                #("TimelyMon", "TimelyMon 6", "development", {"worker": 6, "output_mode": 1}),
                 ("MonPoly", "MonPoly", "master", {"replayer": "gen_data", "path_to_project": self.path_to_project}),
                 ("MonPoly", "VeriMon", "master", {"replayer": "gen_data", "verified": (), "path_to_project": self.path_to_project}),
                 #("WhyMon", "WhyMon", "main", {"replayer": "gen_data", "path_to_project": self.path_to_project}),
@@ -129,13 +128,15 @@ class Evaluator:
 
         benchmark = BenchmarkBuilder(
             init, self.path_to_project,
-            data_setup, ExperimentType.Signature,
+            data_setup, ExperimentType.CaseStudy,
             time_guarded,
-            ["TimelyMon 1", "TimelyMon 6", "MonPoly", "VeriMon"],
+            ["TimelyMon 1", "MonPoly", "VeriMon"],
             (oracle_manager, "VeriMonOracle")
         )
 
-        res = benchmark.run(monitor_manager.get_monitors(["TimelyMon 1", "TimelyMon 6", "VeriMon", "MonPoly"]), {})
+        return
+
+        res = benchmark.run(monitor_manager.get_monitors(["VeriMon", "MonPoly"]), {})
         print(res)
 
         x = self.export_to_structure(

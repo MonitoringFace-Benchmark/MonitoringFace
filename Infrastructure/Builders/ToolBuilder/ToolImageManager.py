@@ -56,7 +56,7 @@ class ToolImageManager(AbstractToolImageManager):
                 elif not current_version == version:
                     self._build_image()
                 else:
-                    print(f"Exists {self.name} - {self.branch}")
+                    print(f"    Exists {self.name} - {self.branch}")
         else:
             if not os.path.exists(self.path_to_archive):
                 os.mkdir(self.path_to_archive)

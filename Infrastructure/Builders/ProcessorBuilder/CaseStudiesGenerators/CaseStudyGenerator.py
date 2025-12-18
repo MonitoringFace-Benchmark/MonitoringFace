@@ -8,7 +8,9 @@ from Infrastructure.constants import WORKDIR_KEY, WORKDIR_VAL, VOLUMES_KEY
 
 class CaseStudyGenerator(CaseStudyTemplate):
     def __init__(self, name, path_to_build):
+        print(f"-> Attempting to build Case Study:")
         self.image = ImageManager(name, Processor.CaseStudies, path_to_build)
+        print("    -> (Success)")
 
     def run_generator(self, generic_contract, time_on=None, time_out=None):
         valid_fields = {f.name for f in fields(CaseStudyContract)}

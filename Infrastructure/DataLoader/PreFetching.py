@@ -1,6 +1,8 @@
 import requests
 from abc import ABC, abstractmethod
 
+from Infrastructure.constants import GIT_TOKEN
+
 
 class RepoFetcher(ABC):
     @abstractmethod
@@ -65,10 +67,13 @@ class BitBucketFetcher(RepoFetcher):
 class GitHubFetcher(RepoFetcher):
     def __init__(self, owner, repo):
         self.url = f"https://api.github.com/repos/{owner}/{repo}"
+        self.header = {
+            "Authorization": f"Bearer {GIT_TOKEN}"
+        }
 
     def get_branches(self):
         try:
-            response = requests.get(self.url + "/branches")
+            response = requests.get(self.url + "/branches", headers=self.header)
             response.raise_for_status()
             branches_data = response.json()
             branch_names = [branch['name'] for branch in branches_data]
@@ -79,7 +84,7 @@ class GitHubFetcher(RepoFetcher):
 
     def get_releases(self):
         try:
-            response = requests.get(self.url + "/releases")
+            response = requests.get(self.url + "/releases", headers=self.header)
             response.raise_for_status()
             releases_data = response.json()
             return releases_data
@@ -89,7 +94,7 @@ class GitHubFetcher(RepoFetcher):
 
     def get_hash(self, identifier):
         try:
-            response = requests.get(self.url + f"/branches/{identifier}")
+            response = requests.get(self.url + f"/branches/{identifier}", headers=self.header)
             response.raise_for_status()
             branch_data = response.json()
             return branch_data['commit']['sha']

@@ -1,6 +1,8 @@
 import importlib
 from pathlib import Path
 
+from Infrastructure.printing import print_headline, print_footline
+
 
 def _discover_monitors():
     monitors = {}
@@ -40,12 +42,27 @@ def identifier_to_monitor(tool_manager, identifier, branch, name, params):
 
 class MonitorManager:
     def __init__(self, tool_manager, monitors_to_build):
+        print_headline("(Starting) Building MonitorManager")
         self.monitors = {}
+        failed_builds = []
         for (identifier, name, branch, params) in monitors_to_build:
-            self.monitors[name] = identifier_to_monitor(
-                tool_manager=tool_manager, identifier=identifier,
-                branch=branch, name=name, params=params
-            )
+            try:
+                print(f"-> Attempting to construct Monitor {identifier} - {branch}")
+                self.monitors[name] = identifier_to_monitor(
+                    tool_manager=tool_manager, identifier=identifier,
+                    branch=branch, name=name, params=params
+                )
+                print(f"    -> (Success)")
+            except Exception:
+                print(f"-> (Failure)")
+                failed_builds += [f"{identifier} - {branch}"]
+
+        if failed_builds:
+            print(f"\nFailed to Construct:")
+            for fail in failed_builds:
+                print(f" - {fail}")
+
+        print_footline("(Finished) Building MonitorManager")
 
     def get_monitor(self, name):
         return self.monitors.get(name)

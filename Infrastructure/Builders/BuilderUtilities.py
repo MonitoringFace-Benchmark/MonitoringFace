@@ -49,6 +49,10 @@ def image_exists(name):
         return False
 
 
+class ImageBuildException(Exception):
+    pass
+
+
 def image_building(image_name, build_dir, args=None):
     client = docker.from_env()
     try:
@@ -69,12 +73,12 @@ def image_building(image_name, build_dir, args=None):
             elif 'status' in chunk:
                 msg = chunk.get('progress', chunk['status'])
                 print(msg)
+
         if error_in_build:
-            print(f" Failed to built image: {image_name}")
-            return False
-        else:
-            print(f" Successfully built image: {image_name}")
-            return True
+            raise ImageBuildException(f" Failed to built image: {image_name}")
+
+        print(f" Successfully built image: {image_name}")
+        return True
     except BuildError as e:
         print(f" Docker build failed: {e}")
         return False

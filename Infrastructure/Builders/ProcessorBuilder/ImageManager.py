@@ -51,7 +51,7 @@ class ImageManager(AbstractImageManager):
                 elif not current_version == version:
                     self._build_image()
                 else:
-                    print(f"Exists {self.identifier} - {self.name}")
+                    print(f"    Exists {self.identifier} - {self.name}")
         else:
             if not os.path.exists(self.path_archive):
                 os.mkdir(self.path_archive)

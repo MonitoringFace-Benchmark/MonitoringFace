@@ -19,3 +19,12 @@ FINGERPRINT_DATA = "fingerprint_data"
 FINGERPRINT_EXPERIMENT = "fingerprint_experiment"
 
 PLACEHOLDER_EVENT = "Placeholder()"
+
+BENCHMARK_BUILDING_OFFSET = (" " * 8)
+
+GIT_TOKEN = "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"
+
+
+# Pretty Printing
+LENGTH = 80
+HEADER_ROW = "=" * LENGTH
