@@ -1,7 +1,7 @@
 import requests
 from abc import ABC, abstractmethod
 
-from Infrastructure.constants import GIT_TOKEN
+from Infrastructure.constants import AUTH_TOKEN
 
 
 class RepoFetcher(ABC):
@@ -67,7 +67,7 @@ class BitBucketFetcher(RepoFetcher):
 class GitHubFetcher(RepoFetcher):
     def __init__(self, owner, repo):
         self.url = f"https://api.github.com/repos/{owner}/{repo}"
-        self.header = {"Authorization": f"Bearer {GIT_TOKEN}"} if GIT_TOKEN != "" else None
+        self.header = {"Authorization": f"Bearer {AUTH_TOKEN}"} if AUTH_TOKEN != "" else None
 
     def get_branches(self):
         try:

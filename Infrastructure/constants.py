@@ -22,7 +22,7 @@ PLACEHOLDER_EVENT = "Placeholder()"
 
 BENCHMARK_BUILDING_OFFSET = (" " * 8)
 
-GIT_TOKEN = ""
+AUTH_TOKEN = ""
 
 
 # Pretty Printing
