@@ -9,7 +9,8 @@ from Infrastructure.DataTypes.Types.custome_type import Processor, processor_to_
 from Infrastructure.Builders.ProcessorBuilder.AbstractImageManager import AbstractImageManager
 from Infrastructure.Builders.BuilderUtilities import image_exists, image_building, run_image, to_prop_file
 from Infrastructure.Monitors.MonitorExceptions import BuildException
-from Infrastructure.constants import IMAGE_POSTFIX
+from Infrastructure.constants import (IMAGE_POSTFIX, VERSION_KEY, META_FILE_VALUE, PROP_FILES_VALUE,
+                                      GIT_KEY, OWNER_KEY, BRANCH_KEY, REPO_KEY, DOCKERFILE_VALUE)
 
 
 def to_file(file, content):
@@ -40,13 +41,13 @@ class ImageManager(AbstractImageManager):
         if self.location == Location.Unavailable:
             raise BuildException(f"{self.identifier} - {self.name} does not exists either Local or Remote")
         elif self.location == Location.Local:
-            in_build = os.path.exists(f"{self.path_to_build}/meta.properties")
+            in_build = os.path.exists(f"{self.path_to_build}{META_FILE_VALUE}")
             if not in_build:
                 self._build_image()
             else:
-                current_version = PropertiesHandler.from_file(f"{self.path_to_build}/meta.properties").get_attr("version")
-                fl = PropertiesHandler.from_file(self.path_archive + f"/tool.properties")
-                version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo"), self.path_to_infra).get_hash(fl.get_attr("branch"))
+                current_version = PropertiesHandler.from_file(self.path_to_build + META_FILE_VALUE).get_attr(VERSION_KEY)
+                fl = PropertiesHandler.from_file(self.path_archive + PROP_FILES_VALUE)
+                version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY), fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(fl.get_attr(BRANCH_KEY))
                 if not image_exists(self.image_name):
                     self._build_image()
                 elif not current_version == version:
@@ -69,10 +70,10 @@ class ImageManager(AbstractImageManager):
             content = self.downloader.get_content(self.name)
             if content is None:
                 raise BuildException("Cannot fetch data from Repository")
-            to_file(self.path_archive + "/Dockerfile", content)
-        fl = PropertiesHandler.from_file(self.path_archive + f"/tool.properties")
-        version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo"), self.path_to_infra).get_hash(fl.get_attr("branch"))
-        to_prop_file(f"{self.path}/{self.identifier}/{self.name}", "/meta.properties", {"version": version})
+            to_file(self.path_archive + DOCKERFILE_VALUE, content)
+        fl = PropertiesHandler.from_file(self.path_archive + PROP_FILES_VALUE)
+        version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY), fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(fl.get_attr(BRANCH_KEY))
+        to_prop_file(f"{self.path}/{self.identifier}/{self.name}", META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, self.path_archive)
 
     def run(self, generic_contract: Dict[AnyStr, Any], time_on=None, time_out=None):

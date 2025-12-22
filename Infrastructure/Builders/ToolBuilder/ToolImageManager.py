@@ -7,7 +7,9 @@ from Infrastructure.Builders.BuilderUtilities import image_building, run_image, 
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.Monitors.MonitorExceptions import BuildException
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
-from Infrastructure.constants import IMAGE_POSTFIX, BUILD_ARG_GIT_BRANCH, VOLUMES_KEY, COMMAND_KEY, WORKDIR_KEY
+from Infrastructure.constants import (IMAGE_POSTFIX, BUILD_ARG_GIT_BRANCH, VOLUMES_KEY, COMMAND_KEY, WORKDIR_KEY,
+                                      DOCKERFILE_VALUE, DOCKERFILE_KEY, PROP_FILES_VALUE, PROP_FILES_KEY, META_FILE_VALUE,
+                                      GIT_KEY, OWNER_KEY, REPO_KEY, VERSION_KEY)
 
 
 def to_file(path, name, content):
@@ -41,7 +43,7 @@ class ToolImageManager(AbstractToolImageManager):
         if self.location == Location.Unavailable:
             raise BuildException(f"{self.name} does not exists either Local or Remote")
         elif self.location == Location.Local:
-            in_build = os.path.exists(f"{self.path}/meta.properties")
+            in_build = os.path.exists(f"{self.path}{META_FILE_VALUE}")
             if not in_build:
                 self._build_image()
             elif not image_exists(self.image_name):
@@ -49,14 +51,13 @@ class ToolImageManager(AbstractToolImageManager):
                 print(f"Dockerfile exists but image missing for {self.name} - {self.branch}, building...")
                 self._build_image()
             else:
-                current_version = PropertiesHandler.from_file(f"{self.path}/meta.properties").get_attr("version")
-                fl = PropertiesHandler.from_file(self.path_to_archive + f"/tool.properties")
-                version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo"), self.path_to_infra).get_hash(self.branch)
+                current_version = PropertiesHandler.from_file(f"{self.path}{META_FILE_VALUE}").get_attr(VERSION_KEY)
+                fl = PropertiesHandler.from_file(self.path_to_archive + PROP_FILES_VALUE)
+                version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY), fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(self.branch)
                 if not image_exists(self.image_name):
                     self._build_image()
-                elif not current_version == version:
-                    if not release:
-                        self._build_image()
+                elif (not current_version == version) and (not release):
+                    self._build_image()
                 else:
                     print(f"    Exists {self.name} - {self.branch}")
         else:
@@ -77,11 +78,11 @@ class ToolImageManager(AbstractToolImageManager):
             content = MonitoringFaceDownloader().get_content(self.name)
             if content is None:
                 raise BuildException("Cannot fetch data from Repository")
-            to_file(self.path_to_archive, "/tool.properties", content["tool.properties"])
-            to_file(self.path_to_archive, "/Dockerfile", content["Dockerfile"])
-        fl = PropertiesHandler.from_file(self.path_to_archive + f"/tool.properties")
-        version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(self.branch)
-        to_prop_file(self.path, "/meta.properties", {"version": version})
+            to_file(self.path_to_archive, PROP_FILES_VALUE, content[PROP_FILES_KEY])
+            to_file(self.path_to_archive, DOCKERFILE_VALUE, content[DOCKERFILE_KEY])
+        fl = PropertiesHandler.from_file(self.path_to_archive + PROP_FILES_VALUE)
+        version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY), fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(self.branch)
+        to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, self.path_to_archive, self.args)
 
     def run(self, path_to_data, parameters, time_on=None, time_out=None):

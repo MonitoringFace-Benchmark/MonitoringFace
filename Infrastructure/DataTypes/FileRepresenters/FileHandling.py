@@ -22,4 +22,3 @@ def get_auth_token(path_to_infra: AnyStr) -> Optional[AnyStr]:
         return None
     auth_token_path = f"{environment_path}/auth_token"
     return from_file(auth_token_path)
-
