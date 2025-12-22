@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Any
+from typing import Optional, Any, AnyStr
 import requests
 
-from Infrastructure.constants import DOWNLOADER_ERR_MSG, AUTH_TOKEN
+from Infrastructure.DataTypes.FileRepresenters.FileHandling import get_auth_token
+from Infrastructure.constants import DOWNLOADER_ERR_MSG
 
 
 class Downloader(ABC):
@@ -104,9 +105,10 @@ class MonitoringFaceDownloader(Downloader):
         return res
 
 
-def url_getter(url, addon, err) -> Optional[Any]:
+def url_getter(url, addon, err, path_to_infra: AnyStr) -> Optional[Any]:
     try:
-        headers = {"Authorization": f"Bearer {AUTH_TOKEN}"} if AUTH_TOKEN != "" else None
+        auth_token = get_auth_token(path_to_infra=path_to_infra)
+        headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
         response = requests.get(url + addon, headers=headers)
         response.raise_for_status()
         contents = response.json()

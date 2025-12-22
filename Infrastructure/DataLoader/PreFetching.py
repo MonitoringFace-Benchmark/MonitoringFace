@@ -1,7 +1,7 @@
 import requests
 from abc import ABC, abstractmethod
 
-from Infrastructure.constants import AUTH_TOKEN
+from Infrastructure.DataTypes.FileRepresenters.FileHandling import get_auth_token
 
 
 class RepoFetcher(ABC):
@@ -65,9 +65,10 @@ class BitBucketFetcher(RepoFetcher):
 
 
 class GitHubFetcher(RepoFetcher):
-    def __init__(self, owner, repo):
+    def __init__(self, owner, repo, path_to_infra):
         self.url = f"https://api.github.com/repos/{owner}/{repo}"
-        self.header = {"Authorization": f"Bearer {AUTH_TOKEN}"} if AUTH_TOKEN != "" else None
+        auth_token = get_auth_token(path_to_infra=path_to_infra)
+        self.header = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
 
     def get_branches(self):
         try:
@@ -140,10 +141,10 @@ class GitLabFetcher(RepoFetcher):
             return None
 
 
-def init_repo_fetcher(platform, owner, repo):
+def init_repo_fetcher(platform, owner, repo, path_to_infra):
     if platform == "GitLab":
         return GitLabFetcher(owner, repo)
     elif platform == "GitHub":
-        return GitHubFetcher(owner, repo)
+        return GitHubFetcher(owner, repo, path_to_infra)
     else:
         return BitBucketFetcher(owner, repo)

@@ -58,6 +58,7 @@ def construct_synthetic_experiment_pattern(
                 if gen_seed:
                     data_setup["seed"] = gen_seed
 
+            print(f"    Build {num_path}")
             if not time_guard.time_guarded:
                 unguarded_synthetic_experiment_pattern(num_path, experiment.num_data_set_sizes,
                                                        data_source, data_setup, oracle, None)
@@ -77,6 +78,7 @@ def guarded_synthetic_experiment_pattern(
     guard = time_guard.guard
 
     num_data_set_sizes = [(l, str(l)) for l in num_data_set_sizes]
+    i = 1
 
     while True:
         sfh = ScratchFolderHandler(num_path)
@@ -84,6 +86,9 @@ def guarded_synthetic_experiment_pattern(
         time_out_in_for_loop = guarded_synthetic_experiment_inner(
             num_path, data_source, data_setup, num_data_set_sizes, oracle, time_on, time_out, guard_type, guard
         )
+
+        print("        Attempting policy {i}")
+        i += 1
 
         if not time_out_in_for_loop:
             sfh.remove_folder()
@@ -128,6 +133,7 @@ def construct_synthetic_experiment_sig(
                     if gen_seed:
                         data_setup["seed"] = gen_seed
 
+                print(f"    Build {num_path}")
                 if not time_guard.time_guarded:
                     unguarded_synthetic_experiment_sig(num_path, num_ops, num_fv, policy_setup, policy_source,
                                                        data_source, data_setup, experiment.num_data_set_sizes.copy(),
@@ -150,6 +156,7 @@ def guarded_synthetic_experiment_sig(
 
     num_data_set_sizes = [(l, str(l)) for l in num_data_set_sizes]
 
+    i = 1
     while True:
         synthetic_formula_guard(num_path, num_ops, num_fv, formula_setup, formula_source, data_source, data_setup)
         sfh = ScratchFolderHandler(num_path)
@@ -157,6 +164,9 @@ def guarded_synthetic_experiment_sig(
         time_out_in_for_loop = guarded_synthetic_experiment_inner(
             num_path, data_source, data_setup, num_data_set_sizes, oracle, time_on, time_out, guard_type, guard
         )
+
+        print("        Attempting policy {i}")
+        i += 1
 
         if not time_out_in_for_loop:
             sfh.remove_folder()

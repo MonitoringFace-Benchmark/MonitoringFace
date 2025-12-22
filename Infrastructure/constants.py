@@ -22,9 +22,6 @@ PLACEHOLDER_EVENT = "Placeholder()"
 
 BENCHMARK_BUILDING_OFFSET = (" " * 8)
 
-AUTH_TOKEN = ""
-
-
 # Pretty Printing
 LENGTH = 80
 HEADER_ROW = "=" * LENGTH

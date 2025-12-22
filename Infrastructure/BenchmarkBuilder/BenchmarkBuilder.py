@@ -155,8 +155,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             else:
                 self._build()
                 new_data_setup_fingerprint = data_class_to_finger_print(data_setup)
-                fph = FingerPrintHandler(
-                    {FINGERPRINT_DATA: new_data_setup_fingerprint, FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
+                fph = FingerPrintHandler({FINGERPRINT_DATA: new_data_setup_fingerprint, FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
                 fph.to_file(fingerprint_location)
 
     def _build(self):

@@ -84,29 +84,3 @@ def parse(line: AnyStr) -> (AnyStr, list[list[AnyStr]]):
     prefix, postfix = line.split(":")
     tuples = [list(match.split(',')) for match in re.findall(r'\(([^)]+)\)', postfix)]
     return prefix, tuples
-
-
-if __name__ == "__main__":
-    d = {"worker": 6, "output_mode": 1, "output_file": "scratch/test.txt"}
-    timely = ToolImageManager("TimelyMon", "development", False,
-                              "/Infrastructure/build")
-
-    tm = TimelyMon(timely, "timely", d)
-    tm.pre_processing(
-        "/Users/krq770/Desktop/MonitoringFace/Infrastructure/experiments/Nokia/data",
-        data_file="Trace/trace.csv",
-        formula_file="Formula/formula_delete.mfotl",
-        signature_file="Signature/sig.sig"
-    )
-
-    start_time = time.time()
-    (x, y) = tm.run_offline(None, 300)
-    end_time = time.time()
-
-    print(x)
-    print(y)
-
-    execution_time = end_time - start_time
-    print(f"Function executed in {execution_time:.4f} seconds")
-
-    print(tm.post_processing(x))

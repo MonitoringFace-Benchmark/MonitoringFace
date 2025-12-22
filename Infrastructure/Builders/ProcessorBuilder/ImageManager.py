@@ -25,6 +25,7 @@ class ImageManager(AbstractImageManager):
         self.processor = proc
         self.identifier = processor_to_identifier(proc)
         self.path = path_to_project_inner + "/Infrastructure/build"
+        self.path_to_infra = path_to_project_inner + "/Infrastructure"
         self.path_archive = path_to_project_inner + f"/Archive/{self.identifier}/{self.name}"
         self.image_name = f"{name.lower()}_{self.identifier.lower()}{IMAGE_POSTFIX}"
 
@@ -45,7 +46,7 @@ class ImageManager(AbstractImageManager):
             else:
                 current_version = PropertiesHandler.from_file(f"{self.path_to_build}/meta.properties").get_attr("version")
                 fl = PropertiesHandler.from_file(self.path_archive + f"/tool.properties")
-                version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(fl.get_attr("branch"))
+                version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo"), self.path_to_infra).get_hash(fl.get_attr("branch"))
                 if not image_exists(self.image_name):
                     self._build_image()
                 elif not current_version == version:
@@ -70,7 +71,7 @@ class ImageManager(AbstractImageManager):
                 raise BuildException("Cannot fetch data from Repository")
             to_file(self.path_archive + "/Dockerfile", content)
         fl = PropertiesHandler.from_file(self.path_archive + f"/tool.properties")
-        version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(fl.get_attr("branch"))
+        version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo"), self.path_to_infra).get_hash(fl.get_attr("branch"))
         to_prop_file(f"{self.path}/{self.identifier}/{self.name}", "/meta.properties", {"version": version})
         return image_building(self.image_name, self.path_archive)
 

@@ -7,6 +7,7 @@ class ToolManager:
     def __init__(self, tools_to_build, path_to_project):
         print_headline("(Starting) Building ToolManager")
         path_to_build = path_to_project + f"/Infrastructure/build"
+        path_to_infra = path_to_project + "/Infrastructure"
         path_to_archive = path_to_project + f"/Archive"
 
         self.images = {}
@@ -14,7 +15,7 @@ class ToolManager:
         for (tool, branch, release) in tools_to_build:
             try:
                 print(f"-> Attempting to build Image {tool} - {branch}")
-                self.images[(tool, branch)] = ToolImageManager(tool, branch, release, path_to_build, path_to_archive)
+                self.images[(tool, branch)] = ToolImageManager(tool, branch, release, path_to_build, path_to_archive, path_to_infra)
                 print(f"    -> (Success)")
             except ImageBuildException:
                 print(f"-> (Failure)")

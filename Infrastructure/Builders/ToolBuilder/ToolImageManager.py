@@ -16,11 +16,12 @@ def to_file(path, name, content):
 
 
 class ToolImageManager(AbstractToolImageManager):
-    def __init__(self, name, branch, release, path_to_repo, path_to_archive):
+    def __init__(self, name, branch, release, path_to_repo, path_to_archive, path_to_infra):
         self.name = name
         self.branch = branch
         self.release = release
         self.path_to_archive = f"{path_to_archive}/Tools/{self.name}"
+        self.path_to_infra = path_to_infra
         self.image_name = f"{self.name.lower()}_{self.branch.lower()}{IMAGE_POSTFIX}"
 
         path_to_monitor = f"{path_to_repo}/Monitor"
@@ -50,11 +51,12 @@ class ToolImageManager(AbstractToolImageManager):
             else:
                 current_version = PropertiesHandler.from_file(f"{self.path}/meta.properties").get_attr("version")
                 fl = PropertiesHandler.from_file(self.path_to_archive + f"/tool.properties")
-                version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo")).get_hash(self.branch)
+                version = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo"), self.path_to_infra).get_hash(self.branch)
                 if not image_exists(self.image_name):
                     self._build_image()
                 elif not current_version == version:
-                    self._build_image()
+                    if not release:
+                        self._build_image()
                 else:
                     print(f"    Exists {self.name} - {self.branch}")
         else:
