@@ -1,6 +1,9 @@
 import importlib
+from abc import ABC
 from pathlib import Path
+from typing import AnyStr, List
 
+from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 from Infrastructure.printing import print_headline, print_footline
 
 
@@ -40,6 +43,20 @@ def identifier_to_monitor(tool_manager, identifier, branch, name, params):
     return monitor_class(tool_manager.get_image(identifier, branch), name, params)
 
 
+class GetMonitorsReturnType(ABC):
+    pass
+
+
+class ValidReturnType(GetMonitorsReturnType):
+    def __init__(self, tool: AbstractMonitorTemplate):
+        self.tool = tool
+
+
+class InvalidReturnType(GetMonitorsReturnType):
+    def __init__(self, name: AnyStr):
+        self.name = name
+
+
 class MonitorManager:
     def __init__(self, tool_manager, monitors_to_build):
         print_headline("(Starting) Building MonitorManager")
@@ -67,5 +84,12 @@ class MonitorManager:
     def get_monitor(self, name):
         return self.monitors.get(name)
 
-    def get_monitors(self, names):
-        return [self.get_monitor(name) for name in names]
+    def get_monitors(self, names) -> List[GetMonitorsReturnType]:
+        res = []
+        for name in names:
+            raw = self.get_monitor(name)
+            if raw:
+                res.append(ValidReturnType(raw))
+            else:
+                res.append(InvalidReturnType(name))
+        return res

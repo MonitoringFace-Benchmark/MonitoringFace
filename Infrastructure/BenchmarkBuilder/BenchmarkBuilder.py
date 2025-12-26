@@ -31,6 +31,7 @@ from Infrastructure.DataTypes.Types.custome_type import ExperimentType
 
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate, run_monitor
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
+from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
 from Infrastructure.constants import FINGERPRINT_DATA, FINGERPRINT_EXPERIMENT
 from Infrastructure.printing import print_headline, print_footline
 
@@ -214,7 +215,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         return seed_dict
 
     def run(
-            self, tools: List[AbstractMonitorTemplate],
+            self, tools: List[GetMonitorsReturnType],
             parameters: dict[AnyStr, dict[AnyStr, Any]]
     ) -> pandas.DataFrame:
         print("-" * 50)
@@ -226,12 +227,21 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             path_to_folder = f"{self.path_to_named_experiment}/data"
             sfh = ScratchFolderHandler(path_to_folder)
             for (num, (data, formula, sig)) in self.data_setup["case_study_mapper"].iterate_settings():
+                setting_id = ""
                 for tool in tools:
-                    run_tools(
-                        settings_result=settings_result, tool=tool, time_guard=self.time_guard,
-                        oracle=self.oracle, path_to_folder=path_to_folder,
-                        data_file=data, signature_file=sig, formula_file=formula
-                    )
+                    if isinstance(tool, InvalidReturnType):
+                        print_headline(f"Missing {tool.name}")
+                        settings_result.loc[len(settings_result)] = [
+                            Status.MI, tool.name, setting_id, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
+                        ]
+                        print_headline("")
+                    elif isinstance(tool, ValidReturnType):
+                        run_tools(settings_result=settings_result, tool=tool.tool, time_guard=self.time_guard,
+                                  oracle=self.oracle, path_to_folder=path_to_folder, setting_id=setting_id,
+                                  data_file=data, signature_file=sig, formula_file=formula
+                        )
+                    else:
+                        raise NotImplemented(f"Not implemented for object {tool}")
                 sfh.clean_up_folder()
             sfh.remove_folder()
             return settings_result
@@ -242,14 +252,23 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
         for path_to_folder in path_generator(self.gen_mode, self.experiment, self.path_to_named_experiment):
             sfh = ScratchFolderHandler(path_to_folder)
             for num_len in self.experiment.num_data_set_sizes:
+                setting_id = ""
                 data_file = f"data_{num_len}.csv"
                 for tool in tools:
-                    print(path_to_folder)
-                    run_tools(
-                        settings_result=settings_result, tool=tool, time_guard=self.time_guard,
-                        oracle=self.oracle, path_to_folder=path_to_folder,
-                        data_file=data_file, signature_file=signature_file, formula_file=formula_file
-                    )
+                    if isinstance(tool, InvalidReturnType):
+                        print_headline(f"Missing {tool.name}")
+                        settings_result.loc[len(settings_result)] = [
+                            Status.MI, tool.name, setting_id, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
+                        ]
+                        print_headline("")
+                    elif isinstance(tool, ValidReturnType):
+                        run_tools(
+                            settings_result=settings_result, tool=tool.tool, time_guard=self.time_guard,
+                            oracle=self.oracle, path_to_folder=path_to_folder, setting_id=setting_id,
+                            data_file=data_file, signature_file=signature_file, formula_file=formula_file
+                        )
+                    else:
+                        raise NotImplemented(f"Not implemented for object {tool}")
                     sfh.clean_up_folder()
             sfh.remove_folder()
         return settings_result
@@ -260,10 +279,10 @@ class Status(Enum):
     TO = "Time out"
     TE = "Tool Error"
     RE = "Result Error"
+    MI = "Missing"
 
 
-def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file):
-    setting_id = ""
+def run_tools(settings_result, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file):
     try:
         prep, runtime, prop = run_monitor(
             tool, time_guard, path_to_folder, data_file,
@@ -274,7 +293,7 @@ def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_fi
         if stats is not None:
             wall_time, max_mem, cpu = stats
         else:
-            wall_time, max_mem, cpu = None, None, None
+            wall_time, max_mem, cpu = pd.NA, pd.NA, pd.NA
 
         settings_result.loc[len(settings_result)] = [
             Status.OK, tool.name, setting_id, prep, runtime, prop,
@@ -284,15 +303,13 @@ def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_fi
     except TimedOut as e:
         print(f"Monitor {tool.name} timed out: {e}")
         settings_result.loc[len(settings_result)] = [
-            Status.TO, tool.name, setting_id, None, None, None,
-            None, None, None
+            Status.TO, tool.name, setting_id, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
         ]
         return settings_result
     except ToolException as e:
         print(f"ToolException for monitor {tool.name}: {e}")
         settings_result.loc[len(settings_result)] = [
-            Status.TE, tool.name, setting_id, None, None, None,
-            None, None, None
+            Status.TE, tool.name, setting_id, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
         ]
         return settings_result
     except ResultErrorException as e:
@@ -301,7 +318,7 @@ def run_tools(settings_result, tool, time_guard, oracle, path_to_folder, data_fi
         if stats is not None:
             wall_time, max_mem, cpu = stats
         else:
-            wall_time, max_mem, cpu = None, None, None
+            wall_time, max_mem, cpu = pd.NA, pd.NA, pd.NA
 
         (prep, runtime, prop) = e.args[0]
         settings_result.loc[len(settings_result)] = [

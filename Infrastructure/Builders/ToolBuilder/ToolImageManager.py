@@ -53,7 +53,8 @@ class ToolImageManager(AbstractToolImageManager):
             else:
                 current_version = PropertiesHandler.from_file(f"{self.path}{META_FILE_VALUE}").get_attr(VERSION_KEY)
                 fl = PropertiesHandler.from_file(self.path_to_archive + PROP_FILES_VALUE)
-                version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY), fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(self.branch)
+                version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY),
+                                            fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(self.branch)
                 if not image_exists(self.image_name):
                     self._build_image()
                 elif (not current_version == version) and (not release):
@@ -81,7 +82,8 @@ class ToolImageManager(AbstractToolImageManager):
             to_file(self.path_to_archive, PROP_FILES_VALUE, content[PROP_FILES_KEY])
             to_file(self.path_to_archive, DOCKERFILE_VALUE, content[DOCKERFILE_KEY])
         fl = PropertiesHandler.from_file(self.path_to_archive + PROP_FILES_VALUE)
-        version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY), fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(self.branch)
+        version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY),
+                                    fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(self.branch)
         to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, self.path_to_archive, self.args)
 

@@ -47,7 +47,8 @@ class ImageManager(AbstractImageManager):
             else:
                 current_version = PropertiesHandler.from_file(self.path_to_build + META_FILE_VALUE).get_attr(VERSION_KEY)
                 fl = PropertiesHandler.from_file(self.path_archive + PROP_FILES_VALUE)
-                version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY), fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(fl.get_attr(BRANCH_KEY))
+                version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY),
+                                            fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(fl.get_attr(BRANCH_KEY))
                 if not image_exists(self.image_name):
                     self._build_image()
                 elif not current_version == version:
@@ -72,7 +73,8 @@ class ImageManager(AbstractImageManager):
                 raise BuildException("Cannot fetch data from Repository")
             to_file(self.path_archive + DOCKERFILE_VALUE, content)
         fl = PropertiesHandler.from_file(self.path_archive + PROP_FILES_VALUE)
-        version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY), fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(fl.get_attr(BRANCH_KEY))
+        version = init_repo_fetcher(fl.get_attr(GIT_KEY), fl.get_attr(OWNER_KEY),
+                                    fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(fl.get_attr(BRANCH_KEY))
         to_prop_file(f"{self.path}/{self.identifier}/{self.name}", META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, self.path_archive)
 

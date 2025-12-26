@@ -4,6 +4,7 @@ from typing import Dict, AnyStr, Any
 
 from Infrastructure.Builders.ToolBuilder import ToolImageManager
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
+from Infrastructure.printing import print_headline
 
 
 class AbstractMonitorTemplate(ABC):
@@ -44,8 +45,7 @@ class AbstractMonitorTemplate(ABC):
 def run_monitor(mon: AbstractMonitorTemplate, guarded,
                 path_to_folder: AnyStr, data_file: AnyStr,
                 signature_file: AnyStr, formula_file: AnyStr, oracle=None):
-    print("\n" + "="*75)
-    print(mon.name)
+    print_headline(f"Run {mon.name}")
     start = time.perf_counter()
     mon.pre_processing(path_to_folder, data_file, signature_file, formula_file)
     end = time.perf_counter()
@@ -73,7 +73,7 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
             raise ResultErrorException((postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
 
     print(postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed)
-    print("="*75 + "\n")
+    print_headline("")
     return preprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed
 
 
