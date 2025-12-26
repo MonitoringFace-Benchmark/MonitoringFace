@@ -258,9 +258,6 @@ Examples:
             raise ValueError(f"The configuration File {name} is unavailable local and remote")
         elif location == Location.Remote:
             br.get_remote_config(path_to_archive_benchmark=path_to_archive_benchmark, name=name)
-        else:
-            print("Local")
-        return
 
         # Detect if suite or single experiment
         is_suite = args.suite or self._is_suite_config(f"{path_to_archive_benchmark}/{name}")
