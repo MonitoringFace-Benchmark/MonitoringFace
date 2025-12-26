@@ -241,9 +241,12 @@ Examples:
             argv: Command-line arguments (defaults to sys.argv)
         """
         args = self.parser.parse_args(argv)
+        print(args)
         
         # Validate config file exists
         if not os.path.exists(args.config):
+            # todo check local archive else download from remote archive
+
             print(f"✗ Configuration file not found: {args.config}", file=sys.stderr)
             sys.exit(1)
         

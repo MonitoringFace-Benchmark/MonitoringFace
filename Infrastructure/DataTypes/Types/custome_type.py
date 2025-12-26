@@ -19,7 +19,8 @@ class Processor(Enum):
     PolicyGenerators = 3,
     PolicyConverters = 4,
     CaseStudies = 5,
-    GeneralUtilities = 6
+    Benchmark = 6,
+    GeneralUtilities = 7
 
 
 def processor_to_identifier(p: Processor) -> AnyStr:
@@ -33,5 +34,7 @@ def processor_to_identifier(p: Processor) -> AnyStr:
         return "PolicyConverters"
     elif p == Processor.CaseStudies:
         return "CaseStudies"
+    elif p == Processor.Benchmark:
+        return "Benchmark"
     else:
         return "GeneralUtilities"

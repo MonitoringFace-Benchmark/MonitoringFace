@@ -10,6 +10,9 @@ class Downloader(ABC):
     err = DOWNLOADER_ERR_MSG
     url = "https://api.github.com/repos/MonitoringFace-Benchmark/MonitoringFace/contents/Archive"
 
+    def __init__(self, path_to_infra):
+        self.path_to_infra = path_to_infra
+
     @abstractmethod
     def get_all_names(self):
         pass
@@ -20,87 +23,99 @@ class Downloader(ABC):
 
 
 class DataGeneratorDownloader(Downloader):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, path_to_infra):
+        super().__init__(path_to_infra)
 
     def get_all_names(self):
         return url_dir_getter(self.url, "/DataGenerators", self.err)
 
     def get_content(self, name):
-        i = url_getter(self.url, f"/DataGenerators/{name}", f"Data generator {name} is not reachable")[0]
+        i = url_getter(self.url, f"/DataGenerators/{name}", f"Data generator {name} is not reachable", self.path_to_infra)[0]
         return requests.get(i["download_url"]).content.decode()
 
 
 class DataConverterDownloader(Downloader):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, path_to_infra):
+        super().__init__(path_to_infra)
 
     def get_all_names(self):
         return url_dir_getter(self.url, "/DataConverters", self.err)
 
     def get_content(self, name):
-        i = url_getter(self.url, f"/DataConverters/{name}", f"Data converter {name} is not reachable")[0]
+        i = url_getter(self.url, f"/DataConverters/{name}", f"Data converter {name} is not reachable", self.path_to_infra)[0]
         return requests.get(i["download_url"]).content.decode()
 
 
 class PolicyGeneratorDownloader(Downloader):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, path_to_infra):
+        super().__init__(path_to_infra)
 
     def get_all_names(self):
         return url_dir_getter(self.url, "/PolicyGenerators", self.err)
 
     def get_content(self, name):
-        i = url_getter(self.url, f"/PolicyGenerators/{name}", f"Policy generator {name} is not reachable")[0]
+        i = url_getter(self.url, f"/PolicyGenerators/{name}", f"Policy generator {name} is not reachable", self.path_to_infra)[0]
         return requests.get(i["download_url"]).content.decode()
 
 
 class PolicyConverterDownloader(Downloader):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, path_to_infra):
+        super().__init__(path_to_infra)
 
     def get_all_names(self):
         return url_dir_getter(self.url, "/PolicyConverters", self.err)
 
     def get_content(self, name):
-        i = url_getter(self.url, f"/PolicyConverters/{name}", f"Policy converter {name} is not reachable")[0]
+        i = url_getter(self.url, f"/PolicyConverters/{name}", f"Policy converter {name} is not reachable", self.path_to_infra)[0]
         return requests.get(i["download_url"]).content.decode()
 
 
 class GeneralUtilitiesDownloader(Downloader):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, path_to_infra):
+        super().__init__(path_to_infra)
 
     def get_all_names(self):
         return url_dir_getter(self.url, "/GeneralUtilities", self.err)
 
     def get_content(self, name):
-        i = url_getter(self.url, f"/GeneralUtilities/{name}", f"General Utility {name} is not reachable")[0]
+        i = url_getter(self.url, f"/GeneralUtilities/{name}", f"General Utility {name} is not reachable", self.path_to_infra)[0]
         return requests.get(i["download_url"]).content.decode()
 
 
 class CaseStudiesDownloader(Downloader):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, path_to_infra):
+        super().__init__(path_to_infra)
 
     def get_all_names(self):
         return url_dir_getter(self.url, "/CaseStudies", self.err)
 
     def get_content(self, name):
-        i = url_getter(self.url, f"/CaseStudies/{name}", f"Case Study {name} is not reachable")[0]
+        i = url_getter(self.url, f"/CaseStudies/{name}", f"Case Study {name} is not reachable", self.path_to_infra)[0]
+        return requests.get(i["download_url"]).content.decode()
+
+
+class BenchmarkDownloader(Downloader):
+    def __init__(self, path_to_infra):
+        super().__init__(path_to_infra)
+
+    def get_all_names(self):
+        return url_dir_getter_files(self.url, "/Benchmarks", self.err)
+
+    def get_content(self, name):
+        i = url_getter(self.url, f"/Benchmarks/{name}", f"Benchmark {name} is not reachable", self.path_to_infra)[0]
         return requests.get(i["download_url"]).content.decode()
 
 
 class MonitoringFaceDownloader(Downloader):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, path_to_infra):
+        super().__init__(path_to_infra)
 
     def get_all_names(self):
         return url_dir_getter(self.url, "/Tools", self.err)
 
     def get_content(self, name):
         res = {}
-        for i in url_getter(self.url, f"/Tools/{name}", self.err):
+        for i in url_getter(self.url, f"/Tools/{name}", self.err, self.path_to_infra):
             res[i["name"]] = requests.get(i["download_url"]).content.decode()
         return res
 
@@ -123,6 +138,16 @@ def url_dir_getter(url, addon, err) -> Optional[list]:
         response = requests.get(url + addon)
         response.raise_for_status()
         return [item["name"] for item in response.json() if item['type'] == "dir"]
+    except requests.exceptions.RequestException as e:
+        print(f"{err}: {e}")
+        return None
+
+
+def url_dir_getter_files(url, addon, err) -> Optional[list]:
+    try:
+        response = requests.get(url + addon)
+        response.raise_for_status()
+        return [item["name"] for item in response.json()]
     except requests.exceptions.RequestException as e:
         print(f"{err}: {e}")
         return None

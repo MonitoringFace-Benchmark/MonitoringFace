@@ -39,7 +39,7 @@ class ToolImageManager(AbstractToolImageManager):
             os.mkdir(self.path)
         self.args = {BUILD_ARG_GIT_BRANCH: branch}
 
-        self.location = ToolResolver(self.name, self.branch, self.path, self.path_to_archive).resolve()
+        self.location = ToolResolver(self.name, self.branch, self.path, self.path_to_archive, self.path_to_infra).resolve()
         if self.location == Location.Unavailable:
             raise BuildException(f"{self.name} does not exists either Local or Remote")
         elif self.location == Location.Local:

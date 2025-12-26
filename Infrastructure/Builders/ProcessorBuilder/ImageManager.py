@@ -21,16 +21,16 @@ def to_file(file, content):
 class ImageManager(AbstractImageManager):
     def __init__(self, name, proc: Processor, path_to_project_inner):
         super().__init__()
-        self.downloader = DataLoader(proc)
         self.name = name
         self.processor = proc
         self.identifier = processor_to_identifier(proc)
         self.path = path_to_project_inner + "/Infrastructure/build"
         self.path_to_infra = path_to_project_inner + "/Infrastructure"
+        self.downloader = DataLoader(proc, self.path_to_infra)
         self.path_archive = path_to_project_inner + f"/Archive/{self.identifier}/{self.name}"
         self.image_name = f"{name.lower()}_{self.identifier.lower()}{IMAGE_POSTFIX}"
 
-        self.location = ProcessorResolver(self.name, self.path_archive, self.processor, self.path_archive).resolve()
+        self.location = ProcessorResolver(self.name, self.path_archive, self.processor, self.path_archive, self.path_to_infra).resolve()
         if not os.path.exists(f"{self.path}/{self.identifier}"):
             os.mkdir(f"{self.path}/{self.identifier}")
 

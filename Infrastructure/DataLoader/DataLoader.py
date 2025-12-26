@@ -1,25 +1,27 @@
 from Infrastructure.DataLoader.Downloader import (
     DataGeneratorDownloader, DataConverterDownloader,
     PolicyGeneratorDownloader, PolicyConverterDownloader,
-    GeneralUtilitiesDownloader, CaseStudiesDownloader
+    GeneralUtilitiesDownloader, CaseStudiesDownloader, BenchmarkDownloader
 )
 from Infrastructure.DataTypes.Types.custome_type import Processor
 
 
 class DataLoader:
-    def __init__(self, p):
+    def __init__(self, p, path_to_infra):
         if p == Processor.DataGenerators:
-            self.downloader = DataGeneratorDownloader()
+            self.downloader = DataGeneratorDownloader(path_to_infra)
         elif p == Processor.DataConverters:
-            self.downloader = DataConverterDownloader()
+            self.downloader = DataConverterDownloader(path_to_infra)
         elif p == Processor.PolicyGenerators:
-            self.downloader = PolicyGeneratorDownloader()
+            self.downloader = PolicyGeneratorDownloader(path_to_infra)
         elif p == Processor.PolicyConverters:
-            self.downloader = PolicyConverterDownloader()
+            self.downloader = PolicyConverterDownloader(path_to_infra)
         elif p == Processor.CaseStudies:
-            self.downloader = CaseStudiesDownloader()
+            self.downloader = CaseStudiesDownloader(path_to_infra)
+        elif p == Processor.Benchmark:
+            self.downloader = BenchmarkDownloader(path_to_infra)
         else:
-            self.downloader = GeneralUtilitiesDownloader()
+            self.downloader = GeneralUtilitiesDownloader(path_to_infra)
 
     def get_all_names(self):
         return self.downloader.get_all_names()
