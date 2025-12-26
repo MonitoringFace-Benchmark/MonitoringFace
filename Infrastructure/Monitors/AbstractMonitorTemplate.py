@@ -4,7 +4,7 @@ from typing import Dict, AnyStr, Any
 
 from Infrastructure.Builders.ToolBuilder import ToolImageManager
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
-from Infrastructure.printing import print_headline
+from Infrastructure.printing import print_headline, print_footline
 
 
 class AbstractMonitorTemplate(ABC):
@@ -73,7 +73,7 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
             raise ResultErrorException((postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
 
     print(postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed)
-    print_headline("")
+    print_footline()
     return preprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed
 
 

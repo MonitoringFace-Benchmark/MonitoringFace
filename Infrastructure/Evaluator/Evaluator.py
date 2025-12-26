@@ -134,8 +134,6 @@ class Evaluator:
             (oracle_manager, "VeriMonOracle")
         )
 
-        return
-
         res = benchmark.run(monitor_manager.get_monitors(["VeriMon", "MonPoly"]), {})
         print(res)
 

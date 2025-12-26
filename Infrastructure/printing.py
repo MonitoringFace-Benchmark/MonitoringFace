@@ -7,8 +7,11 @@ def print_headline(text):
     print(f"\n{orient_header_text(text, LENGTH)}")
     
     
-def print_footline(text):
-    print(f"{orient_header_text(text, LENGTH)}\n")
+def print_footline(init=None):
+    if init is None:
+        print(("=" * LENGTH) + "\n")
+    else:
+        print(f"{orient_header_text(init, LENGTH)}\n")
     
 
 def orient_header_text(text: AnyStr, row_length) -> AnyStr:

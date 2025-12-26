@@ -234,7 +234,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                         settings_result.loc[len(settings_result)] = [
                             Status.MI, tool.name, setting_id, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
                         ]
-                        print_headline("")
+                        print_footline()
                     elif isinstance(tool, ValidReturnType):
                         run_tools(settings_result=settings_result, tool=tool.tool, time_guard=self.time_guard,
                                   oracle=self.oracle, path_to_folder=path_to_folder, setting_id=setting_id,
@@ -260,7 +260,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                         settings_result.loc[len(settings_result)] = [
                             Status.MI, tool.name, setting_id, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
                         ]
-                        print_headline("")
+                        print_footline()
                     elif isinstance(tool, ValidReturnType):
                         run_tools(
                             settings_result=settings_result, tool=tool.tool, time_guard=self.time_guard,
