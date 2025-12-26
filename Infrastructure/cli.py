@@ -7,6 +7,8 @@ import sys
 import os
 from typing import List, Dict, Any
 
+from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
+from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
 from Infrastructure.Parser.YamlParser import YamlParser, ExperimentSuiteParser, YamlParserException
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
 
@@ -241,17 +243,27 @@ Examples:
             argv: Command-line arguments (defaults to sys.argv)
         """
         args = self.parser.parse_args(argv)
-        print(args)
-        
-        # Validate config file exists
-        if not os.path.exists(args.config):
-            # todo check local archive else download from remote archive
 
-            print(f"✗ Configuration file not found: {args.config}", file=sys.stderr)
-            sys.exit(1)
-        
+        # todo check local archive else download from remote archive
+        pwd = os.getcwd()
+        path_to_infra = f"{pwd}/Infrastructure"
+        path_to_archive = f"{pwd}/Archive"
+        br = BenchmarkResolver(name=args.config, path_to_infra=path_to_infra, path_to_archive=path_to_archive)
+        name = args.config
+
+        path_to_archive_benchmark = f"{path_to_archive}/Benchmarks"
+        location = br.resolve()
+        print(location)
+        if location == Location.Unavailable:
+            raise ValueError(f"The configuration File {name} is unavailable local and remote")
+        elif location == Location.Remote:
+            br.get_remote_config(path_to_archive_benchmark=path_to_archive_benchmark, name=name)
+        else:
+            print("Local")
+        return
+
         # Detect if suite or single experiment
-        is_suite = args.suite or self._is_suite_config(args.config)
+        is_suite = args.suite or self._is_suite_config(f"{path_to_archive_benchmark}/{name}")
         
         if is_suite:
             if args.verbose:

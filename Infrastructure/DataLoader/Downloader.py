@@ -102,7 +102,7 @@ class BenchmarkDownloader(Downloader):
         return url_dir_getter_files(self.url, "/Benchmarks", self.err)
 
     def get_content(self, name):
-        i = url_getter(self.url, f"/Benchmarks/{name}", f"Benchmark {name} is not reachable", self.path_to_infra)[0]
+        i = url_getter(self.url, f"/Benchmarks/{name}", f"Benchmark {name} is not reachable", self.path_to_infra)
         return requests.get(i["download_url"]).content.decode()
 
 

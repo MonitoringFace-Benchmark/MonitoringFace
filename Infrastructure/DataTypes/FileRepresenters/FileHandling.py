@@ -2,8 +2,8 @@ import os.path
 from typing import AnyStr, Optional
 
 
-def to_file(path, content, name, ending):
-    file_name = path + "/" + f"{name}.{ending}"
+def to_file(path, content, name, ending=None):
+    file_name = path + "/" + (f"{name}.{ending}" if ending else name)
     with open(file_name, mode="w") as f:
         f.write(content)
 
