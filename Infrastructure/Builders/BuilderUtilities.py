@@ -136,6 +136,7 @@ def run_image(image_name, generic_contract: Dict[AnyStr, Any], time_on=None, tim
             logs = container.logs(stdout=True, stderr=True).decode("utf-8", errors="ignore")
             exit_code = result.get("StatusCode", 1)
             container.remove(force=True)
+
             return logs, exit_code
     except docker.errors.ContainerError as e:
         if container:

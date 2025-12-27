@@ -87,7 +87,7 @@ def guarded_synthetic_experiment_pattern(
             num_path, data_source, data_setup, num_data_set_sizes, oracle, time_on, time_out, guard_type, guard
         )
 
-        print("        Attempting policy {i}")
+        print(f"        Attempting policy {i}")
         i += 1
 
         if not time_out_in_for_loop:
@@ -165,7 +165,7 @@ def guarded_synthetic_experiment_sig(
             num_path, data_source, data_setup, num_data_set_sizes, oracle, time_on, time_out, guard_type, guard
         )
 
-        print("        Attempting policy {i}")
+        print(f"        Attempting policy {i}")
         i += 1
 
         if not time_out_in_for_loop:
@@ -201,8 +201,7 @@ def guarded_synthetic_experiment_inner(
         to_file(num_path, result_csv, f"data_{num_name}", "csv")
 
         if oracle is not None:
-            oracle.pre_process_data(num_path, f"data_{num_name}.csv",
-                                    "signature.sig", "formula.mfotl")
+            oracle.pre_process_data(num_path, f"data_{num_name}.csv", "signature.sig", "formula.mfotl")
 
             if guard_type == TimeGuardingTool.Oracle:
                 try:
@@ -224,12 +223,14 @@ def guarded_synthetic_experiment_inner(
         if guard_type == TimeGuardingTool.Monitor:
             guard.pre_processing(num_path, f"data_{num_name}.csv", "signature.sig", "formula.mfotl")
             try:
-                _, code = guard.run_offline(time_on, time_out)
+                err, code = guard.run_offline(time_on, time_out)
                 if code != 0:
                     if code == 124:
                         raise TimedOut()
+                    elif code == 137:
+                        raise ToolException("OOM Killer activated")
                     else:
-                        raise ToolException()
+                        raise ToolException(code)
             except TimedOut:
                 time_out_in_for_loop = True
                 break

@@ -1,6 +1,3 @@
-"""
-YamlParser.py - Parse YAML configuration files using Hydra and convert to internal data structures
-"""
 import os
 from typing import Dict, Any, List, Optional, Union
 from omegaconf import OmegaConf, DictConfig
@@ -23,7 +20,6 @@ from Infrastructure.Oracles.OracleManager import OracleManager
 
 
 class YamlParserException(Exception):
-    """Custom exception for YAML parsing errors"""
     pass
 
 
@@ -373,19 +369,15 @@ class YamlParser:
 class ExperimentSuiteParser:
     """Parse YAML files containing multiple experiment configurations using Hydra"""
     
-    def __init__(self, suite_yaml_path: str):
+    def __init__(self, path_to_project: str, config_name: str):
         """
         Initialize the experiment suite parser
         
         Args:
             suite_yaml_path: Path to the YAML file containing experiment suite
         """
-        self.suite_yaml_path = os.path.abspath(suite_yaml_path)
-        self.base_dir = os.path.dirname(self.suite_yaml_path)
-        self.config_dir = self.base_dir
-        self.config_name = os.path.splitext(os.path.basename(self.suite_yaml_path))[0]
-        
-        # Load configuration using Hydra
+        self.config_dir = f"{path_to_project}/Archive/Benchmarks"
+        self.config_name = config_name
         self.cfg = self._load_config()
     
     def _load_config(self) -> DictConfig:
@@ -411,24 +403,12 @@ class ExperimentSuiteParser:
         
         experiment_paths = []
         experiments_list = OmegaConf.to_container(self.cfg.experiments, resolve=True)
-        
         for exp_config in experiments_list:
             if exp_config.get('enabled', True):
                 rel_path = exp_config.get('path')
                 if not rel_path:
                     raise YamlParserException(f"Missing 'path' in experiment configuration: {exp_config}")
-                
-                # Resolve relative path
-                if not os.path.isabs(rel_path):
-                    abs_path = os.path.join(self.base_dir, rel_path)
-                else:
-                    abs_path = rel_path
-                
-                if not os.path.exists(abs_path):
-                    raise YamlParserException(f"Experiment file not found: {abs_path}")
-                
-                experiment_paths.append(abs_path)
-        
+                experiment_paths.append(rel_path)
         return experiment_paths
     
     def parse_all_experiments(self) -> List[Dict[str, Any]]:

@@ -18,11 +18,12 @@ class CLI:
     def __init__(self, path_to_module: AnyStr):
         self.parser = self._create_parser()
 
-        self.infra_folder = f"{path_to_module}/Infrastructure"
+        self.path_to_module = path_to_module
+        self.infra_folder = f"{self.path_to_module}/Infrastructure"
         self.build_folder = f"{self.infra_folder}/build"
         self.experiment_folder = f"{self.infra_folder}/experiments"
 
-        self.archive_folder = f"{path_to_module}/Archive"
+        self.archive_folder = f"{self.path_to_module}/Archive"
         self.benchmark_folder = f"{self.archive_folder}/Benchmarks"
 
         if not os.path.exists(self.build_folder):
@@ -165,7 +166,7 @@ Examples:
                 traceback.print_exc()
             sys.exit(1)
     
-    def run_experiment_suite(self, suite_path: str, dry_run: bool = False, verbose: bool = False) -> List[Any]:
+    def run_experiment_suite(self, suite_name: str, dry_run: bool = False, verbose: bool = False) -> List[Any]:
         """
         Run multiple experiments from a suite configuration
         
@@ -178,11 +179,10 @@ Examples:
             List of experiment results or empty list if dry_run
         """
         if verbose:
-            print(f"Loading experiment suite from: {suite_path}")
+            print(f"Loading experiment suite from: {suite_name}")
         
         try:
-            # Parse suite
-            suite_parser = ExperimentSuiteParser(suite_path)
+            suite_parser = ExperimentSuiteParser(self.path_to_module, suite_name)
             experiment_paths = suite_parser.get_experiment_paths()
             
             print(f"Found {len(experiment_paths)} enabled experiment(s) in suite")
@@ -245,7 +245,7 @@ Examples:
             if args.verbose:
                 print("Detected experiment suite configuration")
             self.run_experiment_suite(
-                suite_path=args.config,
+                suite_name=args.config,
                 dry_run=args.dry_run,
                 verbose=args.verbose
             )
