@@ -1,3 +1,4 @@
+import os
 import subprocess
 import urllib.request
 
@@ -16,8 +17,5 @@ def validate_setup():
 
 
 if __name__ == "__main__":
-    # Check prerequisites
     validate_setup()
-    
-    # Run CLI
-    cli_main()
+    cli_main(path_to_module=os.getcwd())

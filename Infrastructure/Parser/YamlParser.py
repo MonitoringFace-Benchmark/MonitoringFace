@@ -443,8 +443,7 @@ class ExperimentSuiteParser:
         
         for exp_path in experiment_paths:
             try:
-                parser = YamlParser(exp_path)
-                parsed_exp = parser.parse_experiment()
+                parsed_exp = YamlParser(exp_path).parse_experiment()
                 parsed_experiments.append(parsed_exp)
             except Exception as e:
                 print(f"Error parsing experiment {exp_path}: {e}")
@@ -458,10 +457,3 @@ class ExperimentSuiteParser:
             GlobalHydra.instance().clear()
         except:
             pass
-
-
-if __name__ == "__main__":
-    # Example usage
-    parser = YamlParser("Infrastructure/experiments/example_synthetic_experiment.yaml")
-    experiment = parser.parse_experiment()
-    print(f"Parsed experiment: {experiment['benchmark_contract'].experiment_name}")

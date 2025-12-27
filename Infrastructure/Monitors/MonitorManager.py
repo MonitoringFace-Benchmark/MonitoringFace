@@ -38,9 +38,13 @@ def identifier_to_monitor(tool_manager, identifier, branch, name, params):
             f"Unknown monitor identifier: '{identifier}'. "
             f"Available monitors: {available}"
         )
+
+    image = tool_manager.get_image(identifier, branch)
+    if image is None:
+        raise ValueError(f"Image missing for '{identifier} - {branch}'")
     
     monitor_class = available_monitors[identifier]
-    return monitor_class(tool_manager.get_image(identifier, branch), name, params)
+    return monitor_class(image, name, params)
 
 
 class GetMonitorsReturnType(ABC):
