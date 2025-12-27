@@ -10,19 +10,15 @@ import pandas as pd
 
 from Infrastructure.Analysis.Formatting import parse_wall_time
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilderException import BenchmarkCreationFailed
-from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import \
-    CaseStudyGenerator
+from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import CaseStudyGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGenerator import SignatureGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfGenerator import DataGolfGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGenerator import PatternsGenerator
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyGenerator import \
-    MfotlPolicyGenerator
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyGenerator import MfotlPolicyGenerator
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
-from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract, PolicyGenerators, \
-    DataGenerators
+from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract, PolicyGenerators, DataGenerators
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import construct_case_study, CaseStudyMapper
-from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment, \
-    construct_synthetic_experiment_sig, construct_synthetic_experiment_pattern, TimeGuarded
+from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import construct_synthetic_experiment_sig, construct_synthetic_experiment_pattern, TimeGuarded
 from Infrastructure.DataTypes.FileRepresenters.FingerPrintHandler import FingerPrintHandler
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
@@ -32,8 +28,8 @@ from Infrastructure.DataTypes.Types.custome_type import ExperimentType
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate, run_monitor
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
-from Infrastructure.constants import FINGERPRINT_DATA, FINGERPRINT_EXPERIMENT
-from Infrastructure.printing import print_headline, print_footline
+from Infrastructure.constants import FINGERPRINT_DATA, FINGERPRINT_EXPERIMENT, LENGTH
+from Infrastructure.printing import print_headline, print_footline, normal_line
 
 
 class BenchmarkBuilderTemplate(ABC):
@@ -218,9 +214,9 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
             self, tools: List[GetMonitorsReturnType],
             parameters: dict[AnyStr, dict[AnyStr, Any]]
     ) -> pandas.DataFrame:
-        print("-" * 50)
-        print("="*15 + "   Run Experiments  " + "="*15)
-        print("-" * 50)
+        print("\n" + "-" * LENGTH)
+        normal_line("Run Experiments")
+        print("-" * LENGTH)
         settings_result = pd.DataFrame(columns=["Status", "Name", "Setting", "pre", "runtime", "post", "wall time", "max mem", "cpu"])
 
         if self.gen_mode == ExperimentType.CaseStudy:

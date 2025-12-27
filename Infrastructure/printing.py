@@ -5,6 +5,10 @@ from Infrastructure.constants import LENGTH
 
 def print_headline(text):
     print(f"\n{orient_header_text(text, LENGTH)}")
+
+
+def normal_line(text):
+    print(f"{orient_header_text(text, LENGTH)}")
     
     
 def print_footline(init=None):

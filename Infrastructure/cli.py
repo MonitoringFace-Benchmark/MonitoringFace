@@ -10,6 +10,7 @@ from typing import List, Any, AnyStr
 from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
 from Infrastructure.Parser.YamlParser import YamlParser, ExperimentSuiteParser, YamlParserException
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
+from Infrastructure.constants import LENGTH
 
 
 class CLI:
@@ -199,16 +200,16 @@ Examples:
             # Run all experiments
             results = []
             for i, exp_path in enumerate(experiment_paths, 1):
-                print(f"\n{'='*60}")
+                print(f"\n{'='*LENGTH}")
                 print(f"Running experiment {i}/{len(experiment_paths)}: {os.path.basename(exp_path)}")
-                print(f"{'='*60}")
+                print(f"{'='*LENGTH}")
                 
                 result = self.run_single_experiment(exp_path, dry_run=False, verbose=verbose)
                 results.append(result)
             
-            print(f"\n{'='*60}")
+            print(f"\n{'='*LENGTH}")
             print(f"✓ All {len(experiment_paths)} experiment(s) completed successfully")
-            print(f"{'='*60}")
+            print(f"{'='*LENGTH}")
             
             return results
             
