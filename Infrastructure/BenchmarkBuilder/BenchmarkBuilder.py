@@ -137,7 +137,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                     )
             else:
                 self._build()
-                fph = FingerPrintHandler({FINGERPRINT_EXPERIMENT: new_experiment_fingerprint}).to_file(fingerprint_location)
+                fph = FingerPrintHandler({FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
                 fph.to_file(fingerprint_location)
         else:
             self.data_gen = init_data_generator(contract.data_source, path_to_project)
