@@ -119,7 +119,6 @@ Examples:
             # Parse configuration
             parser = YamlParser(yaml_path=yaml_file, path_to_build=self.build_folder, path_to_experiments=self.experiment_folder)
             experiment_config = parser.parse_experiment()
-            # todo handle seeds here
             
             if verbose:
                 print(f"Experiment name: {experiment_config['benchmark_contract'].experiment_name}")
@@ -138,7 +137,8 @@ Examples:
                 gen_mode=experiment_config['experiment_type'],
                 time_guard=experiment_config['time_guarded'],
                 tools_to_build=experiment_config['tools_to_build'],
-                oracle=experiment_config['oracle']
+                oracle=experiment_config['oracle'],
+                seeds=experiment_config['seeds']
             )
             
             # Get monitors to run

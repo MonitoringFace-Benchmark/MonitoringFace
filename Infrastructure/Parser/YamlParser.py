@@ -1,5 +1,6 @@
 import os
-from typing import Dict, Any, List, Optional, Union
+import sys
+from typing import Dict, Any, List, Optional, Union, Tuple
 from omegaconf import OmegaConf, DictConfig
 from hydra import compose, initialize_config_dir
 from hydra.core.global_hydra import GlobalHydra
@@ -54,16 +55,10 @@ class YamlParser:
     
     def _load_config(self) -> DictConfig:
         """Load YAML configuration using Hydra"""
-        # Clear any existing Hydra instance
         GlobalHydra.instance().clear()
-        
         try:
-            # Initialize Hydra with the config directory
             initialize_config_dir(config_dir=self.config_dir, version_base=None)
-            
-            # Compose configuration
             cfg = compose(config_name=self.config_name)
-            
             return cfg
         except Exception as e:
             raise YamlParserException(f"Error loading configuration: {e}")
@@ -149,7 +144,13 @@ class YamlParser:
             tools_to_build.append((name, branch, self._parse_branch_or_release(release)))
         
         return ToolManager(tools_to_build=tools_to_build, path_to_project=self.path_to_project)
-    
+
+    def parse_seeds(self) -> Optional[Dict[str, Tuple[int, int]]]:
+        if 'seeds' not in self.cfg:
+            return None
+        seeds_dict = OmegaConf.to_container(self.cfg.seeds, resolve=True)
+        return {key: (int(value[0]), int(value[1])) for key, value in seeds_dict.items()}
+
     def parse_data_setup(self) -> Union[Signature, Patterns, DataGolfContract]:
         """Parse data setup configuration"""
         if 'data_setup' not in self.cfg:
@@ -340,6 +341,8 @@ class YamlParser:
         tools_to_build = self.get_tools_to_build()
         experiment_type = self.get_experiment_type()
         oracle_name = self.get_oracle_config()
+        seeds = self.parse_seeds()
+        print(f"Seeds {seeds}")
         
         oracle_tuple = (oracle_manager, oracle_name) if oracle_manager and oracle_name else None
         
@@ -355,7 +358,8 @@ class YamlParser:
             'oracle': oracle_tuple,
             'path_to_project': self.path_to_project,
             'path_to_build': self.path_to_build,
-            'path_to_experiments': self.path_to_experiments
+            'path_to_experiments': self.path_to_experiments,
+            'seeds': seeds
         }
     
     def __del__(self):
