@@ -65,7 +65,7 @@ class BenchmarkResolver(Resolver):
 
         content = self.data_loader.get_content(name)
         if content is None:
-            raise ValueError("Cannot fetch Benchmark from Repository")
+            raise ValueError(f"Cannot fetch Benchmark ({name}) from Repository")
         to_file(path_to_archive_benchmark, content, name=name)
 
 

@@ -119,6 +119,7 @@ Examples:
             # Parse configuration
             parser = YamlParser(yaml_path=yaml_file, path_to_build=self.build_folder, path_to_experiments=self.experiment_folder)
             experiment_config = parser.parse_experiment()
+            # todo handle seeds here
             
             if verbose:
                 print(f"Experiment name: {experiment_config['benchmark_contract'].experiment_name}")
@@ -231,9 +232,10 @@ Examples:
             argv: Command-line arguments (defaults to sys.argv)
         """
         args = self.parser.parse_args(argv)
-
+        print(f"Resolver entry {args.config}")
         br = BenchmarkResolver(name=args.config, path_to_infra=self.infra_folder, path_to_archive=self.archive_folder)
         location = br.resolve()
+        sys.exit(2)
         if location == Location.Unavailable:
             raise ValueError(f"The configuration File {args.config} is unavailable local and remote")
         elif location == Location.Remote:

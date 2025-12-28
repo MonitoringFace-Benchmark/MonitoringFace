@@ -376,8 +376,12 @@ class ExperimentSuiteParser:
         Args:
             suite_yaml_path: Path to the YAML file containing experiment suite
         """
-        self.config_dir = f"{path_to_project}/Archive/Benchmarks"
-        self.config_name = config_name
+        relative_dir = os.path.dirname(config_name)
+        if relative_dir:
+            self.config_dir = f"{path_to_project}/Archive/Benchmarks/{relative_dir}"
+        else:
+            self.config_dir = f"{path_to_project}/Archive/Benchmarks"
+        self.config_name = os.path.basename(config_name)
         self.cfg = self._load_config()
     
     def _load_config(self) -> DictConfig:

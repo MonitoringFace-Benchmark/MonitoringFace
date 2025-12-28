@@ -99,7 +99,8 @@ class BenchmarkDownloader(Downloader):
         super().__init__(path_to_infra)
 
     def get_all_names(self):
-        return url_dir_getter_files(self.url, "/Benchmarks", self.err)
+        token = get_auth_token(self.path_to_infra)
+        return url_dir_getter_files(self.url, "/Benchmarks", token, self.err)
 
     def get_content(self, name):
         i = url_getter(self.url, f"/Benchmarks/{name}", f"Benchmark {name} is not reachable", self.path_to_infra)
@@ -143,11 +144,38 @@ def url_dir_getter(url, addon, err) -> Optional[list]:
         return None
 
 
-def url_dir_getter_files(url, addon, err) -> Optional[list]:
-    try:
-        response = requests.get(url + addon)
+def url_dir_getter_files(url, addon, token, err) -> Optional[list]:
+    headers = {}
+    if token:
+        headers["Authorization"] = f"token {token}"
+    init_path = "Archive/Benchmarks"
+    url += addon
+
+    def remove_relative_path(path: str):
+        return path.removeprefix(init_path)
+
+    def get(path):
+        response = requests.get(url + path, headers=headers)
         response.raise_for_status()
-        return [item["name"] for item in response.json()]
+        status_code = response.status_code
+        if status_code == 403:
+            raise print("Rate limit exceeded, supply github token in Infrastructure/environment/auth_token")
+        elif status_code != 200:
+            raise ValueError(f"Unable to retrieve content from Archive/Benchmarks; returned code {status_code}")
+
+        inner_files = []
+        for item in response.json():
+            if item["type"] == "file":
+                inner_files.append(item["path"])
+            elif item["type"] == "dir":
+                inner_files.extend(get(remove_relative_path(item["path"])))
+        return inner_files
+
+    try:
+        return [s.removeprefix(init_path + "/") for s in get("")]
     except requests.exceptions.RequestException as e:
+        print(f"{err}: {e}")
+        return None
+    except ValueError as e:
         print(f"{err}: {e}")
         return None
