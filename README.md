@@ -19,13 +19,13 @@ The framework uses Hydra-powered YAML configuration for experiments:
 
 ```bash
 # Run a single experiment
-python -m Infrastructure.main experiments/example_synthetic_experiment.yaml
+python -m Infrastructure.main examples/example_synthetic_experiment.yaml
 
 # Run a suite of experiments
-python -m Infrastructure.main experiments/experiments_suite.yaml
+python -m Infrastructure.main examples/experiments_suite.yaml
 
 # Validate configuration without running
-python -m Infrastructure.main experiments/my_experiment.yaml --dry-run
+python -m Infrastructure.main my_experiment.yaml --dry-run
 ```
 
 ### Documentation
@@ -57,16 +57,17 @@ MonitoringFace/
 │   ├── requirements.txt     # Python dependencies
 │   ├── Parser/              # Configuration parsing
 │   │   └── YamlParser.py   # YAML parser for experiments
-│   ├── experiments/         # Example experiment configurations
-│   │   ├── example_synthetic_experiment.yaml
-│   │   ├── example_patterns.yaml
-│   │   ├── example_case_study.yaml
-│   │   └── experiments_suite.yaml
 │   ├── BenchmarkBuilder/    # Benchmark construction
 │   ├── Monitors/            # Monitor implementations
 │   ├── Oracles/             # Oracle implementations
 │   └── ...
 ├── Archive/                 # Tool Dockerfiles and configurations
+│   ├── Benchmarks/         # Example experiment configurations
+│   │   ├── examples
+│   │   │   ├── example_synthetic_experiment.yaml
+│   │   │   ├── example_patterns.yaml
+│   │   │   ├── example_case_study.yaml
+│   │   │   └── experiments_suite.yaml
 ├── CLI_USAGE.md            # Complete CLI documentation
 └── CLI_QUICK_REFERENCE.md  # Quick reference guide
 ```
@@ -125,13 +126,12 @@ time_guard:
 ```
 
 ### 2. Validate and Run
-
 ```bash
 # Validate configuration
-python -m Infrastructure.main my_experiment.yaml --dry-run
+python -m Infrastructure.main path/my_experiment.yaml --dry-run
 
 # Run experiment
-python -m Infrastructure.main my_experiment.yaml --verbose
+python -m Infrastructure.main path/my_experiment.yaml --verbose
 ```
 
 ## Configuration Options
@@ -190,26 +190,6 @@ synthetic_config:
     num_fvs: [1, 2, 3]                # Test different free variables
     num_data_set_sizes: [50, 100, 500]
 ```
-
-### Custom Directories
-
-```bash
-python -m Infrastructure.main my_experiment.yaml \
-    --build-dir /path/to/build \
-    --exp-dir /path/to/experiments
-```
-
-## Migration from Old Format
-
-If you have experiments in the old `Evaluator.py` format, you can convert them to YAML:
-
-1. Identify your configuration in `Evaluator.py`
-2. Use the example YAML files as templates
-3. Transfer configuration values to YAML
-4. Validate with `--dry-run`
-5. Run with the new CLI
-
-See the `Infrastructure/Parser/ParserComponents.py` file for programmatic conversion between formats.
 
 ## Contributing
 

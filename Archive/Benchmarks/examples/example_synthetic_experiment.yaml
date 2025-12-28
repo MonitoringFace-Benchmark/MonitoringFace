@@ -15,9 +15,6 @@ tools:
   - name: WhyMon
     branch: main
     release: branch
-  - name: EnfGuard
-    branch: enfguard
-    release: branch
 
 # Monitors configuration
 monitors:
@@ -47,11 +44,6 @@ monitors:
   - identifier: WhyMon
     name: WhyMon
     branch: main
-    params:
-      replayer: gen_data
-  - identifier: EnfGuard
-    name: EnfGuard
-    branch: enfguard
     params:
       replayer: gen_data
 
@@ -117,7 +109,6 @@ tools_to_build:
   - VeriMon
   - MonPoly
   - WhyMon
-  - EnfGuard
 
 # Oracle to use (optional)
 oracle:

@@ -26,19 +26,19 @@ pip install -r requirements.txt
 ### Running a Single Experiment
 
 ```bash
-python -m Infrastructure.main experiments/example_synthetic_experiment.yaml
+python -m Infrastructure.main example_synthetic_experiment.yaml
 ```
 
 ### Running Multiple Experiments (Suite)
 
 ```bash
-python -m Infrastructure.main experiments/experiments_suite.yaml
+python -m Infrastructure.main experiments_suite.yaml
 ```
 
 ### Validating Configuration (Dry Run)
 
 ```bash
-python -m Infrastructure.main experiments/example_synthetic_experiment.yaml --dry-run
+python -m Infrastructure.main example_synthetic_experiment.yaml --dry-run
 ```
 
 ## Command-Line Options
@@ -52,9 +52,6 @@ positional arguments:
 
 optional arguments:
   -h, --help           Show help message and exit
-  --build-dir BUILD_DIR
-                       Path to build directory (default: Infrastructure/build)
-  --exp-dir EXP_DIR    Path to experiments directory (default: Infrastructure/experiments)
   --dry-run            Validate configuration without running experiments
   --verbose, -v        Enable verbose output
   --suite              Force treat config as experiment suite (auto-detected by default)
@@ -234,15 +231,15 @@ An experiment suite YAML file references multiple individual experiment configur
 
 ```yaml
 experiments:
-  - path: experiments/example_synthetic_experiment.yaml
+  - path: example_synthetic_experiment.yaml
     enabled: true
     description: "Basic synthetic experiment"
   
-  - path: experiments/example_patterns.yaml
+  - path: example_patterns.yaml
     enabled: true
     description: "Patterns data generator experiment"
   
-  - path: experiments/example_case_study.yaml
+  - path: example_case_study.yaml
     enabled: false                # Can be disabled without removing
     description: "Nokia case study"
 ```
@@ -253,7 +250,7 @@ experiments:
 
 ### Example 1: Basic Synthetic Experiment
 
-See: `Infrastructure/experiments/example_synthetic_experiment.yaml`
+See: `Archive/Benchmarks/example_synthetic_experiment.yaml`
 
 This example demonstrates a complete synthetic benchmark with:
 - Multiple monitors (TimelyMon, MonPoly, WhyMon, EnfGuard)
@@ -263,7 +260,7 @@ This example demonstrates a complete synthetic benchmark with:
 
 ### Example 2: Patterns Generator
 
-See: `Infrastructure/experiments/example_patterns.yaml`
+See: `Archive/Benchmarks/example_patterns.yaml`
 
 This example shows:
 - Using the Patterns data generator
@@ -272,7 +269,7 @@ This example shows:
 
 ### Example 3: Case Study
 
-See: `Infrastructure/experiments/example_case_study.yaml`
+See: `Archive/Benchmarks/example_case_study.yaml`
 
 This example demonstrates:
 - Case study benchmark (Nokia)
@@ -281,7 +278,7 @@ This example demonstrates:
 
 ### Example 4: Experiment Suite
 
-See: `Infrastructure/experiments/experiments_suite.yaml`
+See: `Archive/Benchmarks/experiments_suite.yaml`
 
 This example shows how to:
 - Group multiple experiments
@@ -294,20 +291,20 @@ This example shows how to:
 
 1. Copy an existing example YAML file:
 ```bash
-cp Infrastructure/experiments/example_synthetic_experiment.yaml \
-   Infrastructure/experiments/my_experiment.yaml
+cp Archive/Benchmarks/example_synthetic_experiment.yaml \
+   Archive/Benchmarks/my_experiment.yaml
 ```
 
 2. Edit the configuration to match your needs
 
 3. Validate the configuration:
 ```bash
-python -m Infrastructure.main Infrastructure/experiments/my_experiment.yaml --dry-run
+python -m Infrastructure.main my_experiment.yaml --dry-run
 ```
 
 4. Run the experiment:
 ```bash
-python -m Infrastructure.main Infrastructure/experiments/my_experiment.yaml --verbose
+python -m Infrastructure.main my_experiment.yaml --verbose
 ```
 
 ### 2. Create an Experiment Suite
@@ -317,17 +314,17 @@ python -m Infrastructure.main Infrastructure/experiments/my_experiment.yaml --ve
 2. Create a suite file:
 ```yaml
 experiments:
-  - path: experiments/experiment1.yaml
+  - path: experiment1.yaml
     enabled: true
     description: "First experiment"
-  - path: experiments/experiment2.yaml
+  - path: experiment2.yaml
     enabled: true
     description: "Second experiment"
 ```
 
 3. Run the suite:
 ```bash
-python -m Infrastructure.main experiments/my_suite.yaml
+python -m Infrastructure.main my_suite.yaml
 ```
 
 ### 3. Parameter Sweeps
@@ -349,7 +346,7 @@ This will generate experiments for all combinations of parameters.
 Recommended directory structure:
 
 ```
-Infrastructure/experiments/
+Archive/Benchmarks/
 ├── experiments_suite.yaml          # Main suite file
 ├── synthetic/
 │   ├── basic_experiment.yaml
@@ -364,16 +361,6 @@ Infrastructure/experiments/
 ```
 
 ## Advanced Features
-
-### Custom Build Directories
-
-Use custom directories for builds and experiments:
-
-```bash
-python -m Infrastructure.main my_experiment.yaml \
-    --build-dir /path/to/custom/build \
-    --exp-dir /path/to/custom/experiments
-```
 
 ### Verbose Output
 
@@ -401,7 +388,7 @@ For more control, use the parser directly:
 ```python
 from Infrastructure.Parser.YamlParser import YamlParser
 
-parser = YamlParser('experiments/my_experiment.yaml')
+parser = YamlParser('my_experiment.yaml')
 experiment_config = parser.parse_experiment()
 
 # Access parsed components
@@ -474,7 +461,7 @@ To migrate from the old `Evaluator.py` approach:
 
 - [Hydra Documentation](https://hydra.cc/) - Learn more about Hydra's powerful configuration features
 - [OmegaConf Documentation](https://omegaconf.readthedocs.io/) - Learn about OmegaConf's structured configs
-- See example YAML files in `Infrastructure/experiments/`
+- See example YAML files in `Archive/Benchmarks/`
 - Review `Infrastructure/Parser/YamlParser.py` for all configuration options
 - Review `Infrastructure/Parser/HydraConfig.py` for structured config definitions
 - Check `Infrastructure/cli.py` for CLI implementation details
@@ -486,6 +473,6 @@ When adding new configuration options:
 1. Update the structured config dataclass in `HydraConfig.py`
 2. Add parsing logic in `YamlParser.py` if needed
 3. Update this documentation with examples
-4. Add example configurations to `experiments/` directory
+4. Add example configurations to `Archive/Benchmarks/` directory
 
 The use of Hydra means most configuration changes only require updating the dataclass definitions.

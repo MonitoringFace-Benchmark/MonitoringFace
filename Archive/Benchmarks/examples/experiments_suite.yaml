@@ -2,15 +2,15 @@
 # This file references multiple individual experiment configurations
 
 experiments:
-  - path: example_synthetic_experiment.yaml
+  - path: examples/example_synthetic_experiment.yaml
     enabled: true
     description: "Basic synthetic experiment with Signature data generator"
   
-  - path: example_patterns.yaml
+  - path: examples/example_patterns.yaml
     enabled: true
     description: "Experiment using Patterns data generator"
   
-  - path: example_case_study.yaml
+  - path: examples/example_case_study.yaml
     enabled: false  # Can be disabled without removing from the suite
     description: "Nokia case study benchmark"
   
