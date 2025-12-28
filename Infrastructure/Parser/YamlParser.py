@@ -342,7 +342,6 @@ class YamlParser:
         experiment_type = self.get_experiment_type()
         oracle_name = self.get_oracle_config()
         seeds = self.parse_seeds()
-        print(f"Seeds {seeds}")
         
         oracle_tuple = (oracle_manager, oracle_name) if oracle_manager and oracle_name else None
         
