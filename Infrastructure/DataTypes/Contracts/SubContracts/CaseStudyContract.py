@@ -41,8 +41,7 @@ def construct_case_study(data_gen, data_setup, path_to_named_experiment, oracle:
 
     if oracle:
         result_folder = f"{named_path_to_data}/result"
-        if not os.path.exists(result_folder):
-            os.mkdir(result_folder)
+        os.makedirs(result_folder, exist_ok=True)
 
         print(f"{BENCHMARK_BUILDING_OFFSET} Begin: Verifying with Oracle")
         num_settings = len(mapper.settings)

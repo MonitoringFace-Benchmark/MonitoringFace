@@ -60,8 +60,7 @@ class BenchmarkResolver(Resolver):
         return Location.Unavailable
 
     def get_remote_config(self, path_to_archive_benchmark, name):
-        if not os.path.exists(path_to_archive_benchmark):
-            os.mkdir(path_to_archive_benchmark)
+        os.makedirs(path_to_archive_benchmark, exist_ok=True)
 
         content = self.data_loader.get_content(name)
         if content is None:

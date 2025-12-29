@@ -31,12 +31,8 @@ class ImageManager(AbstractImageManager):
         self.image_name = f"{name.lower()}_{self.identifier.lower()}{IMAGE_POSTFIX}"
 
         self.location = ProcessorResolver(self.name, self.path_archive, self.processor, self.path_archive, self.path_to_infra).resolve()
-        if not os.path.exists(f"{self.path}/{self.identifier}"):
-            os.mkdir(f"{self.path}/{self.identifier}")
-
         self.path_to_build = f"{self.path}/{self.identifier}/{self.name}"
-        if not os.path.exists(self.path_to_build):
-            os.mkdir(self.path_to_build)
+        os.makedirs(self.path_to_build, exist_ok=True)
 
         if self.location == Location.Unavailable:
             raise BuildException(f"{self.identifier} - {self.name} does not exists either Local or Remote")
@@ -56,15 +52,10 @@ class ImageManager(AbstractImageManager):
                 else:
                     print(f"    Exists {self.identifier} - {self.name}")
         else:
-            if not os.path.exists(self.path_archive):
-                os.mkdir(self.path_archive)
-            parent_path = self.path + f"/{self.identifier}"
-            child_path = parent_path + f"/{self.name}"
-            if not os.path.exists(parent_path):
-                os.mkdir(parent_path)
-            if not os.path.exists(child_path):
-                os.mkdir(child_path)
-                self._build_image()
+            os.makedirs(self.path_archive, exist_ok=True)
+            parent_path = self.path + f"/{self.identifier}" + f"/{self.name}"
+            os.makedirs(parent_path, exist_ok=True)
+            self._build_image()
 
     def _build_image(self):
         if self.location == Location.Remote:

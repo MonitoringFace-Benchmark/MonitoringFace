@@ -4,8 +4,7 @@ import os.path
 class SeedHandler:
     def __init__(self, path_to_data):
         self.seeds_folder = f"{path_to_data}/Seeds"
-        if not os.path.exists(self.seeds_folder):
-            os.mkdir(self.seeds_folder)
+        os.makedirs(self.seeds_folder, exist_ok=True)
 
     def add_seed_generator(self, seed):
         with open(f"{self.seeds_folder}/generator.seed", "w") as f:

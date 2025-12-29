@@ -108,11 +108,8 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
         self.time_out = self.time_guard.upper_bound
         self.tools_to_build = tools_to_build
 
-        if not os.path.exists(self.path_to_experiment):
-            os.mkdir(self.path_to_experiment)
-
-        if not os.path.exists(self.path_to_named_experiment):
-            os.mkdir(self.path_to_named_experiment)
+        os.makedirs(self.path_to_experiment, exist_ok=True)
+        os.makedirs(self.path_to_named_experiment, exist_ok=True)
 
         self.data_setup = data_setup if isinstance(data_setup, dict) else asdict(data_setup)
         fingerprint_location = self.path_to_named_experiment + "/fingerprint"

@@ -33,14 +33,12 @@ def construct_synthetic_experiment_pattern(
     data_setup = copy.copy(data_setup_)
     for num_ops in experiment.num_operators:
         ops_path = path_to_folder + "/" + f"operators_{num_ops}"
-        if not os.path.exists(ops_path):
-            os.mkdir(ops_path)
+        os.makedirs(ops_path, exist_ok=True)
 
         for num_set in experiment.num_setting:
             num_path = ops_path + "/" + f"num_{num_set}"
             data_setup["path"] = num_path
-            if not os.path.exists(num_path):
-                os.mkdir(num_path)
+            os.makedirs(num_path, exist_ok=True)
 
             (seed, sig, formula), _ = policy_source.generate_policy(data_setup)
             SeedHandler(num_path).add_seed_policy(seed)
@@ -49,8 +47,7 @@ def construct_synthetic_experiment_pattern(
             to_file(num_path, formula, "formula", "mfotl")
 
             if oracle is not None or data_setup.get("oracle"):
-                if not os.path.exists(f"{num_path}/result"):
-                    os.mkdir(f"{num_path}/result")
+                os.makedirs(f"{num_path}/result", exist_ok=True)
 
             if seeds:
                 gen_seed, _ = seeds[str([num_ops, num_set])]
@@ -107,23 +104,19 @@ def construct_synthetic_experiment_sig(
     policy_setup = copy.copy(policy_setup_)
     for num_ops in experiment.num_operators:
         ops_path = path_to_folder + "/" + f"operators_{num_ops}"
-        if not os.path.exists(ops_path):
-            os.mkdir(ops_path)
+        os.makedirs(ops_path, exist_ok=True)
 
         for num_fv in experiment.num_fvs:
             fvs_path = ops_path + "/" + f"free_vars_{num_fv}"
-            if not os.path.exists(fvs_path):
-                os.mkdir(fvs_path)
+            os.makedirs(fvs_path, exist_ok=True)
 
             for num_set in experiment.num_setting:
                 num_path = fvs_path + "/" + f"num_{num_set}"
                 data_setup["path"] = num_path
-                if not os.path.exists(num_path):
-                    os.mkdir(num_path)
+                os.makedirs(num_path, exist_ok=True)
 
                 if oracle is not None or data_setup.get(ORACLE_KEY):
-                    if not os.path.exists(f"{num_path}/result"):
-                        os.mkdir(f"{num_path}/result")
+                    os.makedirs(f"{num_path}/result", exist_ok=True)
 
                 if seeds:
                     gen_seed, policy_seed = seeds[str([num_ops, num_fv, num_set])]

@@ -27,16 +27,14 @@ class ToolImageManager(AbstractToolImageManager):
         self.image_name = f"{self.name.lower()}_{self.branch.lower()}{IMAGE_POSTFIX}"
 
         path_to_monitor = f"{path_to_repo}/Monitor"
-        if not os.path.exists(path_to_monitor):
-            os.mkdir(path_to_monitor)
+        os.makedirs(path_to_monitor, exist_ok=True)
 
         self.parent_path = f"{path_to_repo}/Monitor/{self.name}"
-        if not os.path.exists(self.parent_path):
-            os.mkdir(self.parent_path)
+        os.makedirs(self.parent_path, exist_ok=True)
 
         self.path = f"{self.parent_path}/{self.branch}"
-        if not os.path.exists(self.path):
-            os.mkdir(self.path)
+        os.makedirs(self.path, exist_ok=True)
+
         self.args = {BUILD_ARG_GIT_BRANCH: branch}
 
         self.location = ToolResolver(self.name, self.branch, self.path, self.path_to_archive, self.path_to_infra).resolve()
@@ -62,17 +60,9 @@ class ToolImageManager(AbstractToolImageManager):
                 else:
                     print(f"    Exists {self.name} - {self.branch}")
         else:
-            if not os.path.exists(self.path_to_archive):
-                os.mkdir(self.path_to_archive)
-            if not os.path.exists(self.parent_path):
-                # tool is remote
-                os.mkdir(self.parent_path)
-                os.mkdir(self.path)
-                self._build_image()
-            elif not os.path.exists(self.path):
-                # branch is remote
-                os.mkdir(self.path)
-                self._build_image()
+            os.makedirs(self.path_to_archive, exist_ok=True)
+            os.makedirs(self.path, exist_ok=True)
+            self._build_image()
 
     def _build_image(self):
         if self.location == Location.Remote:
