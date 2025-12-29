@@ -2,6 +2,7 @@ from typing import Tuple
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Proposition import Proposition
 
 
 class OooVerdicts(AbstractOutputStructure):
@@ -16,4 +17,9 @@ class OooVerdicts(AbstractOutputStructure):
 
     def insert(self, value, time_point, time_stamp):
         self.tp_to_ts[time_point] = time_stamp
-        self.ooo_verdict.append((time_point, time_stamp, value if isinstance(value, list) else [value]))
+        values = value if isinstance(value, list) else [value]
+        if self.variable_order:
+            values = list(map(lambda va: Assignment(va, self.variable_order), values))
+        else:
+            values = list(map(lambda va: Proposition(va), values))
+        self.ooo_verdict.append((time_point, time_stamp, values))

@@ -2,7 +2,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 
 
 class PropositionList(AbstractOutputStructure):
-    def __init__(self, variable_order=None):
+    def __init__(self):
         self.prop_list = dict()
         self.tp_to_ts = dict()
         self.variable_order = None

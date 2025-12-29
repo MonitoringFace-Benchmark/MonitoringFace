@@ -1,8 +1,10 @@
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, AnyStr, Any
+from typing import Dict, AnyStr, Any, Tuple
 
-from Infrastructure.Builders.ToolBuilder import ToolImageManager
+from Infrastructure.Builders.ToolBuilder.ToolImageManager import ToolImageManager
+from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
 from Infrastructure.printing import print_headline, print_footline
 
@@ -29,15 +31,22 @@ class AbstractMonitorTemplate(ABC):
         run the monitor
     """
     @abstractmethod
-    def run_offline(self, time_on=None, time_out=None) -> (AnyStr, int):
+    def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
         # run tool and store results either as the value or file
+        pass
+
+    """
+        retrieve the variable order for a given specification
+    """
+    @abstractmethod
+    def variable_order(self) -> VariableOrdering:
         pass
 
     """
         preprocess the output format for double checking
     """
     @abstractmethod
-    def post_processing(self, stdout_input: AnyStr) -> list[AnyStr]:
+    def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         # process the string or file
         pass
 
@@ -89,6 +98,6 @@ def check(tool_res: list[AnyStr], oracle_res: list[AnyStr]):
     pass
 
 
-def verify(tool_res: list[AnyStr], oracle_res: list[AnyStr]) -> (bool, AnyStr):
+def verify(tool_res: list[AnyStr], oracle_res: list[AnyStr]) -> Tuple[bool, AnyStr]:
     # todo verify and check
     pass

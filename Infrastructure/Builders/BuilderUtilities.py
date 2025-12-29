@@ -17,25 +17,6 @@ def to_prop_file(path, name, content: dict):
             f.write(f"{k}={v}\n")
 
 
-def verify_version(build_folder, image_name, location, release, branch):
-    if location == Location.Local:
-        return True
-
-    fl = PropertiesHandler.from_file(build_folder + f"/tool.properties")
-    ml = PropertiesHandler.from_file(build_folder + f"/meta.properties")
-
-    if not release:
-        git_fetcher = init_repo_fetcher(fl.get_attr("git"), fl.get_attr("owner"), fl.get_attr("repo"))
-        version = ml.get_attr("version")
-        remote_version = git_fetcher.get_hash(branch)
-        if version is not None:
-            return version == remote_version and image_exists(image_name)
-        else:
-            return False
-    else:
-        return True
-
-
 def image_exists(name):
     try:
         docker_env = docker.from_env()
@@ -136,7 +117,6 @@ def run_image(image_name, generic_contract: Dict[AnyStr, Any], time_on=None, tim
             logs = container.logs(stdout=True, stderr=True).decode("utf-8", errors="ignore")
             exit_code = result.get("StatusCode", 1)
             container.remove(force=True)
-
             return logs, exit_code
     except docker.errors.ContainerError as e:
         if container:

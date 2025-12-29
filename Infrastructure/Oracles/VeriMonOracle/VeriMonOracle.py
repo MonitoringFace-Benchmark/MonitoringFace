@@ -1,6 +1,8 @@
 import copy
+import os
 from typing import AnyStr
 
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 
@@ -29,4 +31,11 @@ class VeriMonOracle(AbstractOracleTemplate):
             file.write(std_out_str)
 
     def verify(self, path_to_data, result_file_oracle, tool_input):
-        pass
+        variable_order = self.verimon.variable_order()
+        if os.path.exists(path_to_data):
+            with open(path_to_data, "r") as file:
+                output = self.verimon.post_processing(file.read())
+        else:
+            output = Verdicts(variable_order=variable_order)
+
+        # compare to

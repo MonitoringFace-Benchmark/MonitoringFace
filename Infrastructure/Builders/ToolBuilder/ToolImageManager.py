@@ -5,6 +5,7 @@ from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import ToolResolver, Location
 from Infrastructure.Builders.BuilderUtilities import image_building, run_image, to_prop_file, image_exists
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
+from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
 from Infrastructure.Monitors.MonitorExceptions import BuildException
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.constants import (IMAGE_POSTFIX, BUILD_ARG_GIT_BRANCH, VOLUMES_KEY, COMMAND_KEY, WORKDIR_KEY,
@@ -55,8 +56,9 @@ class ToolImageManager(AbstractToolImageManager):
                                             fl.get_attr(REPO_KEY), self.path_to_infra).get_hash(self.branch)
                 if not image_exists(self.image_name):
                     self._build_image()
-                elif (not current_version == version) and (not release):
-                    self._build_image()
+                elif not current_version == version:
+                    if release == BranchOrRelease.Branch:
+                        self._build_image()
                 else:
                     print(f"    Exists {self.name} - {self.branch}")
         else:

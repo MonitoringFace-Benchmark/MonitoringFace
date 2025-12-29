@@ -1,8 +1,11 @@
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Proposition import Proposition
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering
 
 
 class Verdicts(AbstractOutputStructure):
-    def __init__(self, variable_order=None):
+    def __init__(self, variable_order: VariableOrdering):
         self.verdict = list()
         self.tp_to_ts = dict()
         self.variable_order = variable_order
@@ -15,4 +18,9 @@ class Verdicts(AbstractOutputStructure):
 
     def insert(self, value, time_point, time_stamp):
         self.tp_to_ts[time_point] = time_stamp
-        self.verdict.append((time_point, time_stamp, value if isinstance(value, list) else [value]))
+        values = value if isinstance(value, list) else [value]
+        if self.variable_order:
+            values = list(map(lambda va: Assignment(va, self.variable_order), values))
+        else:
+            values = list(map(lambda va: Proposition(va), values))
+        self.verdict.append((time_point, time_stamp, values))

@@ -1,15 +1,16 @@
 import os.path
-import time
 import re
 
-from abc import ABC
-from typing import Dict, AnyStr, Any
+from typing import Dict, AnyStr, Any, Tuple
 
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import ToolImageManager
+from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, VariableOrder, DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 
 
-class TimelyMon(AbstractMonitorTemplate, ABC):
+class TimelyMon(AbstractMonitorTemplate):
     def __init__(self, image: ToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 
@@ -23,7 +24,7 @@ class TimelyMon(AbstractMonitorTemplate, ABC):
         self.params["signature"] = signature_file
         self.params["formula"] = formula_file
 
-    def run_offline(self, time_on=None, time_out=None) -> (AnyStr, int):
+    def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
         cmd = [self.params["formula"], self.params["data"], "--sig-file", self.params["signature"]]
         if "worker" in self.params:
             cmd += ["-w", str(self.params["worker"])]
@@ -53,34 +54,40 @@ class TimelyMon(AbstractMonitorTemplate, ABC):
 
         return self.image.run(self.params["folder"], cmd, time_on, time_out)
 
-    def post_processing(self, stdout_input: AnyStr) -> list[AnyStr]:
-        # sort and rewrite input
+    def variable_order(self) -> VariableOrdering:
+        def parse_variable_order(text):
+            match = re.search(r"Order of free variables:\s*\((.*?)\)", text)
+            result = match.group(1).split(", ") if match and match.group(1) else []
+            return [v.strip() for v in result]
+
+        cmd = [self.params["formula"], "--check"]
+        logs, code = self.image.run(self.params["folder"], cmd)
+        if code == 0:
+            return VariableOrder(parse_variable_order(logs))
+        else:
+            return DefaultVariableOrder()
+
+    def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        variable_order = self.variable_order()
         if self.params["output_mode"] == 0:
             res_file_path = self.params["folder"] + "/" + self.params["output_file"]
             if os.path.exists(res_file_path):
                 with open(res_file_path, "r") as f:
-                    return parse_list_to_verifiable_output(f.readlines())
+                    return parse_output_structure(f.read(), variable_order)
             else:
-                return [""]
+                return OooVerdicts(variable_order=variable_order)
         else:
-            return parse_str_to_verifiable_output(stdout_input)
+            return parse_output_structure(stdout_input, variable_order)
 
 
-def parse_str_to_verifiable_output(input_val: AnyStr) -> list[AnyStr]:
-    return parse_list_to_verifiable_output(input_val.splitlines())
+def parse_output_structure(input_val: AnyStr, variable_ordering) -> AbstractOutputStructure:
+    def parse_pattern(pattern_str: str):
+        match = re.match(r'@(\d+)\s*\(time point (\d+)\):\s*(.*)', pattern_str)
+        tuples_list = [[num for num in tup.split(',') if num] for tup in re.findall(r'\(([^)]*)\)', match.group(3))]
+        return int(match.group(1)), int(match.group(2)), tuples_list
 
-
-def parse_list_to_verifiable_output(input_val: list[AnyStr]) -> list[AnyStr]:
-    collect: Dict[str, list[list[str]]] = {}
-
-    for line in input_val:
-        prefix, val = parse(line)
-        collect.setdefault(prefix, []).extend(val)
-
-    return [f"{key}: " + " ".join(f"({','.join(map(str, item))})" for item in sorted(collect[key])) for key in sorted(collect)]
-
-
-def parse(line: AnyStr) -> (AnyStr, list[list[AnyStr]]):
-    prefix, postfix = line.split(":")
-    tuples = [list(match.split(',')) for match in re.findall(r'\(([^)]+)\)', postfix)]
-    return prefix, tuples
+    verdicts = OooVerdicts(variable_order=variable_ordering)
+    for line in input_val.strip().split("\n"):
+        ts, tp, tuples = parse_pattern(line)
+        verdicts.insert(tuples, tp, ts)
+    return verdicts
