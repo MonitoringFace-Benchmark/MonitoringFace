@@ -47,7 +47,7 @@ class BenchmarkBuilderTemplate(ABC):
 class TimeGuard:
     lower_time: int
     upper_time: int
-    time_guard: AnyStr
+    time_guard: str
 
 
 def init_policy_generator(name: PolicyGenerators, path_to_build_inner):
@@ -61,7 +61,7 @@ def init_policy_generator(name: PolicyGenerators, path_to_build_inner):
         print("    -> (Success)")
         return pattern_policy
     else:
-        print("Not implemented yet")
+        raise NotImplemented("Not implemented yet")
 
 
 def init_data_generator(tag: DataGenerators, path_to_project):
@@ -82,7 +82,7 @@ def init_data_generator(tag: DataGenerators, path_to_project):
         raise NotImplemented("Not implemented yet()")
 
 
-class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
+class BenchmarkBuilder(BenchmarkBuilderTemplate):
     def __init__(
             self, contract, path_to_project, data_setup,
             gen_mode: ExperimentType, time_guard: TimeGuarded,
@@ -234,8 +234,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate, ABC):
                     elif isinstance(tool, ValidReturnType):
                         run_tools(settings_result=settings_result, tool=tool.tool, time_guard=self.time_guard,
                                   oracle=self.oracle, path_to_folder=path_to_folder, setting_id=setting_id,
-                                  data_file=data, signature_file=sig, formula_file=formula
-                        )
+                                  data_file=data, signature_file=sig, formula_file=formula)
                     else:
                         raise NotImplemented(f"Not implemented for object {tool}")
                 sfh.clean_up_folder()

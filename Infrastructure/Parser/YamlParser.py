@@ -364,7 +364,7 @@ class YamlParser:
         """Cleanup Hydra instance"""
         try:
             GlobalHydra.instance().clear()
-        except:
+        except Exception():
             pass
 
 
@@ -376,7 +376,7 @@ class ExperimentSuiteParser:
         Initialize the experiment suite parser
         
         Args:
-            suite_yaml_path: Path to the YAML file containing experiment suite
+            path_to_project: Path to the YAML file containing experiment suite
         """
         relative_dir = os.path.dirname(config_name)
         if relative_dir:
@@ -441,5 +441,5 @@ class ExperimentSuiteParser:
         """Cleanup Hydra instance"""
         try:
             GlobalHydra.instance().clear()
-        except:
+        except Exception():
             pass

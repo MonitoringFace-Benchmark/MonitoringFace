@@ -27,11 +27,8 @@ class CLI:
         self.archive_folder = f"{self.path_to_module}/Archive"
         self.benchmark_folder = f"{self.archive_folder}/Benchmarks"
 
-        if not os.path.exists(self.build_folder):
-            os.mkdir(self.build_folder)
-
-        if not os.path.exists(self.experiment_folder):
-            os.mkdir(self.experiment_folder)
+        os.makedirs(self.build_folder, exist_ok=True)
+        os.makedirs(self.experiment_folder, exist_ok=True)
     
     @staticmethod
     def _create_parser() -> argparse.ArgumentParser:
@@ -96,7 +93,7 @@ Examples:
             with open(config_path, 'r') as f:
                 config = yaml.safe_load(f)
             return 'experiments' in config
-        except Exception:
+        except Exception():
             return False
     
     def run_single_experiment(self, config_name: AnyStr, dry_run: bool = False, verbose: bool = False) -> Any:
@@ -104,6 +101,7 @@ Examples:
         Run a single experiment from YAML configuration
         
         Args:
+            config_name: Name of a YAML configuration file
             dry_run: If True, only validate without running
             verbose: Enable verbose output
             
@@ -173,7 +171,7 @@ Examples:
         Run multiple experiments from a suite configuration
         
         Args:
-            suite_path: Path to experiment suite YAML file
+            suite_name: Path to experiment suite YAML file
             dry_run: If True, only validate without running
             verbose: Enable verbose output
             
