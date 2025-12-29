@@ -1,5 +1,4 @@
 import os
-import sys
 from typing import Dict, Any, List, Optional, Union, Tuple
 from omegaconf import OmegaConf, DictConfig
 from hydra import compose, initialize_config_dir

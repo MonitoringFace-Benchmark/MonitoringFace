@@ -30,7 +30,6 @@ def construct_synthetic_experiment_pattern(
         oracle: Optional[AbstractOracleTemplate], time_guard, seeds
 ):
     policy_source = PatternPolicyGenerator()
-    sh = SeedHandler(path_to_folder)
     data_setup = copy.copy(data_setup_)
     for num_ops in experiment.num_operators:
         ops_path = path_to_folder + "/" + f"operators_{num_ops}"
@@ -44,7 +43,7 @@ def construct_synthetic_experiment_pattern(
                 os.mkdir(num_path)
 
             (seed, sig, formula), _ = policy_source.generate_policy(data_setup)
-            sh.add_seed_policy(seed)
+            SeedHandler(num_path).add_seed_policy(seed)
 
             to_file(num_path, sig, "signature", "sig")
             to_file(num_path, formula, "formula", "mfotl")
@@ -54,7 +53,7 @@ def construct_synthetic_experiment_pattern(
                     os.mkdir(f"{num_path}/result")
 
             if seeds:
-                gen_seed, policy_seed = seeds[str([num_ops, num_set])]
+                gen_seed, _ = seeds[str([num_ops, num_set])]
                 if gen_seed:
                     data_setup["seed"] = gen_seed
 
