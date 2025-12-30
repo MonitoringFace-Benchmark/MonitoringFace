@@ -31,23 +31,43 @@ class DataGolfGenerator(DataGeneratorTemplate):
 
         out, code = self.image.run(inner_contract, time_on=time_on, time_out=time_out)
         if code != 0:
-            raise GeneratorException
+            print(f"Code {code}\nOutput:\n{out}")
+            raise GeneratorException(f"DataGolf generator failed (exit_code={code}). Output:\n{out}")
 
-        raw_split = out.split("@", 1)
-        prefix = raw_split[0]
-        if data_golf_contract.oracle:
-            with open(f"{data_golf_contract.path}/result/prefix_{str(data_golf_contract.trace_length)}",
-                      "w") as file:
-                file.write(prefix)
+        try:
+            if "@" not in out:
+                raise ValueError("missing '@' separator in datagolf output")
+            raw_split = out.split("@", 1)
+            prefix = raw_split[0]
 
-        remove_prefix = "@" + raw_split[1]
-        return seed, stdout_to_csv(remove_prefix.split("Trace:")[0].rstrip()), code
+            if data_golf_contract.oracle:
+                try:
+                    with open(f"{data_golf_contract.path}/result/prefix_{str(data_golf_contract.trace_length)}", "w") as file:
+                        file.write(prefix)
+                except Exception():
+                    pass
+
+            remove_prefix = "@" + raw_split[1]
+            if "Trace:" not in remove_prefix:
+                raise ValueError("missing 'Trace:' marker in datagolf output")
+
+            csv = stdout_to_csv(remove_prefix.split("Trace:")[0].rstrip())
+            return seed, csv, code
+        except Exception as e:
+            cmd = inner_contract.get(COMMAND_KEY) if 'inner_contract' in locals() else None
+            msg = (
+                f"Failed to parse datagolf output: {e}\n"
+                f"Command: {cmd}\n"
+                f"Exit code: {code}\n"
+                f"Raw output:\n{out}"
+            )
+            raise GeneratorException(msg)
 
     def check_policy(self, path_inner, signature, formula) -> bool:
         inner_contract = dict()
-        inner_contract["command"] = ["/usr/local/bin/datagolf", "-sig", signature, "-formula", formula, "-check"]
-        inner_contract["volumes"] = {path_inner: {'bind': '/data', 'mode': 'ro'}}
-        inner_contract["workdir"] = "/data"
+        inner_contract[COMMAND_KEY] = ["/usr/local/bin/datagolf", "-sig", signature, "-formula", formula, "-check"]
+        inner_contract[VOLUMES_KEY] = {path_inner: {'bind': '/data', 'mode': 'ro'}}
+        inner_contract[WORKDIR_KEY] = "/data"
 
         out, code = self.image.run(inner_contract, None, None)
         if code != 0:
@@ -87,6 +107,12 @@ def stdout_to_csv(in_str: AnyStr):
 
 
 def data_golf_contract_to_command(contract) -> list[AnyStr]:
+    if contract.sig_file == "":
+        contract.sig_file = "signature.sig"
+
+    if contract.formula == "":
+        contract.formula = "formula.mfotl"
+
     args = ["-sig", contract.sig_file, "-formula", contract.formula]
     if hasattr(contract, 'no_rewrite') and contract.no_rewrite is not None:
         if contract.no_rewrite:

@@ -1,7 +1,11 @@
 import copy
 import os
-from typing import AnyStr
+import re
+from pathlib import Path
+from typing import AnyStr, Optional, Tuple
 
+from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+from Infrastructure.DataTypes.Verification.OutputStructures.Compare.Comparing import comparing
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
@@ -17,7 +21,7 @@ class VeriMonOracle(AbstractOracleTemplate):
     def pre_process_data(self, path_to_folder_inner: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
         self.verimon.pre_processing(path_to_folder_inner, data_file, signature_file, formula_file)
 
-    def compute_result(self, time_on=None, time_out=None) -> (AnyStr, int):
+    def compute_result(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
         cmd = [
             "-sig", str(self.verimon.params["signature"]),
             "-formula", str(self.verimon.params["formula"]),
@@ -30,12 +34,20 @@ class VeriMonOracle(AbstractOracleTemplate):
         with open(output_file_name, "w") as file:
             file.write(std_out_str)
 
-    def verify(self, path_to_data, result_file_oracle, tool_input):
-        variable_order = self.verimon.variable_order()
-        if os.path.exists(path_to_data):
-            with open(path_to_data, "r") as file:
-                output = self.verimon.post_processing(file.read())
-        else:
-            output = Verdicts(variable_order=variable_order)
+    def verify(self, path_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure) -> bool:
+        oracle_verdicts = self.get_oracle_verdicts(path_to_result_folder, data_file)
+        return comparing(oracle_verdicts, tool_verdicts)
 
-        # compare to
+    def get_oracle_verdicts(self, path_to_result_folder, data_file) -> AbstractOutputStructure:
+        def extract_data_number(path: str) -> Optional[int]:
+            m = re.compile(r"^data_(\d+)\.csv$", re.IGNORECASE).match(Path(path).name)
+            return int(m.group(1)) if m else None
+
+        data_file_size = extract_data_number(data_file)
+        variable_order = self.verimon.variable_order()
+        result_file = path_to_result_folder + f"/result_{data_file_size}.res"
+        if os.path.exists(result_file):
+            with open(result_file, "r") as file:
+                return self.verimon.post_processing(file.read())
+        else:
+            return Verdicts(variable_order=variable_order)

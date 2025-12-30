@@ -314,7 +314,14 @@ class YamlParser:
     def get_oracle_config(self) -> Optional[str]:
         """Get oracle configuration name"""
         oracle_config = self.cfg.get('oracle', {})
-        oracle_dict = OmegaConf.to_container(oracle_config, resolve=True)
+        if isinstance(oracle_config, dict):
+            oracle_dict = oracle_config
+        else:
+            oracle_dict = OmegaConf.to_container(oracle_config, resolve=True)
+
+        if not oracle_dict:
+            return None
+
         if oracle_dict.get('enabled', False):
             return oracle_dict.get('name')
         return None
