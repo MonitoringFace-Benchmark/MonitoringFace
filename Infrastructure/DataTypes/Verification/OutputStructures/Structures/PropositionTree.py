@@ -79,6 +79,23 @@ class PDTTree:
                 return term_set
         return _inner_collect_terms(self.tree)
 
+    def collect_terms_list(self) -> List[AnyStr]:
+        result: List[AnyStr] = []
+        seen: Set[AnyStr] = set()
+
+        def _inner_collect_terms_list(tree_: PDTComponents):
+            if isinstance(tree_, PDTLeave):
+                return
+            term = tree_.term
+            if term not in seen:
+                seen.add(term)
+                result.append(term)
+            for (_, sub_tree_) in tree_.values:
+                _inner_collect_terms_list(sub_tree_)
+
+        _inner_collect_terms_list(self.tree)
+        return result
+
     def walk_tree(self, term_assignment: List[Tuple[AnyStr, Any]]):
         def _get_value(terms_vals, term):
             for (key, value) in terms_vals:
@@ -122,40 +139,3 @@ class PropositionTree(AbstractOutputStructure):
     def insert(self, value, time_point: int, time_stamp: int):
         self.tp_to_ts[time_point] = time_stamp
         self.forest[time_point] = value
-
-
-if __name__ == "__main__":
-    leave = PDTLeave(value=True)
-    tree = PDTTree(leave)
-    print(tree.walk_tree([]))
-
-    root = PDTNode(term="t1", values=[
-        (PDTSet({1, 2}), PDTLeave(value=False)),
-        (PDTComplementSet({1, 2}), PDTLeave(value=True))
-    ])
-
-    tree = PDTTree(root)
-    print(tree.walk_tree([("t1", 3)]))
-    print(tree.walk_tree([("t1", 1)]))
-    print(tree.terms)
-
-    root = PDTNode(term="t1", values=[
-        (PDTSet({1, 2}),
-            PDTNode(term="t2",
-                    values=[
-                        (PDTSet({5, 10}), PDTLeave(value=True)),
-
-                        (PDTComplementSet({5, 10}),
-                         PDTNode(term="x", values=[
-                             (PDTSet({12}), PDTLeave(value=True)),
-                             (PDTComplementSet({5, 10}), PDTLeave(value=False))
-                        ])
-                    )
-                ]
-            )
-        ),
-        (PDTComplementSet({1, 2}), PDTLeave(value=True))
-    ])
-
-    tree = PDTTree(root)
-    print(tree.walk_tree([("t1", 1), ("t2", 12)]))

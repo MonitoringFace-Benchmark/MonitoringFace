@@ -2,4 +2,5 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 
 
 class DatagolfVerdicts(AbstractOutputStructure):
-    pass
+    def __init__(self, variable_order):
+        self.variable_order = variable_order

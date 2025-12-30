@@ -1,14 +1,17 @@
-from abc import ABC
-from time import sleep
 from typing import Dict, AnyStr, Any
 
 from Infrastructure.Builders.ToolBuilder import ToolImageManager
 from Infrastructure.Builders.ProcessorBuilder.DataConverter.ReplayerConverter import ReplayerConverter
+from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTTree, PropositionTree
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, \
+    DefaultVariableOrder
+from Infrastructure.DataTypes.Verification.PDTParser import str_to_proposition_tree
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 import os
 
 
-class WhyMon(AbstractMonitorTemplate, ABC):
+class WhyMon(AbstractMonitorTemplate):
     def __init__(self, image: ToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
         self.replayer = ReplayerConverter(self.params["replayer"], self.params["path_to_project"])
@@ -63,5 +66,11 @@ class WhyMon(AbstractMonitorTemplate, ABC):
         out, code = self.image.run(self.params["folder"], cmd, time_on, time_out)
         return out, code
 
-    def post_processing(self, stdout_input: AnyStr) -> list[AnyStr]:
-        return stdout_input.split("\n")
+    def variable_order(self) -> VariableOrdering:
+        return DefaultVariableOrder()
+
+    def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        if not stdout_input:
+            return PropositionTree(self.variable_order())
+        else:
+            return str_to_proposition_tree(stdout_input.strip())

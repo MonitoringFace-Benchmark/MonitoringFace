@@ -1,13 +1,16 @@
-from abc import ABC
-from typing import Dict, AnyStr, Any
+import re
+from typing import Dict, AnyStr, Any, Tuple
 
 from Infrastructure.Builders.ToolBuilder import ToolImageManager
 from Infrastructure.Builders.ProcessorBuilder.DataConverter.ReplayerConverter import ReplayerConverter
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, DefaultVariableOrder
+from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 import os
 
 
-class EnfGuard(AbstractMonitorTemplate, ABC):
+class EnfGuard(AbstractMonitorTemplate):
     def __init__(self, image: ToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
         self.replayer = ReplayerConverter(self.params["replayer"], self.params["path_to_project"])
@@ -30,7 +33,7 @@ class EnfGuard(AbstractMonitorTemplate, ABC):
 
         self.params["data"] = f"scratch/{trimmed_data_file}.monpoly"
 
-    def run_offline(self, time_on=None, time_out=None) -> (AnyStr, int):
+    def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
         cmd = [
             "-sig", str(self.params["signature"]),
             "-formula", str(self.params["formula"]),
@@ -44,5 +47,17 @@ class EnfGuard(AbstractMonitorTemplate, ABC):
 
         return self.image.run(self.params["folder"], cmd, time_on, time_out)
 
-    def post_processing(self, stdout_input: AnyStr) -> list[AnyStr]:
-        return stdout_input.split("\n")
+    def variable_order(self) -> VariableOrdering:
+        return DefaultVariableOrder()
+
+    def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        def parse_pattern(pattern_str: str):
+            match = re.match(r'@(\d+)\s*\(time point (\d+)\):\s*(.*)', pattern_str)
+            tuples_list = [[num for num in tup.split(',') if num] for tup in re.findall(r'\(([^)]*)\)', match.group(3))]
+            return int(match.group(1)), int(match.group(2)), tuples_list
+
+        verdicts = Verdicts(variable_order=self.variable_order())
+        for line in stdout_input.strip().split("\n"):
+            ts, tp, vals = parse_pattern(line)
+            verdicts.insert(vals, tp, ts)
+        return verdicts
