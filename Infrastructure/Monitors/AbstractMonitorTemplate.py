@@ -77,27 +77,9 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
     postprocessing_elapsed = end - start
 
     if oracle is not None and False:
-        verified, msg = verify(res, oracle)
+        verified, msg = oracle.verify(path_to_folder + "/results", data_file, res)
         if not verified:
             raise ResultErrorException((postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
 
-    print(postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed)
     print_footline()
     return preprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed
-
-
-# match tool to oracle
-def check(tool_res: list[AnyStr], oracle_res: list[AnyStr]):
-    oracle_len = len(oracle_res)
-    tool_len = len(tool_res)
-
-    emptiness = True if oracle_len == 0 and tool_len == 0 else False
-    same_length = tool_len == oracle_len
-
-    # check if tool_res is a subset of oracle_res
-    pass
-
-
-def verify(tool_res: list[AnyStr], oracle_res: list[AnyStr]) -> Tuple[bool, AnyStr]:
-    # todo verify and check
-    pass

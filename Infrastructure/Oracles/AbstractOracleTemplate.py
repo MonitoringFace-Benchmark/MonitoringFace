@@ -1,13 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import AnyStr
+from typing import AnyStr, Tuple
 
-
-# using datagolf as generator sets oracle true, verimon on the other hand needs to actively set the result.out
-# The time limiter must be verimon when set as oracle in other cases it can be chosen freely
-# datagolf most likely just reformats the file instead of preprocessing and computation
-# or the generator is the orcale from the beginning, the generator uses the oracle directly
-
-# the oracle has to be passed to the generator builder
+from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 
 
 class AbstractOracleTemplate(ABC):
@@ -19,13 +13,13 @@ class AbstractOracleTemplate(ABC):
         pass
 
     @abstractmethod
-    def compute_result(self, time_on=None, time_out=None) -> (AnyStr, int):
+    def compute_result(self, time_on: int = None, time_out: int = None) -> Tuple[AnyStr, int]:
         pass
 
     @abstractmethod
-    def post_process_data(self, std_out_str, output_file_name):
+    def post_process_data(self, std_out_str: AnyStr, output_file_name: AnyStr):
         pass
 
     @abstractmethod
-    def verify(self, path_to_data, result_file_oracle, tool_input):
+    def verify(self, ath_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure) -> Tuple[bool, AnyStr]:
         pass
