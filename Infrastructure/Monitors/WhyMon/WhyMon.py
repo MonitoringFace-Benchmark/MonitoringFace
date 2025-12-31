@@ -3,9 +3,8 @@ from typing import Dict, AnyStr, Any
 from Infrastructure.Builders.ToolBuilder import ToolImageManager
 from Infrastructure.Builders.ProcessorBuilder.DataConverter.ReplayerConverter import ReplayerConverter
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
-from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTTree, PropositionTree
-from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, \
-    DefaultVariableOrder
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PropositionTree
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, DefaultVariableOrder
 from Infrastructure.DataTypes.Verification.PDTParser import str_to_proposition_tree
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 import os

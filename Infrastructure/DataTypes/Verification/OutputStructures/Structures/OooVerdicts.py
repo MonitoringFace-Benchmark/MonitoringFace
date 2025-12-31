@@ -13,7 +13,7 @@ class OooVerdicts(AbstractOutputStructure):
 
     def retrieve(self, time_point):
         selected = [x for (tp, _, val) in self.ooo_verdict if tp == time_point for x in val]
-        return time_point, self.tp_to_ts[time_point], selected
+        return self.tp_to_ts[time_point], time_point, selected
 
     def insert(self, value, time_point, time_stamp):
         self.tp_to_ts[time_point] = time_stamp
@@ -22,4 +22,4 @@ class OooVerdicts(AbstractOutputStructure):
             values = list(map(lambda va: Assignment(va, self.variable_order), values))
         else:
             values = list(map(lambda va: Proposition(va), values))
-        self.ooo_verdict.append((time_point, time_stamp, values))
+        self.ooo_verdict.append((time_stamp, time_point, values))

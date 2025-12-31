@@ -263,6 +263,8 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
                         raise NotImplemented(f"Not implemented for object {tool}")
                     sfh.clean_up_folder()
             sfh.remove_folder()
+
+        print(settings_result)
         return settings_result
 
 

@@ -13,7 +13,7 @@ class Verdicts(AbstractOutputStructure):
     def retrieve(self, time_point):
         selected = [val for (tp, _, val) in self.verdict if tp == time_point]
         if selected:
-            return time_point, self.tp_to_ts[time_point], selected
+            return self.tp_to_ts[time_point], time_point, selected
         return None
 
     def insert(self, value, time_point, time_stamp):
@@ -23,4 +23,4 @@ class Verdicts(AbstractOutputStructure):
             values = list(map(lambda va: Assignment(va, self.variable_order), values))
         else:
             values = list(map(lambda va: Proposition(va), values))
-        self.verdict.append((time_point, time_stamp, values))
+        self.verdict.append((time_stamp, time_point, values))

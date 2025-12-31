@@ -1,52 +1,46 @@
-from enum import Enum
-from typing import AnyStr, List, Union
+from typing import AnyStr, List, Union, Tuple
 
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
-from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTLeave, PDTComplementSet, PDTSet, PDTNode
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTLeave, PDTComplementSet, PDTSet, PDTNode, PropositionTree, PDTTree
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Proposition import Proposition
-
-
-class ValueType(Enum):
-    PROP = 1
-    ASSIGNMENTS = 2
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering
 
 
 class IntermediateList:
-    def __init__(self, values, variable_ordering: list[AnyStr], t: ValueType):
-        self.values: list[int, Union[list[Assignment], Proposition]] = values
+    def __init__(self, values, variable_ordering: VariableOrdering):
+        self.values: list[Tuple[int, int, Union[list[Assignment], Proposition]]] = values
         self.variable_ordering = variable_ordering
-        self.value_type = t
 
     @classmethod
     def from_OOOVerdicts(cls, ooo_verdicts: OooVerdicts):
         values = []
         for tp in sorted(ooo_verdicts.tp_to_ts.keys()):
             values.append([
-                tp, [val for (val_tp, _, vals) in ooo_verdicts.ooo_verdict if tp == val_tp for val in vals]
+                ooo_verdicts.tp_to_ts[tp],
+                tp,
+                [val for (val_tp, val_ts, vals) in ooo_verdicts.ooo_verdict if tp == val_tp for val in vals]
             ])
-        return cls(values, ooo_verdicts.variable_order, ValueType.ASSIGNMENTS)
+        return cls(values, ooo_verdicts.variable_order)
 
     @classmethod
     def from_Verdicts(cls, verdicts: Verdicts):
-        return cls(verdicts.verdict, verdicts.variable_order, ValueType.ASSIGNMENTS)
+        return cls(verdicts.verdict, verdicts.variable_order)
 
     @classmethod
     def from_PropositionList(cls, proposition_list: PropositionList):
-        values = [[tp, Proposition(proposition_list.prop_list[tp])] for tp in sorted(proposition_list.tp_to_ts.keys())]
-        return cls(values, proposition_list.variable_order, ValueType.PROP)
+        values = [
+            [proposition_list.tp_to_ts[tp], tp, Proposition(proposition_list.prop_list[tp])]
+            for tp in sorted(proposition_list.tp_to_ts.keys())
+        ]
+        return cls(values, proposition_list.variable_order)
 
     def to_proposition_tree(self, new_order: List[AnyStr]):
-        assignments, variables = self.values, self.variable_ordering
-
-        if not variables:
-            return PDTLeave(value=assignments[0].value)  # handle closed formulas
-
         def _pdt_subtree_recurse(vars_: List[str], fixed_vars, assignments: List[Assignment], current_assignment: List):
             if not vars_:
-                return PDTLeave(Assignment(fixed_vars, current_assignment) in assignments)
+                return PDTLeave(Assignment(current_assignment, fixed_vars) in assignments)
 
             var_ = vars_[0]
             remaining = vars_[1:]
@@ -62,5 +56,12 @@ class IntermediateList:
             choices.append((PDTComplementSet(domain_set), PDTLeave(False)))
             return PDTNode(var_, choices)
 
-        assignments = list(map(lambda ass: ass.retrieve_order(new_order=new_order), assignments))
-        return _pdt_subtree_recurse(vars_=variables, fixed_vars=variables, assignments=assignments, current_assignment=[])
+        pdt = PropositionTree(new_order)
+        for (ts, tp, val) in self.values:
+            pdt.tp_to_ts[tp] = ts
+            if isinstance(val, Proposition):
+                pdt.forest[tp] = PDTTree(PDTLeave(value=val.value))
+            else:
+                assignments = list(map(lambda ass: ass.retrieve_order(new_order=new_order), val))
+                pdt.forest[tp] = PDTTree(_pdt_subtree_recurse(vars_=new_order, fixed_vars=new_order, assignments=assignments, current_assignment=[]))
+        return pdt
