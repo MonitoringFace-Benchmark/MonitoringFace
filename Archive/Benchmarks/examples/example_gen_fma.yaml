@@ -1,0 +1,75 @@
+# Example YAML configuration for a synthetic benchmark experiment
+experiment_name: test_synthetic_experiment
+
+# Benchmark type: 'synthetic' or 'case_study'
+benchmark_type: synthetic
+
+# Tools configuration
+tools:
+  - name: TimelyMon
+    branch: development
+    release: branch
+  - name: MonPoly
+    branch: master
+    release: branch
+  - name: WhyMon
+    branch: main
+    release: branch
+
+# Monitors configuration
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 6
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+
+# Time guard configuration
+time_guard:
+  enabled: false
+  lower_bound: null  # null for None
+  upper_bound: 200
+  guard_type: Monitor  # Monitor, Oracle, or Generator
+  guard_name: TimelyMon 6
+
+# Data setup - Hydra structured format
+data_setup:
+  type: Signature
+  Signature:
+    trace_length: 1000
+    seed: null
+    event_rate: 1000
+    index_rate: null
+    time_stamp: null
+    sig: ""
+    sample_queue: null
+    string_length: null
+    fresh_value_rate: null
+    domain: null
+
+# Policy setup
+policy_setup:
+  type: GenFmaContract
+  size: 4
+
+# Synthetic benchmark specific configuration
+synthetic_config:
+  data_source: DATAGENERATOR  # DATAGENERATOR or DATAGOLF
+  policy_source: GENFMA  # MFOTLGENERATOR or PATTERNS or GENFMA
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [0, 1]
+    num_data_set_sizes: [50]
+
+# Experiment execution settings
+experiment_type: Signature  # Pattern, Signature, or CaseStudy
+
+# Tools to build and run (list of monitor names)
+tools_to_build:
+  - TimelyMon 6
+
+seeds:
+  '[5, 2, 0]': [314159265,87006]
+  '[5, 2, 1]': [314159265,53339]
