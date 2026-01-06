@@ -1,5 +1,5 @@
 from dataclasses import fields, dataclass
-from typing import AnyStr, Optional, Dict, Any
+from typing import Optional, Dict, Any
 
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
@@ -12,13 +12,15 @@ class Patterns(AbstractContract):
             star=None, triangle=None, pattern=None, violations=1.0, zipf="x=1.5+3,z=2", prob_a=0.2,  prob_b=0.3, prob_c=0.5
         )
 
-    def instantiate_contract(self, params: Dict[AnyStr, Any]):
+    def instantiate_contract(self, params: Dict[str, Any]):
         if not params:
-            return self.default_contract()
-        valid_field_names = {f.name for f in fields(self)}
-        for key, value in params.items():
-            if key in valid_field_names:
-                setattr(self, key, value)
+            self.default_contract()
+        else:
+            valid_field_names = {f.name for f in fields(self)}
+            for key, value in params.items():
+                if key in valid_field_names:
+                    setattr(self, key, value)
+        return self
 
     trace_length: int
     seed: Optional[int]
@@ -29,18 +31,18 @@ class Patterns(AbstractContract):
     star: Optional
     linear: Optional
     triangle: Optional
-    pattern: Optional[AnyStr]
+    pattern: Optional[str]
 
     violations: Optional[float]
-    interval: Optional[AnyStr]
-    zipf: AnyStr
+    interval: Optional[str]
+    zipf: str
 
     prob_a: float
     prob_b: float
     prob_c: float
 
 
-def patterns_to_commands(contract: Patterns) -> list[AnyStr]:
+def patterns_to_commands(contract: Patterns) -> list[str]:
     args = []
     if contract.seed is not None:
         args.extend(["-seed", str(contract.seed)])
@@ -68,7 +70,7 @@ def patterns_to_commands(contract: Patterns) -> list[AnyStr]:
     return args
 
 
-def pattern_contract_to_commands(contract_params: Dict[AnyStr, Any]) -> list[AnyStr]:
+def pattern_contract_to_commands(contract_params: Dict[str, Any]) -> list[str]:
     valid_fields = {f.name for f in fields(Patterns)}
     contract = Patterns(**{k: v for k, v in contract_params.items() if k in valid_fields})
     return patterns_to_commands(contract)

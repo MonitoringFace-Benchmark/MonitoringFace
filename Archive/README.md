@@ -45,3 +45,16 @@ Guidelines and conventions to add software to the archive.
 
 ### DataGenerators
 
+### PolicyGenerators
+1. Dockerfile:
+    1. Uses the appropriate base image (supporting the correct version of the tech stack etc). 
+    2. Imports all needed build tools (git, cargo, gcc, opam etc.) 
+    3. Clones the repository, the git clone command should use a "ARG GIT_BRANCH" variable that allows the framework to download and run different branches and releases. 
+    4. Build the tool and move into the final image.
+    5. Entrypoint should be the name of the binary in lower case.
+2. tool.properties:
+   1. name= ... (original name of the tool, including lower and upper characters) 
+   2. git= ... (the version control that the repository is hosted on) 
+   3. owner= ... (the name of the user or organisation owning the repo) 
+   4. repo= ... (name of the repo)
+   5. branch= ... (desired branch/state of the repo)

@@ -14,6 +14,7 @@ from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGen
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGenerator import SignatureGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfGenerator import DataGolfGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGenerator import PatternsGenerator
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.GenFmaGenerator.GenFmaGenerator import GenFmaGenerator
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyGenerator import MfotlPolicyGenerator
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
 from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract, PolicyGenerators, DataGenerators
@@ -60,6 +61,10 @@ def init_policy_generator(name: PolicyGenerators, path_to_build_inner):
         pattern_policy = PatternPolicyGenerator()
         print("    -> (Success)")
         return pattern_policy
+    elif name == PolicyGenerators.GENFMA:
+        gen_fma = GenFmaGenerator("gen_fma", path_to_build_inner)
+        print("    -> (Success)")
+        return gen_fma
     else:
         raise NotImplemented("Not implemented yet")
 

@@ -6,6 +6,9 @@ from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
 @dataclass
 class MfotlPolicyContract(AbstractContract):
+    def __init__(self):
+        pass
+
     def default_contract(self):
         return MfotlPolicyContract()
 
@@ -16,6 +19,7 @@ class MfotlPolicyContract(AbstractContract):
         for key, value in params.items():
             if key in valid_field_names:
                 setattr(self, key, value)
+        return self
 
     sig_file: Optional[str] = None
     out_file: Optional[str] = None

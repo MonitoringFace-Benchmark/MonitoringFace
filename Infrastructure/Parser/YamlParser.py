@@ -8,6 +8,8 @@ from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.D
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGeneratorContract import Patterns
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGeneratorContract import Signature
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import MfotlPolicyContract
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyContract import \
+    PatternPolicyContract
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
 from Infrastructure.DataTypes.Contracts.BenchmarkContract import (
     DataGenerators, SyntheticBenchmarkContract, PolicyGenerators, CaseStudyBenchmarkContract
@@ -123,6 +125,8 @@ class YamlParser:
             return PolicyGenerators.MFOTLGENERATOR
         elif value_upper == "PATTERNS":
             return PolicyGenerators.PATTERNS
+        elif value_upper == "GENFMA":
+            return PolicyGenerators.GENFMA
         else:
             raise YamlParserException(f"Invalid policy_source value: {value}")
     
@@ -173,7 +177,7 @@ class YamlParser:
         else:
             raise YamlParserException(f"Invalid data_setup type: {data_type}")
     
-    def parse_policy_setup(self) -> MfotlPolicyContract:
+    def parse_policy_setup(self):
         """Parse policy setup configuration"""
         if 'policy_setup' not in self.cfg:
             raise YamlParserException("Missing 'policy_setup' section in YAML configuration")
@@ -181,10 +185,25 @@ class YamlParser:
         policy_setup = self.cfg.policy_setup
         policy_type = policy_setup.get('type', 'PolicyGeneratorContract')
         
-        if policy_type == 'PolicyGeneratorContract':
+        if policy_type == 'MfotlPolicyContract':
             # Start with default contract
             contract = MfotlPolicyContract().default_contract()
             # Update with provided config
+            config = OmegaConf.to_container(policy_setup, resolve=True)
+            for key, value in config.items():
+                if key != 'type' and hasattr(contract, key) and value is not None:
+                    setattr(contract, key, value)
+            return contract
+        elif policy_type == 'PatternPolicyContract':
+            contract = PatternPolicyContract().default_contract()
+            config = OmegaConf.to_container(policy_setup, resolve=True)
+            for key, value in config.items():
+                if key != 'type' and hasattr(contract, key) and value is not None:
+                    setattr(contract, key, value)
+            return contract
+        elif policy_type == 'GenFmaContract':
+            from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.GenFmaGenerator.GenFmaContract import GenFmaContract
+            contract = GenFmaContract().default_contract()
             config = OmegaConf.to_container(policy_setup, resolve=True)
             for key, value in config.items():
                 if key != 'type' and hasattr(contract, key) and value is not None:

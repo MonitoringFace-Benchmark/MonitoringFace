@@ -1,9 +1,8 @@
 import re
-from abc import ABC
 from typing import Dict, AnyStr, Any, Tuple
 
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import ToolImageManager
-from Infrastructure.Builders.ProcessorBuilder.DataConverter.ReplayerConverter import ReplayerConverter
+from Infrastructure.Builders.ProcessorBuilder.DataConverter.ReplayerConverter.ReplayerConverter import ReplayerConverter
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder, VariableOrder
@@ -87,6 +86,9 @@ class MonPoly(AbstractMonitorTemplate):
             return int(match.group(1)), int(match.group(2)), tuples_list
 
         verdicts = Verdicts(variable_order=self.variable_order())
+        if stdout_input == "":
+            return verdicts
+
         for line in stdout_input.strip().split("\n"):
             ts, tp, vals = parse_pattern(line)
             verdicts.insert(vals, tp, ts)

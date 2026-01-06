@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields
-from typing import AnyStr, Optional, Dict, Any
+from typing import Optional, Dict, Any
 
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
@@ -12,13 +12,15 @@ class Signature(AbstractContract):
             sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None
         )
 
-    def instantiate_contract(self, params: Dict[AnyStr, Any]):
+    def instantiate_contract(self, params: Dict[str, Any]):
         if not params:
-            return self.default_contract()
-        valid_field_names = {f.name for f in fields(self)}
-        for key, value in params.items():
-            if key in valid_field_names:
-                setattr(self, key, value)
+            self.default_contract()
+        else:
+            valid_field_names = {f.name for f in fields(self)}
+            for key, value in params.items():
+                if key in valid_field_names:
+                    setattr(self, key, value)
+        return self
 
     trace_length: int
     seed: Optional[int]
@@ -26,14 +28,14 @@ class Signature(AbstractContract):
     index_rate: Optional[int]
     time_stamp: Optional[int]
 
-    sig: AnyStr
+    sig: str
     sample_queue: Optional[int]
     fresh_value_rate: Optional[float]
     domain: Optional[int]
     string_length: Optional[int]
 
 
-def signature_to_commands(contract: Signature) -> list[AnyStr]:
+def signature_to_commands(contract: Signature) -> list[str]:
     args = []
     if contract.seed is not None:
         args.extend(["-seed", str(contract.seed)])
@@ -56,7 +58,7 @@ def signature_to_commands(contract: Signature) -> list[AnyStr]:
     return args
 
 
-def signature_contract_to_commands(contract_params: Dict[AnyStr, Any]) -> list[AnyStr]:
+def signature_contract_to_commands(contract_params: Dict[str, Any]) -> list[str]:
     valid_fields = {f.name for f in fields(Signature)}
     contract = Signature(**{k: v for k, v in contract_params.items() if k in valid_fields})
     return signature_to_commands(contract)

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields
-from typing import AnyStr, Optional
+from typing import Optional
 
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
@@ -14,15 +14,17 @@ class DataGolfContract(AbstractContract):
 
     def instantiate_contract(self, params):
         if not params:
-            return self.default_contract()
-        valid_field_names = {f.name for f in fields(self)}
-        for key, value in params.items():
-            if key in valid_field_names:
-                setattr(self, key, value)
+            self.default_contract()
+        else:
+            valid_field_names = {f.name for f in fields(self)}
+            for key, value in params.items():
+                if key in valid_field_names:
+                    setattr(self, key, value)
+        return self
 
-    sig_file: AnyStr
-    formula: AnyStr
-    path: AnyStr
+    sig_file: str
+    formula: str
+    path: str
     seed: Optional[int]
 
     trace_length: int

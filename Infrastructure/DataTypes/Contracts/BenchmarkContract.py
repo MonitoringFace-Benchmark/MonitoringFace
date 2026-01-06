@@ -17,8 +17,9 @@ class DataGenerators(Enum):
 
 
 class PolicyGenerators(Enum):
-    MFOTLGENERATOR = 1,
-    PATTERNS = 1
+    GENFMA = 1
+    MFOTLGENERATOR = 2,
+    PATTERNS = 3
 
 
 @dataclass

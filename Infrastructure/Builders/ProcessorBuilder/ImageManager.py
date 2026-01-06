@@ -34,6 +34,8 @@ class ImageManager(AbstractImageManager):
         self.path_to_build = f"{self.path}/{self.identifier}/{self.name}"
         os.makedirs(self.path_to_build, exist_ok=True)
 
+        print(self.path_archive)
+
         if self.location == Location.Unavailable:
             raise BuildException(f"{self.identifier} - {self.name} does not exists either Local or Remote")
         elif self.location == Location.Local:

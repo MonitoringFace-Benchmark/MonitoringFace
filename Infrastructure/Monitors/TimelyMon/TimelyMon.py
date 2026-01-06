@@ -87,6 +87,9 @@ def parse_output_structure(input_val: AnyStr, variable_ordering) -> AbstractOutp
         return int(match.group(1)), int(match.group(2)), tuples_list
 
     verdicts = OooVerdicts(variable_order=variable_ordering)
+    if input_val == "":
+        return verdicts
+
     for line in input_val.strip().split("\n"):
         ts, tp, tuples = parse_pattern(line)
         verdicts.insert(tuples, tp, ts)
