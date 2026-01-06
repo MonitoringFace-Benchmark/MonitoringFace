@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import List, Any, Tuple, AnyStr
 
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.ValueType import ValueType
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering
@@ -16,6 +16,9 @@ class Assignment(ValueType):
         if not isinstance(other, Assignment):
             return False
         return dict(zip(self.order, self.values)) == dict(zip(other.order, other.values))
+
+    def to_representation(self) -> List[Tuple[Any, AnyStr]]:
+        return list(zip(self.values, self.order))
 
     def retrieve_order(self, new_order: VariableOrdering):
         mapping = {v: val for v, val in zip(self.values, self.order)}

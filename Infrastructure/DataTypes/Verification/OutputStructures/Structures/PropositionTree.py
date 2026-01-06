@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from typing import AnyStr, List, Set, Tuple, Dict, Any
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder
 
 
 class InvalidPDTTerm(Exception):
@@ -66,62 +68,57 @@ class PDTNode(PDTComponents):
 class PDTTree:
     def __init__(self, root: PDTComponents):
         self.tree = root
-        self.terms = self.collect_terms()
+        self.terms = self._collect_terms_list()
 
-    def collect_terms(self) -> Set[AnyStr]:
-        def _inner_collect_terms(tree_: PDTComponents) -> Set[AnyStr]:
-            if isinstance(tree_, PDTLeave):
-                return set()
-            else:
-                term_set = {tree_.term}
-                for (_, sub_tree_) in tree_.values:
-                    term_set = term_set.union(_inner_collect_terms(sub_tree_))
-                return term_set
-        return _inner_collect_terms(self.tree)
-
-    def collect_terms_list(self) -> List[AnyStr]:
+    def _collect_terms_list(self) -> List[AnyStr]:
         result: List[AnyStr] = []
         seen: Set[AnyStr] = set()
 
         def _inner_collect_terms_list(tree_: PDTComponents):
             if isinstance(tree_, PDTLeave):
                 return
-            term = tree_.term
-            if term not in seen:
-                seen.add(term)
-                result.append(term)
-            for (_, sub_tree_) in tree_.values:
-                _inner_collect_terms_list(sub_tree_)
-
+            elif isinstance(tree_, PDTNode):
+                term = tree_.term
+                if term not in seen:
+                    seen.add(term)
+                    result.append(term)
+                for (_, sub_tree_) in tree_.values:
+                    _inner_collect_terms_list(sub_tree_)
+            else:
+                raise ValueError(f"Not well-formed PDT tree at node {repr(tree_)}")
         _inner_collect_terms_list(self.tree)
         return result
 
-    def walk_tree(self, term_assignment: List[Tuple[AnyStr, Any]]):
-        def _get_value(terms_vals, term):
-            for (key, value) in terms_vals:
-                if key == term:
-                    return value
+    def check_assignment(self, assignment: Assignment) -> bool:
+        reordered_assignment = assignment.retrieve_order(VariableOrder(self.terms))
+        try:
+            return self.walk_tree(reordered_assignment.to_representation())
+        except InvalidPDTTerm:
+            return False
 
-            if term in self.terms:
-                _, last = terms_vals[-1]
-                return last
+    def walk_tree(self, term_assignment: List[Tuple[Any, AnyStr]]) -> bool:
+        def _get_value(terms_vals: List[Tuple[Any, AnyStr]], term: AnyStr):
+            for (value, var) in terms_vals:
+                if var == term:
+                    return value
             raise InvalidPDTTerm(f"Term {term} not in Assignment")
 
         def _make_choice(value, choices: List[Tuple[PDTSets, PDTComponents]]):
             for (pdt_set, sub_tree) in choices:
                 if pdt_set.is_member(value):
                     return sub_tree
-            raise InvalidPDTChoice(f"{value} not in Domain")
+            raise InvalidPDTChoice(f"{value} not in Domain")  # implies construction error
 
-        def _inner_walk_tree(tree_: PDTNode, term_assignment_: List[Tuple[AnyStr, Any]]) -> bool:
+        def _inner_walk_tree(tree_: PDTComponents, term_assignment_: List[Tuple[AnyStr, Any]]) -> bool:
             if isinstance(tree_, PDTLeave):
                 return tree_.value
-            value = _get_value(term_assignment_, tree_.term)
-            choice = _make_choice(value, tree_.values)
-            return _inner_walk_tree(choice, term_assignment_)
+            elif isinstance(tree_, PDTNode):
+                value = _get_value(term_assignment_, tree_.term)
+                choice = _make_choice(value, tree_.values)
+                return _inner_walk_tree(choice, term_assignment_)
+            else:
+                raise ValueError(f"Not well-formed PDT tree at node {repr(tree_)}")
 
-        if isinstance(self.tree, PDTLeave):
-            return self.tree.value
         return _inner_walk_tree(self.tree, term_assignment)
 
 
