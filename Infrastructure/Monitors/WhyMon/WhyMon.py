@@ -71,4 +71,4 @@ class WhyMon(AbstractMonitorTemplate):
         if not stdout_input:
             return PropositionTree(self.variable_order())
         else:
-            return str_to_proposition_tree(stdout_input.strip())
+            return PropositionTree(self.variable_order()) #str_to_proposition_tree(stdout_input.strip())
