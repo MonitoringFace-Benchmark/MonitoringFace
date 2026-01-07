@@ -302,28 +302,19 @@ class YamlParser:
         return self._parse_experiment_type(exp_type_str)
     
     def parse_experiment(self) -> Dict[str, Any]:
-        """
-        Parse entire experiment configuration and return all components
-        
-        Returns:
-            Dictionary containing all parsed components needed to run the experiment
-        """
         tool_manager = self.parse_tool_manager()
-        data_setup = self.parse_data_generator_setup()
         benchmark_contract = self.parse_benchmark_contract()
         monitor_manager = self.parse_monitor_manager(tool_manager)
         oracle_manager = self.parse_oracle_manager(monitor_manager)
         time_guarded = self.parse_time_guarded(monitor_manager)
         tools_to_build = self.get_tools_to_build()
-        experiment_type = self.get_experiment_type()
         oracle_name = self.get_oracle_config()
-        seeds = self.parse_seeds()
-        
+        experiment_type = self.get_experiment_type()
         oracle_tuple = (oracle_manager, oracle_name) if oracle_manager and oracle_name else None
-        
+
+        is_case_study = experiment_type == ExperimentType.CaseStudy
         return {
             'tool_manager': tool_manager,
-            'data_setup': data_setup,
             'benchmark_contract': benchmark_contract,
             'monitor_manager': monitor_manager,
             'oracle_manager': oracle_manager,
@@ -334,9 +325,10 @@ class YamlParser:
             'path_to_project': self.path_to_project,
             'path_to_build': self.path_to_build,
             'path_to_experiments': self.path_to_experiments,
-            'seeds': seeds
+            'data_setup': None if is_case_study else self.parse_data_generator_setup(),
+            'seeds': None if is_case_study else self.parse_seeds()
         }
-    
+
     def __del__(self):
         """Cleanup Hydra instance"""
         try:

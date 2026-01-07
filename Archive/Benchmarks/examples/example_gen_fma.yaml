@@ -1,29 +1,22 @@
 # Example YAML configuration for a synthetic benchmark experiment
-experiment_name: test_synthetic_experiment
+experiment_name: test_gen_fma
 
 # Benchmark type: 'synthetic' or 'case_study'
 benchmark_type: synthetic
 
 # Tools configuration
 tools:
-  - name: TimelyMon
-    branch: development
-    release: branch
-  - name: MonPoly
-    branch: master
-    release: branch
   - name: WhyMon
     branch: main
     release: branch
 
 # Monitors configuration
 monitors:
-  - identifier: TimelyMon
-    name: TimelyMon 6
-    branch: development
+  - identifier: WhyMon
+    name: WhyMon
+    branch: main
     params:
-      worker: 6
-      output_mode: 1
+      replayer: gen_data
 
 # Time guard configuration
 time_guard:
@@ -35,8 +28,8 @@ time_guard:
 
 # Data setup - Hydra structured format
 data_setup:
-  type: Signature
-  Signature:
+  type: SignatureContract
+  SignatureContract:
     trace_length: 1000
     seed: null
     event_rate: 1000
@@ -51,12 +44,13 @@ data_setup:
 # Policy setup
 policy_setup:
   type: GenFmaContract
-  size: 4
+  GenFmaContract:
+    size: 4
 
 # Synthetic benchmark specific configuration
 synthetic_config:
-  data_source: DATAGENERATOR  # DATAGENERATOR or DATAGOLF
-  policy_source: GENFMA  # MFOTLGENERATOR or PATTERNS or GENFMA
+  data_source: SignatureGenerator
+  policy_source: GenFmaGenerator
   experiment:
     num_operators: [5]
     num_fvs: [2]

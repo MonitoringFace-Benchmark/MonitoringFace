@@ -79,15 +79,6 @@ Examples:
     
     @staticmethod
     def _is_suite_config(config_path: str) -> bool:
-        """
-        Detect if config file is an experiment suite
-        
-        Args:
-            config_path: Path to YAML configuration file
-            
-        Returns:
-            True if config contains 'experiments' list, False otherwise
-        """
         try:
             import yaml
             with open(config_path, 'r') as f:
@@ -97,17 +88,6 @@ Examples:
             return False
     
     def run_single_experiment(self, config_name: AnyStr, dry_run: bool = False, verbose: bool = False) -> Any:
-        """
-        Run a single experiment from YAML configuration
-        
-        Args:
-            config_name: Name of a YAML configuration file
-            dry_run: If True, only validate without running
-            verbose: Enable verbose output
-            
-        Returns:
-            Experiment results or None if dry_run
-        """
         yaml_file = f"{self.benchmark_folder}/{config_name}"
 
         if verbose:

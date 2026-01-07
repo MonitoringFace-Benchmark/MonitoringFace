@@ -73,6 +73,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
         os.makedirs(self.path_to_experiment, exist_ok=True)
         os.makedirs(self.path_to_named_experiment, exist_ok=True)
 
+        data_setup = data_setup if data_setup else {}
         self.data_setup = data_setup if isinstance(data_setup, dict) else asdict(data_setup)
         fingerprint_location = self.path_to_named_experiment + "/fingerprint"
         new_experiment_fingerprint = data_class_to_finger_print(contract)
