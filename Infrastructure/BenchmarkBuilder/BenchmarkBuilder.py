@@ -11,13 +11,7 @@ import pandas as pd
 from Infrastructure.Analysis.Formatting import parse_wall_time
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilderException import BenchmarkCreationFailed
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import CaseStudyGenerator
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGenerator import SignatureGenerator
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfGenerator import DataGolfGenerator
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGenerator import PatternsGenerator
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.GenFmaGenerator.GenFmaGenerator import GenFmaGenerator
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyGenerator import MfotlPolicyGenerator
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyGenerator import PatternPolicyGenerator
-from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract, PolicyGenerators, DataGenerators
+from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import construct_case_study, CaseStudyMapper
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import construct_synthetic_experiment_sig, construct_synthetic_experiment_pattern, TimeGuarded
 from Infrastructure.DataTypes.FileRepresenters.FingerPrintHandler import FingerPrintHandler
@@ -39,8 +33,7 @@ class BenchmarkBuilderTemplate(ABC):
         pass
 
     @abstractmethod
-    def run(self, tools: list[AbstractMonitorTemplate],
-            parameters: dict[AnyStr, dict[AnyStr, Any]]) -> pandas.DataFrame:
+    def run(self, tools: list[AbstractMonitorTemplate], parameters: dict[AnyStr, dict[AnyStr, Any]]) -> pandas.DataFrame:
         pass
 
 
@@ -49,42 +42,6 @@ class TimeGuard:
     lower_time: int
     upper_time: int
     time_guard: str
-
-
-def init_policy_generator(name: PolicyGenerators, path_to_build_inner):
-    print(f"-> Attempting to initialize Policy Generator {name}")
-    if name == PolicyGenerators.MFOTLGENERATOR:
-        mfotl_gen = MfotlPolicyGenerator("gen_mfotl", path_to_build_inner)
-        print("    -> (Success)")
-        return mfotl_gen
-    elif name == PolicyGenerators.PATTERNS:
-        pattern_policy = PatternPolicyGenerator()
-        print("    -> (Success)")
-        return pattern_policy
-    elif name == PolicyGenerators.GENFMA:
-        gen_fma = GenFmaGenerator("gen_fma", path_to_build_inner)
-        print("    -> (Success)")
-        return gen_fma
-    else:
-        raise NotImplemented("Not implemented yet")
-
-
-def init_data_generator(tag: DataGenerators, path_to_project):
-    print(f"-> Attempting to initialize Data Generator {tag}")
-    if tag == DataGenerators.DATAGOLF:
-        data_golf = DataGolfGenerator("datagolf", path_to_project)
-        print("    -> (Success)")
-        return data_golf
-    elif tag == DataGenerators.DATAGENERATOR:
-        sig_gen = SignatureGenerator("gen_data", path_to_project)
-        print("    -> (Success)")
-        return sig_gen
-    elif tag == DataGenerators.PATTERNS:
-        pattern_gen = PatternsGenerator("gen_data", path_to_project)
-        print("    -> (Success)")
-        return pattern_gen
-    else:
-        raise NotImplemented("Not implemented yet()")
 
 
 class BenchmarkBuilder(BenchmarkBuilderTemplate):
@@ -138,8 +95,8 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
                 fph = FingerPrintHandler({FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
                 fph.to_file(fingerprint_location)
         else:
-            self.data_gen = init_data_generator(contract.data_source, path_to_project)
-            self.policy_gen = init_policy_generator(contract.policy_source, path_to_project)
+            self.data_gen = contract.data_source
+            self.policy_gen = contract.policy_source
             self.policy_setup = asdict(contract.policy_setup)
             self.experiment = contract.experiment
             print_footline("(Finished) Init Benchmark")
@@ -287,6 +244,8 @@ def run_tools(settings_result, tool, setting_id, time_guard, oracle, path_to_fol
             tool, time_guard, path_to_folder, data_file,
             signature_file, formula_file, oracle
         )
+
+        print(f"Prep:    {prep}\nRuntime: {runtime}\nPost:    {prop}")
 
         stats = StatsHandler(path_to_folder).get_stats()
         if stats is not None:

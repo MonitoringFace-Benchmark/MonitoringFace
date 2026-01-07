@@ -1,7 +1,7 @@
 from typing import AnyStr
 
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGeneratorContract import \
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternContract import \
     pattern_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
 from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY
@@ -11,7 +11,7 @@ from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY
 DEFAULT_SEED = 314159265
 
 
-class PatternsGenerator(DataGeneratorTemplate):
+class PatternGenerator(DataGeneratorTemplate):
     def __init__(self, name, path_to_build):
         self.image = ImageManager(name, Processor.DataGenerators, path_to_build)
 

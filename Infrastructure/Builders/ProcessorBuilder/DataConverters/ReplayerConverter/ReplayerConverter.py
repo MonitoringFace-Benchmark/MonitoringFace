@@ -1,7 +1,7 @@
 import subprocess
 from typing import AnyStr
 
-from Infrastructure.Builders.ProcessorBuilder.DataConverter.DataConverterTemplate import DataConverterTemplate
+from Infrastructure.Builders.ProcessorBuilder.DataConverters.DataConverterTemplate import DataConverterTemplate
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import Processor, ImageManager
 from Infrastructure.Monitors.MonitorExceptions import ReplayerException
 

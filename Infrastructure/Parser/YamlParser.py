@@ -1,19 +1,18 @@
+import importlib
 import os
+import sys
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Union, Tuple
 from omegaconf import OmegaConf, DictConfig
 from hydra import compose, initialize_config_dir
 from hydra.core.global_hydra import GlobalHydra
 
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfContract import DataGolfContract
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternGeneratorContract import Patterns
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGeneratorContract import Signature
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import MfotlPolicyContract
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PatternPolicyGenerator.PatternPolicyContract import \
-    PatternPolicyContract
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
+
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
-from Infrastructure.DataTypes.Contracts.BenchmarkContract import (
-    DataGenerators, SyntheticBenchmarkContract, PolicyGenerators, CaseStudyBenchmarkContract
-)
+from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
+from Infrastructure.DataTypes.Contracts.BenchmarkContract import SyntheticBenchmarkContract, CaseStudyBenchmarkContract
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
 from Infrastructure.DataTypes.Types.custome_type import ExperimentType, BranchOrRelease
@@ -26,17 +25,7 @@ class YamlParserException(Exception):
 
 
 class YamlParser:
-    """Parse YAML configuration files using Hydra for benchmark experiments"""
-    
     def __init__(self, yaml_path: str, path_to_build: str = None, path_to_experiments: str = None):
-        """
-        Initialize the YAML parser with Hydra
-        
-        Args:
-            yaml_path: Path to the YAML configuration file
-            path_to_build: Path to the build directory (optional, will use default)
-            path_to_experiments: Path to experiments directory (optional, will use default)
-        """
         self.yaml_path = os.path.abspath(yaml_path)
         self.config_dir = os.path.dirname(self.yaml_path)
         self.config_name = os.path.splitext(os.path.basename(self.yaml_path))[0]
@@ -55,7 +44,6 @@ class YamlParser:
         self.cfg = self._load_config()
     
     def _load_config(self) -> DictConfig:
-        """Load YAML configuration using Hydra"""
         GlobalHydra.instance().clear()
         try:
             initialize_config_dir(config_dir=self.config_dir, version_base=None)
@@ -64,12 +52,10 @@ class YamlParser:
         except Exception as e:
             raise YamlParserException(f"Error loading configuration: {e}")
         finally:
-            # Don't clear here - we need the config later
             pass
     
     @staticmethod
     def _parse_branch_or_release(value: str) -> BranchOrRelease:
-        """Convert string to BranchOrRelease enum"""
         value_lower = value.lower()
         if value_lower == "branch":
             return BranchOrRelease.Branch
@@ -80,7 +66,6 @@ class YamlParser:
     
     @staticmethod
     def _parse_experiment_type(value: str) -> ExperimentType:
-        """Convert string to ExperimentType enum"""
         value_lower = value.lower()
         if value_lower == "pattern":
             return ExperimentType.Pattern
@@ -93,7 +78,6 @@ class YamlParser:
     
     @staticmethod
     def _parse_time_guarding_tool(value: str) -> TimeGuardingTool:
-        """Convert string to TimeGuardingTool enum"""
         value_lower = value.lower()
         if value_lower == "monitor":
             return TimeGuardingTool.Monitor
@@ -104,34 +88,7 @@ class YamlParser:
         else:
             raise YamlParserException(f"Invalid guard_type value: {value}")
     
-    @staticmethod
-    def _parse_data_generators(value: str) -> DataGenerators:
-        """Convert string to DataGenerators enum"""
-        value_upper = value.upper()
-        if value_upper == "DATAGENERATOR":
-            return DataGenerators.DATAGENERATOR
-        elif value_upper == "DATAGOLF":
-            return DataGenerators.DATAGOLF
-        elif value_upper == "PATTERNS":
-            return DataGenerators.PATTERNS
-        else:
-            raise YamlParserException(f"Invalid data_source value: {value}")
-    
-    @staticmethod
-    def _parse_policy_generators(value: str) -> PolicyGenerators:
-        """Convert string to PolicyGenerators enum"""
-        value_upper = value.upper()
-        if value_upper == "MFOTLGENERATOR":
-            return PolicyGenerators.MFOTLGENERATOR
-        elif value_upper == "PATTERNS":
-            return PolicyGenerators.PATTERNS
-        elif value_upper == "GENFMA":
-            return PolicyGenerators.GENFMA
-        else:
-            raise YamlParserException(f"Invalid policy_source value: {value}")
-    
     def parse_tool_manager(self) -> ToolManager:
-        """Parse tools configuration and create ToolManager"""
         if 'tools' not in self.cfg:
             raise YamlParserException("Missing 'tools' section in YAML configuration")
         
@@ -154,66 +111,63 @@ class YamlParser:
         seeds_dict = OmegaConf.to_container(self.cfg.seeds, resolve=True)
         return {key: (int(value[0]), int(value[1])) for key, value in seeds_dict.items()}
 
-    def parse_data_setup(self) -> Union[Signature, Patterns, DataGolfContract]:
-        """Parse data setup configuration"""
+    @staticmethod
+    def _parse_data_generators(path_to_module, name: str) -> DataGeneratorTemplate:
+        print(f"-> Attempting to initialize Policy Generator {name}")
+        available = _discover_names(f"{path_to_module}/Infrastructure", "DataGenerators")
+        if name in available:
+            cls = _retrieve_module("DataGenerators", name)
+            build_cls = cls(name=name, path_to_build=f"{path_to_module}")
+            print("    -> (Success)")
+            return build_cls
+        else:
+            raise YamlParserException(f"Invalid DataGenerator {name} not in {available}")
+
+    def parse_data_generator_setup(self) -> AbstractContract:
         if 'data_setup' not in self.cfg:
             raise YamlParserException("Missing 'data_setup' section in YAML configuration")
         
         data_setup = self.cfg.data_setup
-        data_type = data_setup.get('type')
-        
-        if data_type == 'Signature':
-            config = OmegaConf.to_container(data_setup.get('Signature', {}), resolve=True)
-            return Signature(**config)
-        elif data_type == 'Patterns':
-            config = OmegaConf.to_container(data_setup.get('Patterns', {}), resolve=True)
-            return Patterns(**config)
-        elif data_type == 'DataGolfContract':
-            config = OmegaConf.to_container(data_setup.get('DataGolfContract', {}), resolve=True)
-            # Add path if not specified
-            if 'path' not in config:
-                config['path'] = self.path_to_experiments
-            return DataGolfContract(**config)
+        data_contract_name = data_setup.get('type')
+
+        folder_files = _discover_contract_names(self.path_to_project + "/Infrastructure", "DataGenerators")
+        if _contract_names(folder_files, data_contract_name):
+            folder = _folder_name_from_contract(folder_files, data_contract_name)
+            config = OmegaConf.to_container(data_setup.get(data_contract_name, {}), resolve=True)
+            contract = _retrieve_contract("DataGenerators", folder, data_contract_name)
+            return contract(**config)
         else:
-            raise YamlParserException(f"Invalid data_setup type: {data_type}")
+            raise YamlParserException(f"Invalid data_setup type: {data_contract_name}")
+
+    @staticmethod
+    def _parse_policy_generators(path_to_module, name: str) -> PolicyGeneratorTemplate:
+        print(f"-> Attempting to initialize Policy Generator {name}")
+        available = _discover_names(f"{path_to_module}/Infrastructure", "PolicyGenerators")
+        if name in available:
+            cls = _retrieve_module("PolicyGenerators", name)
+            build_cls = cls(name=name, path_to_build=f"{path_to_module}")
+            print("    -> (Success)")
+            return build_cls
+        else:
+            raise YamlParserException(f"Invalid Policy Generator {name} not in {available}")
     
     def parse_policy_setup(self):
-        """Parse policy setup configuration"""
         if 'policy_setup' not in self.cfg:
             raise YamlParserException("Missing 'policy_setup' section in YAML configuration")
         
         policy_setup = self.cfg.policy_setup
-        policy_type = policy_setup.get('type', 'PolicyGeneratorContract')
-        
-        if policy_type == 'MfotlPolicyContract':
-            # Start with default contract
-            contract = MfotlPolicyContract().default_contract()
-            # Update with provided config
-            config = OmegaConf.to_container(policy_setup, resolve=True)
-            for key, value in config.items():
-                if key != 'type' and hasattr(contract, key) and value is not None:
-                    setattr(contract, key, value)
-            return contract
-        elif policy_type == 'PatternPolicyContract':
-            contract = PatternPolicyContract().default_contract()
-            config = OmegaConf.to_container(policy_setup, resolve=True)
-            for key, value in config.items():
-                if key != 'type' and hasattr(contract, key) and value is not None:
-                    setattr(contract, key, value)
-            return contract
-        elif policy_type == 'GenFmaContract':
-            from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.GenFmaGenerator.GenFmaContract import GenFmaContract
-            contract = GenFmaContract().default_contract()
-            config = OmegaConf.to_container(policy_setup, resolve=True)
-            for key, value in config.items():
-                if key != 'type' and hasattr(contract, key) and value is not None:
-                    setattr(contract, key, value)
-            return contract
+        data_contract_name = policy_setup.get('type')
+
+        folder_files = _discover_contract_names(self.path_to_project + "/Infrastructure", "PolicyGenerators")
+        if _contract_names(folder_files, data_contract_name):
+            folder = _folder_name_from_contract(folder_files, data_contract_name)
+            config = OmegaConf.to_container(policy_setup.get(data_contract_name, {}), resolve=True)
+            contract = _retrieve_contract("PolicyGenerators", folder, data_contract_name)
+            return contract().instantiate_contract(config)
         else:
-            raise YamlParserException(f"Invalid policy_setup type: {policy_type}")
+            raise YamlParserException(f"Invalid Policy Generator Contract: {data_contract_name}")
     
     def parse_benchmark_contract(self) -> Union[SyntheticBenchmarkContract, CaseStudyBenchmarkContract]:
-        """Parse benchmark contract based on benchmark type"""
         experiment_name = self.cfg.get('experiment_name', 'unnamed_experiment')
         benchmark_type = self.cfg.get('benchmark_type', 'synthetic')
         
@@ -224,18 +178,12 @@ class YamlParser:
             if not case_study_name:
                 raise YamlParserException("Missing 'case_study_name' in case_study_config")
             
-            return CaseStudyBenchmarkContract(
-                experiment_name=experiment_name,
-                case_study_name=case_study_name
-            )
-        
+            return CaseStudyBenchmarkContract(experiment_name=experiment_name, case_study_name=case_study_name)
         elif benchmark_type == 'synthetic':
             if 'synthetic_config' not in self.cfg:
                 raise YamlParserException("Missing 'synthetic_config' for synthetic benchmark")
             
             synthetic_config = self.cfg.synthetic_config
-            data_source = self._parse_data_generators(synthetic_config.get('data_source', 'DATAGENERATOR'))
-            policy_source = self._parse_policy_generators(synthetic_config.get('policy_source', 'MFOTLGENERATOR'))
             
             experiment_config = synthetic_config.get('experiment', {})
             experiment_dict = OmegaConf.to_container(experiment_config, resolve=True)
@@ -245,7 +193,10 @@ class YamlParser:
                 num_setting=experiment_dict.get('num_setting', [0]),
                 num_data_set_sizes=experiment_dict.get('num_data_set_sizes', [50])
             )
-            
+
+            # todo the discovery of data_source and policy_source could be improved
+            data_source = self._parse_data_generators(self.path_to_project, synthetic_config.get('data_source', 'SignatureGenerator'))
+            policy_source = self._parse_policy_generators(self.path_to_project, synthetic_config.get('policy_source', 'MfotlPolicyGenerator'))
             policy_setup = self.parse_policy_setup()
             
             return SyntheticBenchmarkContract(
@@ -358,7 +309,7 @@ class YamlParser:
             Dictionary containing all parsed components needed to run the experiment
         """
         tool_manager = self.parse_tool_manager()
-        data_setup = self.parse_data_setup()
+        data_setup = self.parse_data_generator_setup()
         benchmark_contract = self.parse_benchmark_contract()
         monitor_manager = self.parse_monitor_manager(tool_manager)
         oracle_manager = self.parse_oracle_manager(monitor_manager)
@@ -395,15 +346,7 @@ class YamlParser:
 
 
 class ExperimentSuiteParser:
-    """Parse YAML files containing multiple experiment configurations using Hydra"""
-    
     def __init__(self, path_to_project: str, config_name: str):
-        """
-        Initialize the experiment suite parser
-        
-        Args:
-            path_to_project: Path to the YAML file containing experiment suite
-        """
         relative_dir = os.path.dirname(config_name)
         if relative_dir:
             self.config_dir = f"{path_to_project}/Archive/Benchmarks/{relative_dir}"
@@ -413,9 +356,7 @@ class ExperimentSuiteParser:
         self.cfg = self._load_config()
     
     def _load_config(self) -> DictConfig:
-        """Load YAML configuration using Hydra"""
         GlobalHydra.instance().clear()
-        
         try:
             initialize_config_dir(config_dir=self.config_dir, version_base=None)
             cfg = compose(config_name=self.config_name)
@@ -424,12 +365,6 @@ class ExperimentSuiteParser:
             raise YamlParserException(f"Error loading suite configuration: {e}")
     
     def get_experiment_paths(self) -> List[str]:
-        """
-        Get list of enabled experiment configuration paths
-        
-        Returns:
-            List of absolute paths to experiment YAML files
-        """
         if 'experiments' not in self.cfg:
             raise YamlParserException("Missing 'experiments' section in suite YAML")
         
@@ -444,12 +379,6 @@ class ExperimentSuiteParser:
         return experiment_paths
     
     def parse_all_experiments(self) -> List[Dict[str, Any]]:
-        """
-        Parse all enabled experiments in the suite
-        
-        Returns:
-            List of parsed experiment configurations
-        """
         experiment_paths = self.get_experiment_paths()
         parsed_experiments = []
         
@@ -464,8 +393,54 @@ class ExperimentSuiteParser:
         return parsed_experiments
     
     def __del__(self):
-        """Cleanup Hydra instance"""
         try:
             GlobalHydra.instance().clear()
         except Exception():
             pass
+
+
+def _discover_names(path_to_infra_, category):
+    names = []
+    for item in Path(f"{path_to_infra_}/Builders/ProcessorBuilder/{category}").iterdir():
+        if not item.is_dir() or item.name.startswith('_') or item.name == '__pycache__':
+            continue
+        names.append(item.name)
+    return names
+
+
+def _retrieve_module(category, name):
+    return getattr(importlib.import_module(f"Infrastructure.Builders.ProcessorBuilder.{category}.{name}.{name}"), name)
+
+
+def _discover_contract_names(path_to_infra_: str, category: str) -> List[str]:
+    contracts = []
+    category_path = Path(f"{path_to_infra_}/Builders/ProcessorBuilder/{category}")
+    for item in category_path.iterdir():
+        if not item.is_dir() or item.name.startswith('_') or item.name == '__pycache__':
+            continue
+        for file in item.iterdir():
+            if file.suffix == '.py' and 'Contract' in file.stem:
+                contracts.append((item.name, file.stem))
+    return contracts
+
+
+def _contract_names(folder_file_tuples, name) -> bool:
+    return name in map(lambda x: x[1], folder_file_tuples)
+
+
+def _folder_name_from_contract(folder_file_tuples, contract_name) -> Optional[str]:
+    for folder_name, file_name in folder_file_tuples:
+        if file_name == contract_name:
+            return folder_name
+    raise ValueError(f"Contract {contract_name} folder not found")
+
+
+def _retrieve_contract(category: str, folder_name: str, contract_class_name: str):
+    module = importlib.import_module(f"Infrastructure.Builders.ProcessorBuilder.{category}.{folder_name}.{contract_class_name}")
+    return getattr(module, contract_class_name)
+
+
+if __name__ == '__main__':
+    path_to_infra = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure"
+    print(_discover_contract_names(path_to_infra, "DataGenerators"))
+    #_discover_processor(path_to_infra, "DataGenerators")

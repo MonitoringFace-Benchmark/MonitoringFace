@@ -10,7 +10,7 @@ class PatternPolicyContract(AbstractContract):
         pass
 
     def default_contract(self):
-        return PatternPolicyContract(interval="[0,30)", policy="linear")
+        return PatternPolicyContract()
 
     def instantiate_contract(self, params):
         if not params:

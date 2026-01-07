@@ -1,4 +1,4 @@
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureGeneratorContract import signature_contract_to_commands
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureContract import signature_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
 from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY
@@ -9,7 +9,7 @@ DEFAULT_SEED = 314159265
 
 class SignatureGenerator(DataGeneratorTemplate):
     def __init__(self, name, path_to_build):
-        self.image = ImageManager(name, Processor.DataGenerators, path_to_build)
+        self.image = ImageManager("gen_data", Processor.DataGenerators, path_to_build)
 
     def run_generator(self, contract_inner, time_on=None, time_out=None):
         inner_contract = dict()

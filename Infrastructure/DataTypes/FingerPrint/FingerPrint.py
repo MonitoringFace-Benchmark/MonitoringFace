@@ -1,8 +1,12 @@
 import hashlib
+import sys
 from enum import Enum
 
 import yaml
 from dataclasses import is_dataclass, asdict
+
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 
 
 def normalize(obj):
@@ -14,6 +18,10 @@ def normalize(obj):
         return [normalize(x) for x in obj]
     elif isinstance(obj, dict):
         return {k: normalize(v) for k, v in obj.items()}
+    elif isinstance(obj, DataGeneratorTemplate):
+        return f"{obj.__class__.__name__}"
+    elif isinstance(obj, PolicyGeneratorTemplate):
+        return f"{obj.__class__.__name__}"
     else:
         return obj
 

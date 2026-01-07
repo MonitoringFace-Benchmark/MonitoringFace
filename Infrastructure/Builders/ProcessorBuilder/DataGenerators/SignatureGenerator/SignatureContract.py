@@ -5,9 +5,9 @@ from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
 
 @dataclass
-class Signature(AbstractContract):
+class SignatureContract(AbstractContract):
     def default_contract(self):
-        return Signature(
+        return SignatureContract(
             trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None,
             sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None
         )
@@ -35,7 +35,7 @@ class Signature(AbstractContract):
     string_length: Optional[int]
 
 
-def signature_to_commands(contract: Signature) -> list[str]:
+def signature_to_commands(contract: SignatureContract) -> list[str]:
     args = []
     if contract.seed is not None:
         args.extend(["-seed", str(contract.seed)])
@@ -59,6 +59,6 @@ def signature_to_commands(contract: Signature) -> list[str]:
 
 
 def signature_contract_to_commands(contract_params: Dict[str, Any]) -> list[str]:
-    valid_fields = {f.name for f in fields(Signature)}
-    contract = Signature(**{k: v for k, v in contract_params.items() if k in valid_fields})
+    valid_fields = {f.name for f in fields(SignatureContract)}
+    contract = SignatureContract(**{k: v for k, v in contract_params.items() if k in valid_fields})
     return signature_to_commands(contract)

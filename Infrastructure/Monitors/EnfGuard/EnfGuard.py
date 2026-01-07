@@ -2,7 +2,7 @@ import re
 from typing import Dict, AnyStr, Any, Tuple
 
 from Infrastructure.Builders.ToolBuilder import ToolImageManager
-from Infrastructure.Builders.ProcessorBuilder.DataConverter.ReplayerConverter import ReplayerConverter
+from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import ReplayerConverter
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, DefaultVariableOrder
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
@@ -17,7 +17,6 @@ class EnfGuard(AbstractMonitorTemplate):
 
     def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
         self.params["folder"] = path_to_folder
-
         self.params["signature"] = signature_file
         self.params["formula"] = formula_file
 

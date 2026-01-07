@@ -1,4 +1,5 @@
 import importlib
+import sys
 from abc import ABC
 from pathlib import Path
 from typing import AnyStr, List
@@ -9,11 +10,10 @@ from Infrastructure.printing import print_headline, print_footline
 
 def _discover_monitors():
     monitors = {}
-    monitors_dir = Path(__file__).parent
-    for item in monitors_dir.iterdir():
+    for item in Path(__file__).parent.iterdir():
         if not item.is_dir() or item.name.startswith('_') or item.name == '__pycache__':
             continue
-        
+
         folder_name = item.name
         module_file = item / f"{folder_name}.py"
 
@@ -21,7 +21,6 @@ def _discover_monitors():
             try:
                 module_path = f"Infrastructure.Monitors.{folder_name}.{folder_name}"
                 module = importlib.import_module(module_path)
-
                 if hasattr(module, folder_name):
                     monitor_class = getattr(module, folder_name)
                     monitors[folder_name] = monitor_class

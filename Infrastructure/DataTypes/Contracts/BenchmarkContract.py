@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from enum import Enum
 
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
+from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
 
@@ -10,22 +11,10 @@ class BenchmarkContractAbstract:
     experiment_name: str
 
 
-class DataGenerators(Enum):
-    DATAGOLF = 1,
-    DATAGENERATOR = 2,
-    PATTERNS = 3
-
-
-class PolicyGenerators(Enum):
-    GENFMA = 1
-    MFOTLGENERATOR = 2,
-    PATTERNS = 3
-
-
 @dataclass
 class SyntheticBenchmarkContract(BenchmarkContractAbstract):
-    data_source: DataGenerators
-    policy_source: PolicyGenerators
+    data_source: DataGeneratorTemplate
+    policy_source: PolicyGeneratorTemplate
     policy_setup: AbstractContract
     experiment: SyntheticExperiment
 

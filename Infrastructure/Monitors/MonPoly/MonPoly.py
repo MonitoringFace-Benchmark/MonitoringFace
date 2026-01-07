@@ -2,7 +2,7 @@ import re
 from typing import Dict, AnyStr, Any, Tuple
 
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import ToolImageManager
-from Infrastructure.Builders.ProcessorBuilder.DataConverter.ReplayerConverter.ReplayerConverter import ReplayerConverter
+from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import ReplayerConverter
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder, VariableOrder

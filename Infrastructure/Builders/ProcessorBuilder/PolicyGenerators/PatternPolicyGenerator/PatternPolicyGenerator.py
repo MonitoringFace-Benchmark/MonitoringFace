@@ -4,7 +4,7 @@ from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTe
 
 
 class PatternPolicyGenerator(PolicyGeneratorTemplate):
-    def __init__(self):
+    def __init__(self, _name, _path_to_build):
         super().__init__()
 
     def generate_policy(self, policy_contract, time_on=None, time_out=None):
