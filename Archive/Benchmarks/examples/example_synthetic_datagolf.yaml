@@ -52,18 +52,19 @@ data_setup:
 
 # Policy setup
 policy_setup:
-  type: PolicyGeneratorContract
-  num_preds: 4
-  prob_eand: 0
-  prob_rand: 0
-  prob_let: 0
-  prob_matchF: 0
-  prob_matchP: 0
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_eand: 0
+    prob_rand: 0
+    prob_let: 0
+    prob_matchF: 0
+    prob_matchP: 0
 
 # Synthetic benchmark specific configuration
 synthetic_config:
-  data_source: DATAGOLF  # DATAGENERATOR or DATAGOLF
-  policy_source: MFOTLGENERATOR  # MFOTLGENERATOR or PATTERNS
+  data_source: DataGolfGenerator
+  policy_source: MfotlPolicyGenerator
   experiment:
     num_operators: [5]
     num_fvs: [2]

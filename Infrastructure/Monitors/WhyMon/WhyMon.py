@@ -1,4 +1,4 @@
-from typing import Dict, AnyStr, Any
+from typing import Dict, AnyStr, Any, Tuple
 
 from Infrastructure.Builders.ToolBuilder import ToolImageManager
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import ReplayerConverter
@@ -17,7 +17,6 @@ class WhyMon(AbstractMonitorTemplate):
 
     def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
         self.params["folder"] = path_to_folder
-
         self.params["signature"] = signature_file
         self.params["formula"] = formula_file
 
@@ -33,7 +32,7 @@ class WhyMon(AbstractMonitorTemplate):
 
         self.params["data"] = f"scratch/{trimmed_data_file}.monpoly"
 
-    def run_offline(self, time_on=None, time_out=None) -> (AnyStr, int):
+    def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
         cmd = [
             "-sig", str(self.params["signature"]),
             "-formula", str(self.params["formula"]),
