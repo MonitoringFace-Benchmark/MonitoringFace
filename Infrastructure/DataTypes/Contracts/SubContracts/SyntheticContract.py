@@ -29,7 +29,7 @@ def construct_synthetic_experiment_pattern(
         path_to_folder: AnyStr, data_setup_, data_source,
         oracle: Optional[AbstractOracleTemplate], time_guard, seeds
 ):
-    policy_source = PatternPolicyGenerator()
+    policy_source = PatternPolicyGenerator("", "")
     data_setup = copy.copy(data_setup_)
     for num_ops in experiment.num_operators:
         ops_path = path_to_folder + "/" + f"operators_{num_ops}"

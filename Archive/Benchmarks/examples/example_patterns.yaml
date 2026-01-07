@@ -33,8 +33,8 @@ time_guard:
 
 # Data setup using Patterns - Hydra structured format
 data_setup:
-  type: Patterns
-  Patterns:
+  type: PatternContract
+  PatternContract:
     trace_length: 1000
     seed: null
     event_rate: 1000
@@ -53,18 +53,17 @@ data_setup:
 
 # Policy setup
 policy_setup:
-  type: PolicyGeneratorContract
-  num_preds: 3
-  prob_eand: 0
-  prob_rand: 0
+  type: PatternPolicyContract
+  PatternPolicyContract:
+    interval: "[0,10)"
+    policy: "Star"
 
 # Synthetic benchmark configuration
 synthetic_config:
-  data_source: PATTERNS
-  policy_source: MFOTLGENERATOR
+  data_source: PatternGenerator
+  policy_source: PatternPolicyGenerator
   experiment:
     num_operators: [3, 5, 7]
-    num_fvs: [1, 2]
     num_setting: [0]
     num_data_set_sizes: [10, 50]
 
