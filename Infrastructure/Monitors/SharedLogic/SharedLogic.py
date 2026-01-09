@@ -89,7 +89,15 @@ class MonPolyVeriMonWrapper(AbstractMonitorTemplate):
             return verdicts
 
         for line in stdout_input.strip().split("\n"):
-            ts, tp, vals = parse_pattern(line)
-            verdicts.insert(vals, tp, ts)
+            try:
+                ts, tp, vals = parse_pattern(line)
+                verdicts.insert(vals, tp, ts)
+            except Exception:
+                if line.startswith("@MaxTs"):
+                    pass
+                else:
+                    raise ValueError(f"Could not parse line: {line}")
+
+
 
         return verdicts

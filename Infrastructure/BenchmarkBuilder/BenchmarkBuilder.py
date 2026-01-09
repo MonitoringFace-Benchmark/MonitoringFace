@@ -259,6 +259,8 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
             tool.name, setting_id, prep, runtime, prop,
             wall_time, max_mem, cpu, str(e.args[1])
         )
+    except Exception as e:
+        result_aggregator.add_tool_error(tool.name, setting_id, str(e))
 
 
 def path_generator(mode: ExperimentType, experiment, path_to_named_experiment: AnyStr) -> list[AnyStr]:
