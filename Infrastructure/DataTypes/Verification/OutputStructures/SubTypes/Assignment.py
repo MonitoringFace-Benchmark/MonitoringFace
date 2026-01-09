@@ -17,6 +17,9 @@ class Assignment(ValueType):
             return False
         return dict(zip(self.order, self.values)) == dict(zip(other.order, other.values))
 
+    def __hash__(self):
+        return hash(tuple(zip(self.order, self.values)))
+
     def to_representation(self) -> List[Tuple[Any, AnyStr]]:
         return list(zip(self.values, self.order))
 

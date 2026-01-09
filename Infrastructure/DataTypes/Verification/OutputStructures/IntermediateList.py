@@ -38,21 +38,26 @@ class IntermediateList:
         return cls(values, proposition_list.variable_order)
 
     def to_proposition_tree(self, new_order: VariableOrdering):
-        def _pdt_subtree_recurse(vars_: List[str], fixed_vars, assignments: List[Assignment], current_assignment: List):
+        def _pdt_subtree_recurse(vars_: List[str], assignments: List[Assignment]):
             if not vars_:
-                return PDTLeaf(Assignment(current_assignment, fixed_vars) in assignments)
+                return PDTLeaf(len(assignments) > 0)
 
             var_ = vars_[0]
             remaining = vars_[1:]
-            domain_set = set([assignment.retrieve_value(var_) for assignment in assignments])
+
+            value_to_assignments = {}
+            for assignment in assignments:
+                val = assignment.retrieve_value(var_)
+                if val not in value_to_assignments:
+                    value_to_assignments[val] = []
+                value_to_assignments[val].append(assignment)
+
             choices = []
-            for elem in domain_set:
-                new_assignment = current_assignment.copy()
-                new_assignment.append(elem)
-                subtree = _pdt_subtree_recurse(remaining, fixed_vars, assignments, new_assignment)
+            for elem, matching in value_to_assignments.items():
+                subtree = _pdt_subtree_recurse(remaining, matching)
                 choices.append((PDTSet({elem}), subtree))
 
-            choices.append((PDTComplementSet(domain_set), PDTLeaf(False)))
+            choices.append((PDTComplementSet(set(value_to_assignments.keys())), PDTLeaf(False)))
             return PDTNode(var_, choices)
 
         pdt = PropositionTree(new_order)
@@ -62,5 +67,5 @@ class IntermediateList:
                 pdt.forest[tp] = PDTTree(PDTLeaf(value=val.value))
             else:
                 assignments = list(map(lambda ass: ass.retrieve_order(new_order=new_order), val))
-                pdt.forest[tp] = PDTTree(_pdt_subtree_recurse(vars_=new_order.retrieve_order(), fixed_vars=new_order, assignments=assignments, current_assignment=[]))
+                pdt.forest[tp] = PDTTree(_pdt_subtree_recurse(vars_=new_order.retrieve_order(), assignments=assignments))
         return pdt

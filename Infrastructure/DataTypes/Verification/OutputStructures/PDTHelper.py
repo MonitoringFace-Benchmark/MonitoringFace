@@ -53,7 +53,29 @@ def negate_pdt(pdt: PDTComponents) -> PDTComponents:
 
 
 def equality_between_pdts(vars, left_tree: PDTTree, right_tree: PDTTree) -> bool:
-    return collapse_pdt(apply2_reduce_inner(vars, (lambda x, y: x == y), left_tree.tree, right_tree.tree))
+    if len(vars) == 1:
+        print("Single level tree comparison")
+        return single_level_tree(left_tree.tree, right_tree.tree)
+    else:
+        print("Multi-level tree comparison")
+        return collapse_pdt(apply2_reduce_inner(vars, (lambda x, y: x == y), left_tree.tree, right_tree.tree))
+
+
+def single_level_tree(left_tree: PDTComponents, right_tree: PDTComponents) -> bool:
+    if isinstance(left_tree, PDTLeaf) and isinstance(right_tree, PDTLeaf):
+        return left_tree.value and right_tree.value
+    elif isinstance(left_tree, PDTNode) and isinstance(right_tree, PDTNode):
+        l_comp = None
+        for x in left_tree.values:
+            if isinstance(x[1], PDTComplementSet):
+                l_comp = x[1]
+        r_comp = None
+        for x in right_tree.values:
+            if isinstance(x[1], PDTComplementSet):
+                r_comp = x[1]
+        return l_comp == r_comp
+    else:
+         return False
 
 
 def setc_union(set1: PDTSets, set2: PDTSets) -> PDTSets:
@@ -108,51 +130,44 @@ def _map_dedup(part: list, f) -> list:
     return _dedup_part([(guard, f(value)) for guard, value in part])
 
 
-def _merge2_dedup(f, part1: list, part2: list) -> list:
-    def merge2(f, part1, part2):
-        if not part1:
-            return []
-
-        sub1, v1 = part1[0]
-        rest_part1 = part1[1:]
-
-        part12 = []
-        part2not1 = []
-
-        for sub2, v2 in part2:
+def _merge2_dedup_iter(f, part1: list, part2: list) -> list:
+    merged = []
+    remaining_part2 = list(part2)
+    for sub1, v1 in part1:
+        new_remaining = []
+        for sub2, v2 in remaining_part2:
             inter = setc_inter(sub1, sub2)
             if not setc_is_empty(inter):
-                part12.append((inter, f(v1, v2)))
-
+                merged.append((inter, f(v1, v2)))
             diff = setc_diff(sub2, sub1)
             if not setc_is_empty(diff):
-                part2not1.append((diff, v2))
-
-        return part12 + merge2(f, rest_part1, part2not1)
-
-    merged = merge2(f, part1, part2)
+                new_remaining.append((diff, v2))
+        remaining_part2 = new_remaining
     return _dedup_part(merged)
 
 
 def _dedup_part(part: list) -> list:
-    def aux(acc, sv):
-        s, v = sv
-        if not acc:
-            return [(s, v)]
-        t, u = acc[0]
-        rest_acc = acc[1:]
-        if u == v:
-            return [(setc_union(s, t), u)] + rest_acc
+    if not part:
+        return []
+
+    result = []
+    for s, v in part:
+
+        if result:
+            # Check if we can merge with any existing entry
+            merged = False
+            for i in range(len(result)):
+                t, u = result[i]
+                if u == v:
+                    result[i] = (setc_union(s, t), u)
+                    merged = True
+                    break
+            if not merged:
+                result.append((s, v))
         else:
-            return [(t, u)] + aux(rest_acc, (s, v))
+            result.append((s, v))
 
-    def dedup_rec(part, acc):
-        if not part:
-            return acc
-        s, v = part[0]
-        return dedup_rec(part[1:], aux(acc, (s, v)))
-
-    return dedup_rec(part, [])
+    return result
 
 
 def apply1_reduce(vars: list, f, node: PDTComponents) -> PDTComponents:
@@ -172,7 +187,7 @@ def apply1_reduce(vars: list, f, node: PDTComponents) -> PDTComponents:
             deduped = _dedup_part(new_values)
             return PDTNode(node.term, deduped)
         else:
-            return apply1_reduce(vars, f, node)
+            return apply1_reduce(vars[1:], f, node)
     raise PDTCompareError("Unknown PDTComponents type during apply1_reduce")
 
 
@@ -181,7 +196,6 @@ def apply2_reduce_inner(vars: list, f, left_node: PDTComponents, right_node: PDT
         return PDTLeaf(f(left_node.value, right_node.value))
 
     if isinstance(left_node, PDTLeaf) and isinstance(right_node, PDTNode):
-        # return a leave if result is a singleton
         return PDTNode(
             right_node.term,
             _map_dedup(right_node.values, lambda l2: apply1_reduce(vars, lambda l1: f(left_node.value, l1), l2))
@@ -201,7 +215,7 @@ def apply2_reduce_inner(vars: list, f, left_node: PDTComponents, right_node: PDT
         rest_vars = vars[1:]
 
         if left_node.term == current_var and right_node.term == current_var:
-            sub_list = _merge2_dedup(
+            sub_list = _merge2_dedup_iter(
                 lambda l1, l2: apply2_reduce_inner(rest_vars, f, l1, l2),
                 left_node.values,
                 right_node.values
@@ -224,54 +238,6 @@ def apply2_reduce_inner(vars: list, f, left_node: PDTComponents, right_node: PDT
             return PDTNode(right_node.term,
                 _map_dedup(right_node.values, lambda l2: apply2_reduce_inner(rest_vars, f, PDTNode(left_node.term, left_node.values), l2))
             )
-        return apply2_reduce_inner(vars, f, left_node, right_node)
+        return apply2_reduce_inner(rest_vars, f, left_node, right_node)
 
     raise PDTCompareError("Unknown PDTComponents type during apply2_reduce_inner")
-
-
-def _extract_finite_and_complement(node_values: PDTNode) -> tuple[list[tuple[PDTSet, PDTComponents]], PDTComplementSet]:
-    finite_pairs = []
-    complement_pair = None
-
-    for guard, subtree in node_values.values:
-        if isinstance(guard, PDTSet):
-            finite_pairs.append((guard, subtree))
-        elif isinstance(guard, PDTComplementSet):
-            complement_pair = guard
-
-    return finite_pairs, complement_pair
-
-
-def _find_leaf_for_value(node, value) -> bool:
-    if value is None and not isinstance(node, PDTLeaf):
-        raise PDTCompareError(f"Value is None but node at term {node.term} is not a leaf")
-
-    if isinstance(node, PDTLeaf):
-        return node.value
-
-    for guard, subtree in node.values:
-        if guard.is_member(value):
-            return _find_leaf_for_value(subtree, value)
-
-    raise PDTCompareError(f"No guard matched value {value} at term {node.term}")
-
-
-def _are_finite_sets_equivalent(left_finite, right_finite):
-    left_sets = [guard.set for guard, _ in left_finite]
-    matched_left = set()
-
-    for right_set in [guard.set for guard, _ in right_finite]:
-        found_match = False
-        for i, left_set in enumerate(left_sets):
-            if right_set & left_set:  # intersection
-                if right_set <= left_set:  # subset check
-                    matched_left.add(i)
-                    found_match = True
-                    break
-        if not found_match:
-            return False
-
-    if len(matched_left) != len(left_sets):
-        return False
-
-    return True
