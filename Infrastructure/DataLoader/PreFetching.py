@@ -2,6 +2,7 @@ import requests
 from abc import ABC, abstractmethod
 
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import get_auth_token
+from Infrastructure.constants import GIT_KEY, OWNER_KEY, REPO_KEY
 
 
 class RepoFetcher(ABC):
@@ -141,7 +142,11 @@ class GitLabFetcher(RepoFetcher):
             return None
 
 
-def init_repo_fetcher(platform, owner, repo, path_to_infra):
+def init_repo_fetcher(fl, path_to_infra):
+    platform = fl.get_attr(GIT_KEY)
+    owner = fl.get_attr(OWNER_KEY)
+    repo = fl.get_attr(REPO_KEY)
+
     if platform == "GitLab":
         return GitLabFetcher(owner, repo)
     elif platform == "GitHub":

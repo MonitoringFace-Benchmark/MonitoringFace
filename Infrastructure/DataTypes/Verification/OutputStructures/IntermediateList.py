@@ -1,4 +1,4 @@
-from typing import AnyStr, List, Union, Tuple
+from typing import List, Union, Tuple
 
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
@@ -37,14 +37,13 @@ class IntermediateList:
         ]
         return cls(values, proposition_list.variable_order)
 
-    def to_proposition_tree(self, new_order: List[AnyStr]):
+    def to_proposition_tree(self, new_order: VariableOrdering):
         def _pdt_subtree_recurse(vars_: List[str], fixed_vars, assignments: List[Assignment], current_assignment: List):
             if not vars_:
                 return PDTLeave(Assignment(current_assignment, fixed_vars) in assignments)
 
             var_ = vars_[0]
             remaining = vars_[1:]
-
             domain_set = set([assignment.retrieve_value(var_) for assignment in assignments])
             choices = []
             for elem in domain_set:
@@ -63,5 +62,5 @@ class IntermediateList:
                 pdt.forest[tp] = PDTTree(PDTLeave(value=val.value))
             else:
                 assignments = list(map(lambda ass: ass.retrieve_order(new_order=new_order), val))
-                pdt.forest[tp] = PDTTree(_pdt_subtree_recurse(vars_=new_order, fixed_vars=new_order, assignments=assignments, current_assignment=[]))
+                pdt.forest[tp] = PDTTree(_pdt_subtree_recurse(vars_=new_order.retrieve_order(), fixed_vars=new_order, assignments=assignments, current_assignment=[]))
         return pdt

@@ -2,7 +2,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import Dict, AnyStr, Any, Tuple
 
-from Infrastructure.Builders.ToolBuilder.ToolImageManager import ToolImageManager
+from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
@@ -10,7 +10,7 @@ from Infrastructure.printing import print_headline, print_footline
 
 
 class AbstractMonitorTemplate(ABC):
-    def __init__(self, image: ToolImageManager, name, params: Dict[AnyStr, Any]):
+    def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         self.image = image
         self.params = params
         self.name = name
@@ -76,8 +76,11 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
     end = time.perf_counter()
     postprocessing_elapsed = end - start
 
-    if oracle is not None and False:
-        verified, msg = oracle.verify(path_to_folder + "/results", data_file, res)
+    print(f"Prep:    {preprocessing_elapsed}\nRuntime: {run_offline_elapsed}\nPost:    {postprocessing_elapsed}")
+
+    if oracle is not None:
+        verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, formula_file)
+        print_headline(f"Verified: {verified}")
         if not verified:
             raise ResultErrorException((postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
 

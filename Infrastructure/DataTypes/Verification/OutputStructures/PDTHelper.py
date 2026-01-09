@@ -28,12 +28,19 @@ def data_golf_pdt_equality(data_golf: DatagolfVerdicts, right_tree: PropositionT
     return True
 
 
+def collapse_pdt(pdt: PDTComponents) -> bool:
+    def _inner(pdt_):
+        if isinstance(pdt_, PDTLeave):
+            return pdt_.value
+        elif isinstance(pdt_, PDTNode):
+            return all([_inner(y) for (_, y) in pdt_.values])
+        else:
+            raise ValueError("Malformed Tree")
+    return _inner(pdt)
+
+
 def equality_between_pdts(vars, left_tree: PDTTree, right_tree: PDTTree) -> bool:
-    res_tree = apply2_reduce_inner(vars, (lambda x, y: x == y), left_tree.tree, right_tree.tree)
-    if isinstance(res_tree, PDTLeave):
-        return res_tree.value
-    else:
-        return False
+    return collapse_pdt(apply2_reduce_inner(vars, (lambda x, y: x == y), left_tree.tree, right_tree.tree))
 
 
 def setc_union(set1: PDTSets, set2: PDTSets) -> PDTSets:

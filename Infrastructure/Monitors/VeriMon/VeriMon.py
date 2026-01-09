@@ -7,7 +7,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrd
 from Infrastructure.Monitors.SharedLogic.SharedLogic import MonPolyVeriMonWrapper
 
 
-class MonPoly:
+class VeriMon:
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         self.name = name
         self.logic = MonPolyVeriMonWrapper(image, name, params)
@@ -23,3 +23,4 @@ class MonPoly:
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         return self.logic.post_processing(stdout_input)
+

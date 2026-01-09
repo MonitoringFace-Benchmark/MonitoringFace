@@ -271,7 +271,6 @@ def unguarded_synthetic_experiments_inner(
     sh = SeedHandler(num_path)
     for num_len in num_data_set_sizes:
         data_setup["trace_length"] = num_len
-
         seed, result_csv, code = data_source.run_generator(data_setup)
         sh.add_seed_generator(seed)
         if code != 0:

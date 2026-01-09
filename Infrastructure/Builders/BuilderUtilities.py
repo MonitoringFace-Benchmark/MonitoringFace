@@ -4,9 +4,6 @@ from typing import Dict, AnyStr, Any
 import docker
 from docker.errors import APIError, BuildError
 
-from Infrastructure.DataLoader import init_repo_fetcher
-from Infrastructure.DataLoader.Resolver import Location
-from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.Monitors.MonitorExceptions import TimedOut
 from Infrastructure.constants import COMMAND_KEY, WORKDIR_KEY, VOLUMES_KEY, ENTRYPOINT_KEY
 

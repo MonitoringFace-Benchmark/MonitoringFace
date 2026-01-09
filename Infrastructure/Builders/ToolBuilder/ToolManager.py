@@ -1,5 +1,8 @@
+import os
+
 from Infrastructure.Builders.BuilderUtilities import ImageBuildException
-from Infrastructure.Builders.ToolBuilder.ToolImageManager import ToolImageManager
+from Infrastructure.Builders.ToolBuilder.ToolImageManager import DirectToolImageManager, remote_content_handler, IndirectToolImageManager
+from Infrastructure.DataLoader.Resolver import ToolResolver, Location
 from Infrastructure.printing import print_headline, print_footline
 
 
@@ -10,12 +13,39 @@ class ToolManager:
         path_to_infra = path_to_project + "/Infrastructure"
         path_to_archive = path_to_project + f"/Archive"
 
+        path_to_monitor = f"{path_to_build}/Monitor"
+        os.makedirs(path_to_monitor, exist_ok=True)
+
         self.images = {}
         failed_builds = []
         for (tool, branch, release) in tools_to_build:
             try:
                 print(f"-> Attempting to build Image {tool} - {branch}")
-                self.images[(tool, branch)] = ToolImageManager(tool, branch, release, path_to_build, path_to_archive, path_to_infra)
+                path_to_named_archive = f"{path_to_archive}/Tools/{tool}"
+                tl = ToolResolver(tool, path_to_archive, path_to_named_archive, path_to_infra)
+                location = tl.resolve()
+
+                # only direct linking, no transitive linking, there is no reason for further indirection
+                if location == Location.Unavailable:
+                    raise ImageBuildException(f"{tool} does not exists either Local or Remote")
+                elif location == Location.Remote:
+                    remote_content_handler(path_to_named_archive, path_to_infra, tool)
+
+                linked = tl.symbolic_linked()
+                if linked:
+                    new_path_to_named_archive = f"{path_to_archive}/Tools/{linked}"
+                    new_tl = ToolResolver(linked, path_to_archive, new_path_to_named_archive, path_to_infra)
+                    new_location = new_tl.resolve()
+                    if location == Location.Unavailable:
+                        raise ImageBuildException(f"Linked {linked} does not exists either Local or Remote")
+                    elif new_location == Location.Remote:  # local need no further treatment
+                        remote_content_handler(new_path_to_named_archive, path_to_infra, new_tl)
+                    self.images[(tool, branch)] = IndirectToolImageManager(tool, linked, branch, release,
+                                                                           path_to_build, path_to_archive,
+                                                                           path_to_infra, new_location)
+                else:
+                    self.images[(tool, branch)] = DirectToolImageManager(tool, branch, release, path_to_build,
+                                                                         path_to_archive, path_to_infra, location)
                 print(f"    -> (Success)")
             except ImageBuildException:
                 print(f"-> (Failure)")

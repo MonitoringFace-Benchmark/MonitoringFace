@@ -1,5 +1,4 @@
 import importlib
-import sys
 from abc import ABC
 from pathlib import Path
 from typing import AnyStr, List
@@ -37,7 +36,6 @@ def identifier_to_monitor(tool_manager, identifier, branch, name, params):
             f"Unknown monitor identifier: '{identifier}'. "
             f"Available monitors: {available}"
         )
-
     image = tool_manager.get_image(identifier, branch)
     if image is None:
         raise ValueError(f"Image missing for '{identifier} - {branch}'")
@@ -74,7 +72,7 @@ class MonitorManager:
                 )
                 print(f"    -> (Success)")
             except Exception:
-                print(f"-> (Failure)")
+                print(f"    -> (Failure)")
                 failed_builds += [f"{identifier} - {branch}"]
 
         if failed_builds:

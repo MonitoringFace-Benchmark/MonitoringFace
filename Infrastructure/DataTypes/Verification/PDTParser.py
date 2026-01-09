@@ -3,20 +3,24 @@ import ast
 
 from typing import AnyStr, List, Tuple
 
-from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTSets, PDTComplementSet, PDTSet, PDTNode, PDTLeave, PropositionTree
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTSets, PDTComplementSet, \
+    PDTSet, PDTNode, PDTLeave, PropositionTree, PDTTree
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, VariableOrder, DefaultVariableOrder
 
 
 def term_and_set(str_: AnyStr) -> Tuple[AnyStr, PDTSets]:
-    split_list = str_.strip().split(IN_SYMBOL)
+    #print(str_)
+    split_list = str_.split(IN_SYMBOL)
+    #print(split_list)
+    #print("==============")
     term_ = split_list[0].strip()
     pdt_set = resolve_set(split_list[1].strip())
     return term_, pdt_set
 
 
-def resolve_set(str_: AnyStr) -> PDTSets:
+def resolve_set(str_: str) -> PDTSets:
     if str_.__contains__(COMPLEMENT_OF):
-        return PDTComplementSet(ast.literal_eval(str_.strip().removeprefix(COMPLEMENT_OF)))
+        return PDTComplementSet(ast.literal_eval(str_.removeprefix(COMPLEMENT_OF).strip()))
     else:
         return PDTSet(ast.literal_eval(str_.strip()))
 
@@ -28,28 +32,26 @@ EXPLANATION_PREFIX = "Explanation:"
 IN_SYMBOL = "∈"
 
 
-def parse_tree(raw_string: AnyStr):
+def parse_tree(raw_string: str):
     raw_string = raw_string.strip()
-    string = raw_string.replace(EXPLANATION_PREFIX, "")
+    string = raw_string.replace(EXPLANATION_PREFIX, "").strip()
+    string = string.strip().removeprefix(OPEN_BRACKET).removesuffix(CLOSED_BRACKET).strip()
 
     def _inner_parse_tree(raw_str):
         if raw_str == 'true' or raw_str.startswith("S"):
             return PDTLeave(value=True)
         elif raw_str.startswith("V"):
             return PDTLeave(value=False)
-        raw_str = raw_str.strip().removeprefix(OPEN_BRACKET).removesuffix(CLOSED_BRACKET).strip()
 
-        tmp = raw_str.split(IN_SYMBOL, 1)
-        pattern = f"{tmp[0].strip()} {IN_SYMBOL}"
+        tmp = map(lambda s: s.strip(), raw_str.split(CLOSED_BRACKET))
+        tmp = list(filter(None, map(lambda s: s.split(OPEN_BRACKET), tmp)))
 
-        top_level_choices = re.split(rf'(?={pattern})', raw_str)
         terms, values = [], []
-
-        for sub_tree_str in [part.strip() for part in top_level_choices if part.startswith(pattern)]:
-            tmp = sub_tree_str.split("\n", 1)
-            term_, set_ = term_and_set(tmp[0].strip())
-            sub_tree_ = _inner_parse_tree(tmp[1].strip())
-
+        for sub in list(map(lambda s: [s.strip() for s in s], tmp)):
+            if not sub[0] or not sub[1]:
+                continue
+            term_, set_ = term_and_set(sub[0])
+            sub_tree_ = _inner_parse_tree(sub[1])
             terms.append(term_)
             values.append((set_, sub_tree_))
         return PDTNode(term=unify_term(terms), values=values)
@@ -73,8 +75,7 @@ def variable_ordering_tree(pt: PropositionTree) -> VariableOrdering:
         return DefaultVariableOrder()
 
     for tree in pt.forest.values():
-        return VariableOrder(tree.collect_terms_list())
-
+        return VariableOrder(tree._collect_terms_list())
     return DefaultVariableOrder()
 
 
@@ -85,7 +86,7 @@ def file_to_proposition_tree(file: AnyStr) -> PropositionTree:
         tree = PropositionTree()
         for pair in [(diff_explanations[i], diff_explanations[i + 1]) for i in range(0, len(diff_explanations), 2)]:
             (tp, ts) = time_extract(pair[0])
-            tree.insert(parse_tree(pair[1]), tp, ts)
+            tree.insert(PDTTree(parse_tree(pair[1])), tp, ts)
         tree.variable_order = variable_ordering_tree(tree)
         return tree
 
@@ -96,6 +97,6 @@ def str_to_proposition_tree(raw_string: AnyStr) -> PropositionTree:
     tree = PropositionTree()
     for pair in [(diff_explanations[i], diff_explanations[i + 1]) for i in range(0, len(diff_explanations), 2)]:
         (tp, ts) = time_extract(pair[0])
-        tree.insert(parse_tree(pair[1]), tp, ts)
+        tree.insert(PDTTree(parse_tree(pair[1])), tp, ts)
     tree.variable_order = variable_ordering_tree(tree)
     return tree

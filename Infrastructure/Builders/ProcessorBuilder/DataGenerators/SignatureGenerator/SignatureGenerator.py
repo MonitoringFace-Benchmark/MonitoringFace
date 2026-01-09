@@ -9,7 +9,7 @@ DEFAULT_SEED = 314159265
 
 class SignatureGenerator(DataGeneratorTemplate):
     def __init__(self, name, path_to_build):
-        self.image = ImageManager("gen_data", Processor.DataGenerators, path_to_build)
+        self.image = ImageManager(name, Processor.DataGenerators, path_to_build)
 
     def run_generator(self, contract_inner, time_on=None, time_out=None):
         inner_contract = dict()

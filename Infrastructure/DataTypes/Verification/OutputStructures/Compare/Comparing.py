@@ -10,8 +10,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts 
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 
 
-# todo handle proposition tree reordering variable order
-def intermediate_list_from_structure(structure: AbstractOutputStructure, variable_order) -> IntermediateList:
+def intermediate_list_from_structure(structure: AbstractOutputStructure, variable_order) -> PropositionTree:
     if isinstance(structure, OooVerdicts):
         return IntermediateList.from_OOOVerdicts(structure).to_proposition_tree(new_order=variable_order)
     elif isinstance(structure, Verdicts):
@@ -34,7 +33,30 @@ def comparing(oracle_structure: AbstractOutputStructure, tool_structure: Abstrac
         oracle_pdt = oracle_structure if isinstance(oracle_structure, PropositionTree) else intermediate_list_from_structure(oracle_structure, oracle_structure.variable_order)
         tool_pdt = tool_structure if isinstance(tool_structure, PropositionTree) else intermediate_list_from_structure(tool_structure, oracle_structure.variable_order)
         try:
-            equality_between_pdts(oracle_pdt, tool_pdt)
-            return True, "Verified: Structures are equivalent"
+            oracle_dict = oracle_pdt.tp_to_ts
+            tool_dict = tool_pdt.tp_to_ts
+
+            if oracle_dict == tool_dict:
+                for tp in oracle_dict.keys():
+                    oracle_subtree = oracle_pdt.forest[tp]
+                    tool_subtree = tool_pdt.forest[tp]
+                    if not equality_between_pdts(oracle_structure.variable_order.variable_order, oracle_subtree, tool_subtree):
+                        return False, "Verified: Structures are not equivalent"
+
+                return True, "Verified: Structures are equivalent"
+            else:
+                tool_keys = set(tool_dict.keys())
+                oracle_keys = set(oracle_dict.keys())
+
+                if tool_keys.issubset(oracle_keys):
+                    missing_keys = oracle_keys - tool_keys
+                    missing_mappings = {k: oracle_dict[k] for k in missing_keys}
+                    return False, f"Tool missing tp->ts mappings: {missing_mappings}"
+                elif oracle_keys.issubset(tool_keys):
+                    extra_keys = tool_keys - oracle_keys
+                    extra_mappings = {k: tool_dict[k] for k in extra_keys}
+                    return False, f"Tool has extra tp->ts mappings: {extra_mappings}"
+                else:
+                    return False, f"tp->ts dictionaries differ: Oracle has {oracle_dict}, Tool has {tool_dict}"
         except Exception as e:
             return False, str(e)

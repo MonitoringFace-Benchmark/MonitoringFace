@@ -9,6 +9,8 @@ BUILD_ARG_GIT_BRANCH = "GIT_BRANCH"
 WORKDIR_KEY = "workdir"
 WORKDIR_VAL = "/data"
 
+SYMLINK_KEY = "symbolic_link"
+
 DOCKERFILE_KEY = "Dockerfile"
 DOCKERFILE_VALUE = "/Dockerfile"
 

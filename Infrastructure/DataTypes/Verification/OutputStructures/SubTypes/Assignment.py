@@ -6,7 +6,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrd
 
 class Assignment(ValueType):
     def __init__(self, values: List[Any], variable_order: VariableOrdering):
-        self.order = variable_order.variable_order
+        self.order = variable_order.retrieve_order()
         self.values = values
 
     def __repr__(self):
@@ -21,10 +21,12 @@ class Assignment(ValueType):
         return list(zip(self.values, self.order))
 
     def retrieve_order(self, new_order: VariableOrdering):
+        if self.order == new_order.retrieve_order():
+            return self
         mapping = {v: val for v, val in zip(self.values, self.order)}
-        if set(self.values) != set(new_order.variable_order):
+        if set(self.values) != set(new_order.retrieve_order()):
             raise ValueError("New order must contain exactly the same variable names.")
-        return Assignment([mapping[v] for v in new_order.variable_order], new_order)
+        return Assignment([mapping[v] for v in new_order.retrieve_order()], new_order)
 
     def retrieve_value(self, key):
         return self.values[self.order.index(key)]

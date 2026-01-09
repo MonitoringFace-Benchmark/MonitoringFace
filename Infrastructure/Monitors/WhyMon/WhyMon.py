@@ -1,6 +1,6 @@
 from typing import Dict, AnyStr, Any, Tuple
 
-from Infrastructure.Builders.ToolBuilder import ToolImageManager
+from Infrastructure.Builders.ToolBuilder import AbstractToolImageManager
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import ReplayerConverter
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PropositionTree
@@ -11,7 +11,7 @@ import os
 
 
 class WhyMon(AbstractMonitorTemplate):
-    def __init__(self, image: ToolImageManager, name, params: Dict[AnyStr, Any]):
+    def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
         self.replayer = ReplayerConverter(self.params["replayer"], self.params["path_to_project"])
 
@@ -71,4 +71,4 @@ class WhyMon(AbstractMonitorTemplate):
         if not stdout_input:
             return PropositionTree(self.variable_order())
         else:
-            return PropositionTree(self.variable_order()) #str_to_proposition_tree(stdout_input.strip())
+            return str_to_proposition_tree(stdout_input.strip())

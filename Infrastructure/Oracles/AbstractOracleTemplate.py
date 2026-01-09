@@ -21,5 +21,5 @@ class AbstractOracleTemplate(ABC):
         pass
 
     @abstractmethod
-    def verify(self, ath_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure) -> Tuple[bool, AnyStr]:
+    def verify(self, ath_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure, sig_file, formula_file) -> Tuple[bool, AnyStr]:
         pass

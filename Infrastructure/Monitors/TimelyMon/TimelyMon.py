@@ -3,7 +3,7 @@ import re
 
 from typing import Dict, AnyStr, Any, Tuple
 
-from Infrastructure.Builders.ToolBuilder.ToolImageManager import ToolImageManager
+from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, VariableOrder, DefaultVariableOrder
@@ -11,7 +11,7 @@ from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTempl
 
 
 class TimelyMon(AbstractMonitorTemplate):
-    def __init__(self, image: ToolImageManager, name, params: Dict[AnyStr, Any]):
+    def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 
     def pre_processing(self, path_to_folder: AnyStr,

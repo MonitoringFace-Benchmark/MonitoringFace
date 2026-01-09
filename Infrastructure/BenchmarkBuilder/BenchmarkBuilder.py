@@ -246,8 +246,6 @@ def run_tools(settings_result, tool, setting_id, time_guard, oracle, path_to_fol
             signature_file, formula_file, oracle
         )
 
-        print(f"Prep:    {prep}\nRuntime: {runtime}\nPost:    {prop}")
-
         stats = StatsHandler(path_to_folder).get_stats()
         if stats is not None:
             wall_time, max_mem, cpu = stats
