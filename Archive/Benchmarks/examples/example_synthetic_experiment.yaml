@@ -35,7 +35,7 @@ monitors:
     branch: master
     params:
       replayer: gen_data
-  - identifier: MonPoly
+  - identifier: VeriMon
     name: VeriMon
     branch: master
     params:
