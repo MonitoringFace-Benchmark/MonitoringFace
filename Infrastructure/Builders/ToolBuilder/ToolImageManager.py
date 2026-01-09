@@ -119,6 +119,7 @@ class DirectToolImageManager(AbstractToolImageManager):
     def _build_image(self):
         fl = PropertiesHandler.from_file(self.named_archive + PROP_FILES_VALUE)
         version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
+        os.makedirs(self.path, exist_ok=True)
         to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, self.named_archive, self.args)
 
