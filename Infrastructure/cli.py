@@ -27,6 +27,9 @@ class CLI:
         self.archive_folder = f"{self.path_to_module}/Archive"
         self.benchmark_folder = f"{self.archive_folder}/Benchmarks"
 
+        self.result_folder = f"{self.infra_folder}/results"
+        os.makedirs(self.result_folder, exist_ok=True)
+
         os.makedirs(self.build_folder, exist_ok=True)
         os.makedirs(self.experiment_folder, exist_ok=True)
     
@@ -129,7 +132,9 @@ Examples:
             
             # Run benchmark
             results = benchmark.run(monitors, {})
-            
+            experiment_name = os.path.splitext(os.path.basename(yaml_file))[0]
+            results.to_csv(self.result_folder, experiment_name)
+
             print(f"✓ Experiment completed: {experiment_config['benchmark_contract'].experiment_name}")
             if verbose:
                 print(f"Results: {results}")
