@@ -46,12 +46,12 @@ class PDTComponents(ABC):
     pass
 
 
-class PDTLeave(PDTComponents):
+class PDTLeaf(PDTComponents):
     def __init__(self, value: bool):
         self.value = value
 
     def __repr__(self):
-        return f"PDTLeave({repr(self.value)})"
+        return f"PDTLeaf({repr(self.value)})"
 
 
 class PDTNode(PDTComponents):
@@ -75,7 +75,7 @@ class PDTTree:
         seen: Set[AnyStr] = set()
 
         def _inner_collect_terms_list(tree_: PDTComponents):
-            if isinstance(tree_, PDTLeave):
+            if isinstance(tree_, PDTLeaf):
                 return
             elif isinstance(tree_, PDTNode):
                 term = tree_.term
@@ -110,7 +110,7 @@ class PDTTree:
             raise InvalidPDTChoice(f"{value} not in Domain")  # implies construction error
 
         def _inner_walk_tree(tree_: PDTComponents, term_assignment_: List[Tuple[AnyStr, Any]]) -> bool:
-            if isinstance(tree_, PDTLeave):
+            if isinstance(tree_, PDTLeaf):
                 return tree_.value
             elif isinstance(tree_, PDTNode):
                 value = _get_value(term_assignment_, tree_.term)

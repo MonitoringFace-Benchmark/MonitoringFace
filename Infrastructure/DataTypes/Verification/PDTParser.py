@@ -4,7 +4,7 @@ import ast
 from typing import AnyStr, List, Tuple
 
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTSets, PDTComplementSet, \
-    PDTSet, PDTNode, PDTLeave, PropositionTree, PDTTree
+    PDTSet, PDTNode, PDTLeaf, PropositionTree, PDTTree
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, VariableOrder, DefaultVariableOrder
 
 
@@ -39,9 +39,9 @@ def parse_tree(raw_string: str):
 
     def _inner_parse_tree(raw_str):
         if raw_str == 'true' or raw_str.startswith("S"):
-            return PDTLeave(value=True)
+            return PDTLeaf(value=True)
         elif raw_str.startswith("V"):
-            return PDTLeave(value=False)
+            return PDTLeaf(value=False)
 
         tmp = map(lambda s: s.strip(), raw_str.split(CLOSED_BRACKET))
         tmp = list(filter(None, map(lambda s: s.split(OPEN_BRACKET), tmp)))

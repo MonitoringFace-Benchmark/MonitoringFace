@@ -1,5 +1,5 @@
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.DatagolfVerdicts import DatagolfVerdicts
-from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTLeave, \
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTLeaf, \
     PDTComplementSet, PDTSet, PDTNode, PDTComponents, PropositionTree, PDTTree, PDTSets
 
 
@@ -30,13 +30,26 @@ def data_golf_pdt_equality(data_golf: DatagolfVerdicts, right_tree: PropositionT
 
 def collapse_pdt(pdt: PDTComponents) -> bool:
     def _inner(pdt_):
-        if isinstance(pdt_, PDTLeave):
+        if isinstance(pdt_, PDTLeaf):
             return pdt_.value
         elif isinstance(pdt_, PDTNode):
             return all([_inner(y) for (_, y) in pdt_.values])
         else:
             raise ValueError("Malformed Tree")
     return _inner(pdt)
+
+
+def negate_pdt(pdt: PDTComponents) -> PDTComponents:
+    if isinstance(pdt, PDTLeaf):
+        return PDTLeaf(not pdt.value)
+    elif isinstance(pdt, PDTNode):
+        new_values = []
+        for guard, subtree in pdt.values:
+            negated_subtree = negate_pdt(subtree)
+            new_values.append((guard, negated_subtree))
+        return PDTNode(pdt.term, new_values)
+    else:
+        raise PDTCompareError("Unknown PDTComponents type during negate_pdt")
 
 
 def equality_between_pdts(vars, left_tree: PDTTree, right_tree: PDTTree) -> bool:
@@ -143,8 +156,8 @@ def _dedup_part(part: list) -> list:
 
 
 def apply1_reduce(vars: list, f, node: PDTComponents) -> PDTComponents:
-    if isinstance(node, PDTLeave):
-        return PDTLeave(f(node.value))
+    if isinstance(node, PDTLeaf):
+        return PDTLeaf(f(node.value))
 
     if isinstance(node, PDTNode):
         if not vars:
@@ -164,16 +177,17 @@ def apply1_reduce(vars: list, f, node: PDTComponents) -> PDTComponents:
 
 
 def apply2_reduce_inner(vars: list, f, left_node: PDTComponents, right_node: PDTComponents) -> PDTComponents:
-    if isinstance(left_node, PDTLeave) and isinstance(right_node, PDTLeave):
-        return PDTLeave(f(left_node.value, right_node.value))
+    if isinstance(left_node, PDTLeaf) and isinstance(right_node, PDTLeaf):
+        return PDTLeaf(f(left_node.value, right_node.value))
 
-    if isinstance(left_node, PDTLeave) and isinstance(right_node, PDTNode):
+    if isinstance(left_node, PDTLeaf) and isinstance(right_node, PDTNode):
+        # return a leave if result is a singleton
         return PDTNode(
             right_node.term,
             _map_dedup(right_node.values, lambda l2: apply1_reduce(vars, lambda l1: f(left_node.value, l1), l2))
         )
 
-    if isinstance(left_node, PDTNode) and isinstance(right_node, PDTLeave):
+    if isinstance(left_node, PDTNode) and isinstance(right_node, PDTLeaf):
         return PDTNode(
             left_node.term,
             _map_dedup(left_node.values, lambda l1: apply1_reduce(vars, lambda l2: f(l1, right_node.value), l1))
@@ -194,7 +208,7 @@ def apply2_reduce_inner(vars: list, f, left_node: PDTComponents, right_node: PDT
             )
 
             if len(sub_list) == 1:
-                return PDTLeave(isinstance(sub_list[0], PDTComplementSet))
+                return PDTLeaf(isinstance(sub_list[0], PDTComplementSet))
             return PDTNode(current_var, sub_list)
 
         if left_node.term == current_var:
@@ -229,10 +243,10 @@ def _extract_finite_and_complement(node_values: PDTNode) -> tuple[list[tuple[PDT
 
 
 def _find_leaf_for_value(node, value) -> bool:
-    if value is None and not isinstance(node, PDTLeave):
+    if value is None and not isinstance(node, PDTLeaf):
         raise PDTCompareError(f"Value is None but node at term {node.term} is not a leaf")
 
-    if isinstance(node, PDTLeave):
+    if isinstance(node, PDTLeaf):
         return node.value
 
     for guard, subtree in node.values:

@@ -1,8 +1,10 @@
+import sys
 from typing import Tuple, AnyStr
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.IntermediateList import IntermediateList
-from Infrastructure.DataTypes.Verification.OutputStructures.PDTHelper import equality_between_pdts, data_golf_pdt_equality
+from Infrastructure.DataTypes.Verification.OutputStructures.PDTHelper import equality_between_pdts, \
+    data_golf_pdt_equality, negate_pdt
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.DatagolfVerdicts import DatagolfVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PropositionTree
