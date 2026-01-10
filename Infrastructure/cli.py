@@ -5,6 +5,7 @@ Provides command-line interface for running experiments from YAML configuration 
 import argparse
 import sys
 import os
+from datetime import datetime
 from typing import List, Any, AnyStr
 
 from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
@@ -27,12 +28,19 @@ class CLI:
         self.archive_folder = f"{self.path_to_module}/Archive"
         self.benchmark_folder = f"{self.archive_folder}/Benchmarks"
 
-        self.result_folder = f"{self.infra_folder}/results"
-        os.makedirs(self.result_folder, exist_ok=True)
+        self.result_base_folder = f"{self.infra_folder}/results"
+        os.makedirs(self.result_base_folder, exist_ok=True)
 
         os.makedirs(self.build_folder, exist_ok=True)
         os.makedirs(self.experiment_folder, exist_ok=True)
     
+    def _create_timestamped_result_folder(self, experiment_name: str) -> str:
+        """Create a timestamped result folder for the current run."""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        result_folder = os.path.join(self.result_base_folder, f"{experiment_name}_{timestamp}")
+        os.makedirs(result_folder, exist_ok=True)
+        return result_folder
+
     @staticmethod
     def _create_parser() -> argparse.ArgumentParser:
         """Create and configure argument parser"""
@@ -96,7 +104,7 @@ Examples:
         except Exception():
             return False
     
-    def run_single_experiment(self, config_name: AnyStr, dry_run: bool = False, verbose: bool = False, debug: bool = False) -> Any:
+    def run_single_experiment(self, config_name: AnyStr, dry_run: bool = False, verbose: bool = False, debug: bool = False, result_folder: str = None) -> Any:
         yaml_file = f"{self.benchmark_folder}/{config_name}"
 
         if verbose:
@@ -143,9 +151,15 @@ Examples:
             # Run benchmark
             results = benchmark.run(monitors, {})
             experiment_name = os.path.splitext(os.path.basename(yaml_file))[0]
-            results.to_csv(self.result_folder, experiment_name)
+
+            # Use provided result_folder or create a new timestamped one
+            if result_folder is None:
+                result_folder = self._create_timestamped_result_folder(experiment_name)
+
+            results.to_csv(result_folder, experiment_name)
 
             print(f"✓ Experiment completed: {experiment_config['benchmark_contract'].experiment_name}")
+            print(f"  Results saved to: {result_folder}")
             if verbose:
                 print(f"Results: {results}")
             
@@ -195,6 +209,11 @@ Examples:
                 print(f"\n✓ All {len(experiment_paths)} experiment(s) validated successfully")
                 return []
             
+            # Create a single timestamped folder for the entire suite
+            suite_name_clean = os.path.splitext(os.path.basename(suite_name))[0]
+            suite_result_folder = self._create_timestamped_result_folder(suite_name_clean)
+            print(f"Suite results will be saved to: {suite_result_folder}")
+
             # Run all experiments
             results = []
             for i, exp_path in enumerate(experiment_paths, 1):
@@ -202,7 +221,12 @@ Examples:
                 print(f"Running experiment {i}/{len(experiment_paths)}: {os.path.basename(exp_path)}")
                 print(f"{'='*LENGTH}")
                 
-                result = self.run_single_experiment(exp_path, dry_run=False, verbose=verbose, debug=debug)
+                # Create a subfolder for each experiment within the suite folder
+                exp_name = os.path.splitext(os.path.basename(exp_path))[0]
+                exp_result_folder = os.path.join(suite_result_folder, exp_name)
+                os.makedirs(exp_result_folder, exist_ok=True)
+
+                result = self.run_single_experiment(exp_path, dry_run=False, verbose=verbose, debug=debug, result_folder=exp_result_folder)
                 results.append(result)
             
             print(f"\n{'='*LENGTH}")
