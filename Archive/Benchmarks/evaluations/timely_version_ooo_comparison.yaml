@@ -1,0 +1,135 @@
+experiment_name: timely_version_ooo_comparison
+
+benchmark_type: synthetic
+experiment_type: Signature
+
+tools:
+  - name: TimelyMon
+    branch: development
+    release: branch
+  - name: TimelyMon
+    branch: version_update
+    release: branch
+  - name: VeriMon
+    branch: master
+    release: branch
+
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 1
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+      mode: oootps
+  - identifier: TimelyMon
+    name: TimelyMon 6
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+      mode: oootps
+  - identifier: TimelyMon
+    name: TimelyMon 1 V
+    branch: version_update
+    params:
+      worker: 1
+      output_mode: 1
+      mode: oootps
+  - identifier: TimelyMon
+    name: TimelyMon 6 V
+    branch: version_update
+    params:
+      worker: 6
+      output_mode: 1
+      mode: oootps
+  - identifier: VeriMon
+    name: VeriMon
+    branch: master
+    params:
+      replayer: gen_data
+
+oracles:
+  - identifier: VeriMonOracle
+    name: VeriMonOracle
+    monitor_name: VeriMon
+    params:
+      replayer: gen_data
+      verified: true
+
+oracle:
+  enabled: true
+  name: VeriMonOracle
+
+time_guard:
+  enabled: true
+  lower_bound: 2
+  upper_bound: 200
+  guard_type: Oracle
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    seed: null
+    event_rate: 1000
+    index_rate: null
+    time_stamp: null
+    sig: ""
+    sample_queue: null
+    string_length: null
+    fresh_value_rate: null
+    domain: null
+
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_once: 0.4
+    prob_eventually: 0.4
+    prob_eand: 0
+    prob_rand: 0
+    prob_let: 0
+    prob_matchF: 0
+    prob_matchP: 0
+
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [5, 10]
+    num_fvs: [2, 4]
+    num_setting: [0, 1, 2, 3, 4, 5]
+    num_data_set_sizes: [50]
+
+tools_to_build:
+  - TimelyMon 1
+  - TimelyMon 6
+  - TimelyMon 1 V
+  - TimelyMon 6 V
+
+seeds:
+  '[5, 2, 0]': [314159265, 86383]
+  '[5, 2, 1]': [314159265, 61390]
+  '[5, 2, 2]': [314159265, 2658]
+  '[5, 2, 3]': [314159265, 28466]
+  '[5, 2, 4]': [314159265, 9924]
+  '[5, 2, 5]': [314159265, 28055]
+  '[5, 4, 0]': [314159265, 45070]
+  '[5, 4, 1]': [314159265, 18357]
+  '[5, 4, 2]': [314159265, 16076]
+  '[5, 4, 3]': [314159265, 26474]
+  '[5, 4, 4]': [314159265, 4867]
+  '[5, 4, 5]': [314159265, 78737]
+  '[10, 2, 0]': [314159265, 56160]
+  '[10, 2, 1]': [314159265, 97781]
+  '[10, 2, 2]': [314159265, 99289]
+  '[10, 2, 3]': [314159265, 65810]
+  '[10, 2, 4]': [314159265, 78457]
+  '[10, 2, 5]': [314159265, 84244]
+  '[10, 4, 0]': [314159265, 34754]
+  '[10, 4, 1]': [314159265, 9718]
+  '[10, 4, 2]': [314159265, 82282]
+  '[10, 4, 3]': [314159265, 31159]
+  '[10, 4, 4]': [314159265, 70357]
+  '[10, 4, 5]': [314159265, 69513]

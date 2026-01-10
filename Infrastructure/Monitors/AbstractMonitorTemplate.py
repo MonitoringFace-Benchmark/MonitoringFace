@@ -82,10 +82,11 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
         try:
             verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, formula_file)
         except Exception as e:
-            print(e)
+            print(f"Oracle verification failed with exception: {e}")
+            raise ResultErrorException((preprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed), str(e))
         print_headline(f"Verified: {verified}")
         if not verified:
-            raise ResultErrorException((postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
+            raise ResultErrorException((preprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
 
     print_footline()
     return preprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed
