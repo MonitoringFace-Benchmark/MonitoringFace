@@ -72,7 +72,7 @@ class MonPolyVeriMonWrapper(AbstractMonitorTemplate):
             return [v.strip() for v in result]
 
         cmd = ["-sig", str(self.params["signature"]), "-formula", str(self.params["formula"]), "-check"]
-        logs, code = self.image.run(self.params["folder"], cmd)
+        logs, code = self.image.run(self.params["folder"], cmd, measure=False)
         if code == 0:
             return VariableOrder(parse_variable_order(logs))
         else:
@@ -97,7 +97,5 @@ class MonPolyVeriMonWrapper(AbstractMonitorTemplate):
                     pass
                 else:
                     raise ValueError(f"Could not parse line: {line}")
-
-
 
         return verdicts

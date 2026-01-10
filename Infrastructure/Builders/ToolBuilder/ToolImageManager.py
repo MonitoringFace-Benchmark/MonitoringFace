@@ -75,10 +75,13 @@ class IndirectToolImageManager(AbstractToolImageManager):
         to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, self.linked_named_archive, self.args)
 
-    def run(self, path_to_data, parameters, time_on=None, time_out=None):
+    def run(self, path_to_data, parameters, time_on=None, time_out=None, measure=True):
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
-        inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.binary_name] + parameters
+        if measure:
+            inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.binary_name] + parameters
+        else:
+            inner_contract_[COMMAND_KEY] = [self.binary_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
         return run_image(self.image_name, inner_contract_, time_on, time_out)
 
@@ -123,9 +126,12 @@ class DirectToolImageManager(AbstractToolImageManager):
         to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, self.named_archive, self.args)
 
-    def run(self, path_to_data, parameters, time_on=None, time_out=None):
+    def run(self, path_to_data, parameters, time_on=None, time_out=None, measure=True):
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
-        inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.name.lower()] + parameters
+        if measure:
+            inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.name.lower()] + parameters
+        else:
+            inner_contract_[COMMAND_KEY] = [self.name.lower()] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
         return run_image(self.image_name, inner_contract_, time_on, time_out)

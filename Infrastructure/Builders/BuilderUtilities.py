@@ -69,6 +69,7 @@ def run_image(image_name, generic_contract: Dict[AnyStr, Any], time_on=None, tim
     client = docker.from_env()
 
     command = generic_contract.get(COMMAND_KEY)
+    print(" ".join(command))
     volumes = generic_contract.get(VOLUMES_KEY)
     workdir = generic_contract.get(WORKDIR_KEY)
     entrypoint = generic_contract.get(ENTRYPOINT_KEY)

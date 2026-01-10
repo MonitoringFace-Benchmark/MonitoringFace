@@ -10,6 +10,9 @@ from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrd
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 
 
+# todo reorder component infront of the monitor in preprocessing
+
+
 class TimelyMon(AbstractMonitorTemplate):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
@@ -61,7 +64,7 @@ class TimelyMon(AbstractMonitorTemplate):
             return [v.strip() for v in result]
 
         cmd = [self.params["formula"], "--check"]
-        logs, code = self.image.run(self.params["folder"], cmd)
+        logs, code = self.image.run(self.params["folder"], cmd, measure=False)
         if code == 0:
             return VariableOrder(parse_variable_order(logs))
         else:
