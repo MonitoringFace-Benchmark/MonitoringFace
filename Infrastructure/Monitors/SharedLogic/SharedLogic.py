@@ -93,7 +93,7 @@ class MonPolyVeriMonWrapper(AbstractMonitorTemplate):
                 ts, tp, vals = parse_pattern(line)
                 verdicts.insert(vals, tp, ts)
             except Exception:
-                if line.startswith("@MaxTs"):
+                if line.startswith("@MaxTS"):
                     pass
                 else:
                     raise ValueError(f"Could not parse line: {line}")

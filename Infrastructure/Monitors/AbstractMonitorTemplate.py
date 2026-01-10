@@ -79,15 +79,12 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
     print(f"Prep:    {preprocessing_elapsed}\nRuntime: {run_offline_elapsed}\nPost:    {postprocessing_elapsed}")
 
     if oracle is not None:
-        print("Before oracle verification")
         try:
             verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, formula_file)
         except Exception as e:
             print(e)
-        print(f"After oracle verification {verified} {msg}")
         print_headline(f"Verified: {verified}")
         if not verified:
-            print("After oracle verification error")
             raise ResultErrorException((postprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
 
     print_footline()

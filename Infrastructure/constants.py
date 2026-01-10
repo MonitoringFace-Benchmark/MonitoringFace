@@ -41,3 +41,15 @@ BENCHMARK_BUILDING_OFFSET = (" " * 8)
 # Pretty Printing
 LENGTH = 80
 HEADER_ROW = "=" * LENGTH
+
+
+class Config:
+    verbose = False
+
+    @classmethod
+    def set_verbose(cls, value: bool):
+        cls.verbose = value
+
+    @classmethod
+    def is_verbose(cls) -> bool:
+        return cls.verbose

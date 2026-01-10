@@ -136,7 +136,7 @@ class OutOfOrderConverter(DataConverterTemplate):
         percentage_delayed = params.get("percentage_delayed", PERCENTAGE_DELAYED)
 
         with open(f"{path_to_folder}/{data_file}", "r") as f:
-            lines = f.readlines()
+            lines = [line.rstrip('\n') for line in f.readlines()]
 
         events, watermarks = [], []
         for line in lines:

@@ -11,7 +11,7 @@ from typing import List, Any, AnyStr
 from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
 from Infrastructure.Parser.YamlParser import YamlParser, ExperimentSuiteParser, YamlParserException
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
-from Infrastructure.constants import LENGTH
+from Infrastructure.constants import LENGTH, Config
 
 
 class CLI:
@@ -253,6 +253,10 @@ Examples:
             argv: Command-line arguments (defaults to sys.argv)
         """
         args = self.parser.parse_args(argv)
+
+        # Set global verbose flag
+        Config.set_verbose(args.verbose)
+
         br = BenchmarkResolver(name=args.config, path_to_infra=self.infra_folder, path_to_archive=self.archive_folder)
         location = br.resolve()
         if location == Location.Unavailable:

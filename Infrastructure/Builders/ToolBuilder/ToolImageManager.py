@@ -83,7 +83,7 @@ class IndirectToolImageManager(AbstractToolImageManager):
         else:
             inner_contract_[COMMAND_KEY] = [self.binary_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_image(self.image_name, inner_contract_, time_on, time_out)
+        return run_image(self.image_name, inner_contract_, time_on, time_out, is_tool_image=True)
 
 
 class DirectToolImageManager(AbstractToolImageManager):
@@ -134,4 +134,4 @@ class DirectToolImageManager(AbstractToolImageManager):
         else:
             inner_contract_[COMMAND_KEY] = [self.name.lower()] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_image(self.image_name, inner_contract_, time_on, time_out)
+        return run_image(self.image_name, inner_contract_, time_on, time_out, is_tool_image=True)

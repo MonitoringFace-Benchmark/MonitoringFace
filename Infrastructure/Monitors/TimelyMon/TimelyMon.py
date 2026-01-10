@@ -3,6 +3,7 @@ import re
 
 from typing import Dict, AnyStr, Any, Tuple
 
+from Infrastructure.Builders.ProcessorBuilder.DataConverters.OutOfOrderConverter.OutOfOrderConverter import OutOfOrderConverter
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
@@ -10,22 +11,25 @@ from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrd
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 
 
-# todo reorder component infront of the monitor in preprocessing
-
-
 class TimelyMon(AbstractMonitorTemplate):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 
-    def pre_processing(self, path_to_folder: AnyStr,
-                       data_file: AnyStr,
-                       signature_file: AnyStr,
-                       formula_file: AnyStr):
+    def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
         self.params["folder"] = path_to_folder
-
-        self.params["data"] = data_file
         self.params["signature"] = signature_file
         self.params["formula"] = formula_file
+
+        reordering = "mode" in self.params
+        trimmed_data_file = os.path.basename(data_file)
+        if reordering:
+            oooc = OutOfOrderConverter(None, None)
+            oooc.convert(
+                path_to_folder, data_file, self.name.lower(),
+                os.path.basename(data_file), dest=f"{path_to_folder}/scratch", params=self.params
+            )
+
+        self.params["data"] = f"scratch/{trimmed_data_file}.{self.name.lower()}" if reordering else data_file
 
     def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
         cmd = [self.params["formula"], self.params["data"], "--sig-file", self.params["signature"]]
