@@ -78,6 +78,12 @@ Examples:
             help='Force treat config as experiment suite (auto-detected by default)'
         )
         
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='Enable debug mode - preserves scratch folder data for each tool execution'
+        )
+
         return parser
     
     @staticmethod
@@ -90,12 +96,15 @@ Examples:
         except Exception():
             return False
     
-    def run_single_experiment(self, config_name: AnyStr, dry_run: bool = False, verbose: bool = False) -> Any:
+    def run_single_experiment(self, config_name: AnyStr, dry_run: bool = False, verbose: bool = False, debug: bool = False) -> Any:
         yaml_file = f"{self.benchmark_folder}/{config_name}"
 
         if verbose:
             print(f"Loading experiment configuration from: {yaml_file}")
         
+        if debug:
+            print(f"Debug mode enabled - scratch folder data will be preserved")
+
         try:
             # Parse configuration
             parser = YamlParser(yaml_path=yaml_file, path_to_build=self.build_folder, path_to_experiments=self.experiment_folder)
@@ -119,7 +128,8 @@ Examples:
                 time_guard=experiment_config['time_guarded'],
                 tools_to_build=experiment_config['tools_to_build'],
                 oracle=experiment_config['oracle'],
-                seeds=experiment_config['seeds']
+                seeds=experiment_config['seeds'],
+                debug_mode=debug
             )
             
             # Get monitors to run
@@ -151,7 +161,7 @@ Examples:
                 traceback.print_exc()
             sys.exit(1)
     
-    def run_experiment_suite(self, suite_name: str, dry_run: bool = False, verbose: bool = False) -> List[Any]:
+    def run_experiment_suite(self, suite_name: str, dry_run: bool = False, verbose: bool = False, debug: bool = False) -> List[Any]:
         """
         Run multiple experiments from a suite configuration
         
@@ -159,13 +169,17 @@ Examples:
             suite_name: Path to experiment suite YAML file
             dry_run: If True, only validate without running
             verbose: Enable verbose output
-            
+            debug: Enable debug mode - preserves scratch folder data
+
         Returns:
             List of experiment results or empty list if dry_run
         """
         if verbose:
             print(f"Loading experiment suite from: {suite_name}")
         
+        if debug:
+            print(f"Debug mode enabled - scratch folder data will be preserved")
+
         try:
             suite_parser = ExperimentSuiteParser(self.path_to_module, suite_name)
             experiment_paths = suite_parser.get_experiment_paths()
@@ -177,7 +191,7 @@ Examples:
                 for i, exp_path in enumerate(experiment_paths, 1):
                     if verbose:
                         print(f"\nValidating experiment {i}/{len(experiment_paths)}: {exp_path}")
-                    self.run_single_experiment(exp_path, dry_run=True, verbose=verbose)
+                    self.run_single_experiment(exp_path, dry_run=True, verbose=verbose, debug=debug)
                 print(f"\n✓ All {len(experiment_paths)} experiment(s) validated successfully")
                 return []
             
@@ -188,7 +202,7 @@ Examples:
                 print(f"Running experiment {i}/{len(experiment_paths)}: {os.path.basename(exp_path)}")
                 print(f"{'='*LENGTH}")
                 
-                result = self.run_single_experiment(exp_path, dry_run=False, verbose=verbose)
+                result = self.run_single_experiment(exp_path, dry_run=False, verbose=verbose, debug=debug)
                 results.append(result)
             
             print(f"\n{'='*LENGTH}")
@@ -231,7 +245,8 @@ Examples:
             self.run_experiment_suite(
                 suite_name=args.config,
                 dry_run=args.dry_run,
-                verbose=args.verbose
+                verbose=args.verbose,
+                debug=args.debug
             )
         else:
             if args.verbose:
@@ -239,7 +254,8 @@ Examples:
             self.run_single_experiment(
                 config_name=args.config,
                 dry_run=args.dry_run,
-                verbose=args.verbose
+                verbose=args.verbose,
+                debug=args.debug
             )
 
 

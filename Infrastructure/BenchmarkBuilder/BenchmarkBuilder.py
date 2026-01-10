@@ -46,15 +46,17 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
     def __init__(
             self, contract, path_to_project, data_setup,
             gen_mode: ExperimentType, time_guard: TimeGuarded,
-            tools_to_build, oracle=None, seeds=None
+            tools_to_build, oracle=None, seeds=None, debug_mode=False
     ):
         print_headline("(Starting) Init Benchmark")
         self.contract = contract
         self.seeds = seeds
+        self.debug_mode = debug_mode
 
         self.path_to_build = path_to_project + "/Infrastructure/build"
         self.path_to_experiment = path_to_project + "/Infrastructure/experiments"
         self.path_to_named_experiment = self.path_to_experiment + "/" + self.contract.experiment_name
+        self.path_to_debug = self.path_to_named_experiment + "/debug"
 
         # Initialize oracle to None by default
         self.oracle = None
@@ -190,9 +192,11 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
                     elif isinstance(tool, ValidReturnType):
                         run_tools(result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
                                   oracle=self.oracle, path_to_folder=path_to_folder, setting_id=setting_id,
-                                  data_file=data, signature_file=sig, formula_file=formula)
+                                  data_file=data, signature_file=sig, formula_file=formula,
+                                  sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug)
                     else:
                         raise NotImplemented(f"Not implemented for object {tool}")
+
                 sfh.clean_up_folder()
             sfh.remove_folder()
             return result_aggregator
@@ -214,21 +218,26 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
                         run_tools(
                             result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
                             oracle=self.oracle, path_to_folder=path_to_folder, setting_id=setting_id,
-                            data_file=data_file, signature_file=signature_file, formula_file=formula_file
+                            data_file=data_file, signature_file=signature_file, formula_file=formula_file,
+                            sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug
                         )
                     else:
                         raise NotImplemented(f"Not implemented for object {tool}")
+
                     sfh.clean_up_folder()
             sfh.remove_folder()
         return result_aggregator
 
 
-def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file):
+def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file, sfh=None, debug_mode=False, debug_path=None):
     try:
         prep, runtime, prop = run_monitor(
             tool, time_guard, path_to_folder, data_file,
             signature_file, formula_file, oracle
         )
+
+        if debug_mode and sfh is not None and debug_path is not None:
+            sfh.copy_to_debug(debug_path, setting_id, tool.name)
 
         stats = StatsHandler(path_to_folder).get_stats()
         if stats is not None:
@@ -242,12 +251,18 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
         )
     except TimedOut as e:
         print(f"Monitor {tool.name} timed out: {e}")
+        if debug_mode and sfh is not None and debug_path is not None:
+            sfh.copy_to_debug(debug_path, setting_id, tool.name)
         result_aggregator.add_timeout(tool.name, setting_id, time_guard.upper_bound)
     except ToolException as e:
         print(f"ToolException for monitor {tool.name}: {e}")
+        if debug_mode and sfh is not None and debug_path is not None:
+            sfh.copy_to_debug(debug_path, setting_id, tool.name)
         result_aggregator.add_tool_error(tool.name, setting_id, str(e))
     except ResultErrorException as e:
         print(f"ResultErrorException for monitor {tool.name}: {e.args[1]}")
+        if debug_mode and sfh is not None and debug_path is not None:
+            sfh.copy_to_debug(debug_path, setting_id, tool.name)
         stats = StatsHandler(path_to_folder).get_stats()
         if stats is not None:
             wall_time, max_mem, cpu = stats
@@ -260,6 +275,8 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
             wall_time, max_mem, cpu, str(e.args[1])
         )
     except Exception as e:
+        if debug_mode and sfh is not None and debug_path is not None:
+            sfh.copy_to_debug(debug_path, setting_id, tool.name)
         result_aggregator.add_tool_error(tool.name, setting_id, str(e))
 
 
