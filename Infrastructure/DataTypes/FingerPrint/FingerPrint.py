@@ -1,4 +1,5 @@
 import hashlib
+import json
 import sys
 from enum import Enum
 
@@ -29,5 +30,6 @@ def normalize(obj):
 def data_class_to_finger_print(data_class_instance):
     if not is_dataclass(data_class_instance):
         raise NotImplemented("Not a dataclass")
-    serialized = yaml.safe_dump(normalize(data_class_instance), sort_keys=True, default_flow_style=True)
+    normalized = normalize(data_class_instance)
+    serialized = json.dumps(normalized, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
