@@ -133,5 +133,6 @@ class DirectToolImageManager(AbstractToolImageManager):
             inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.name.lower()] + parameters
         else:
             inner_contract_[COMMAND_KEY] = [self.name.lower()] + parameters
+        print(path_to_data)
         inner_contract_[WORKDIR_KEY] = "/data"
         return run_image(self.image_name, inner_contract_, time_on, time_out, is_tool_image=True)

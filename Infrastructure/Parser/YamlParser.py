@@ -255,7 +255,8 @@ class YamlParser:
         return OracleManager(oracles_to_build=oracles_to_build, monitor_manager=monitor_manager)
     
     def parse_time_guarded(self, monitor_manager: MonitorManager) -> TimeGuarded:
-        """Parse time guard configuration and create TimeGuarded"""
+        if 'time_guard' not in self.cfg:
+            return None
         time_guard_config = self.cfg.get('time_guard', {})
         time_guard_dict = OmegaConf.to_container(time_guard_config, resolve=True)
         
@@ -297,7 +298,6 @@ class YamlParser:
         return None
     
     def get_experiment_type(self) -> ExperimentType:
-        """Get experiment type"""
         exp_type_str = self.cfg.get('experiment_type', 'Signature')
         return self._parse_experiment_type(exp_type_str)
     

@@ -1,6 +1,5 @@
 import dataclasses
 import os.path
-from typing import AnyStr
 
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.Monitors.MonitorExceptions import InstructionMissing, TimedOut
@@ -8,19 +7,9 @@ from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.Oracles.OracleExceptions import RunOracleException
 from Infrastructure.constants import BENCHMARK_BUILDING_OFFSET
 
-
-# case studies are a collection of data, formulas and signatures
-# a relation mapping data, formula and signature to one experiment and their respective location
-# the case study is then conducted by iterating over the results of the mapping, running all tools on it
-# the data is added in the form of a folder into the experiment work space
-# the mapping describes the relative path from the top level of the case study folder to the files
-
-# the case study Image manager equivalent will get the correct folder within it volumes and is allowed to read and write
-# then it will also write the experiment setup list, the paring of data, formula, signature
-
 @dataclasses.dataclass
 class CaseStudyContract:
-    path: AnyStr
+    path: str
 
 
 def construct_case_study(data_gen, data_setup, path_to_named_experiment, oracle: AbstractOracleTemplate, time_out):
@@ -84,5 +73,7 @@ class CaseStudyMapper:
         settings = []
         with open(self.instruction_path, "r") as f:
             for line in f.readlines():
-                settings.append([l.split()[0] for l in line.split(",")])
+                l = [l.split()[0] for l in line.split(",")]
+                l = l + [None] * (3 - len(l))
+                settings.append(l)
         return settings

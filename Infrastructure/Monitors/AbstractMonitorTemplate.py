@@ -61,7 +61,8 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
     preprocessing_elapsed = end - start
 
     start = time.perf_counter()
-    out, code = mon.run_offline(time_on=None, time_out=guarded.upper_bound)
+    timeout_value = guarded.upper_bound if guarded else None
+    out, code = mon.run_offline(time_on=None, time_out=timeout_value)
     end = time.perf_counter()
     run_offline_elapsed = end - start
 

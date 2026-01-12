@@ -67,7 +67,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
         self.gen_mode = gen_mode
 
         self.time_guard = time_guard
-        self.time_out = self.time_guard.upper_bound
+        self.time_out = self.time_guard.upper_bound if self.time_guard else None
         self.tools_to_build = tools_to_build
 
         os.makedirs(self.path_to_experiment, exist_ok=True)
@@ -253,7 +253,8 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
         print(f"Monitor {tool.name} timed out: {e}")
         if debug_mode and sfh is not None and debug_path is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
-        result_aggregator.add_timeout(tool.name, setting_id, time_guard.upper_bound)
+        timeout_value = time_guard.upper_bound if time_guard else None
+        result_aggregator.add_timeout(tool.name, setting_id, timeout_value)
     except ToolException as e:
         print(f"ToolException for monitor {tool.name}: {e}")
         if debug_mode and sfh is not None and debug_path is not None:

@@ -1,8 +1,11 @@
 import requests
+import urllib3
 from abc import ABC, abstractmethod
 
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import get_auth_token
 from Infrastructure.constants import GIT_KEY, OWNER_KEY, REPO_KEY
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class RepoFetcher(ABC):
@@ -107,12 +110,13 @@ class GitHubFetcher(RepoFetcher):
 
 
 class GitLabFetcher(RepoFetcher):
-    def __init__(self, base, repo):
+    def __init__(self, base, repo, verify_ssl=False):
         self.url = f"https://{base}/api/v4/projects/{repo}"
+        self.verify_ssl = verify_ssl
 
     def get_branches(self):
         try:
-            response = requests.get(self.url + "/repository/branches")
+            response = requests.get(self.url + "/repository/branches", verify=self.verify_ssl)
             response.raise_for_status()
             branches_data = response.json()
             branch_names = [branch['name'] for branch in branches_data]
@@ -123,7 +127,7 @@ class GitLabFetcher(RepoFetcher):
 
     def get_releases(self):
         try:
-            response = requests.get(self.url + "/releases")
+            response = requests.get(self.url + "/releases", verify=self.verify_ssl)
             response.raise_for_status()
             releases_data = response.json()
             return releases_data
@@ -133,7 +137,7 @@ class GitLabFetcher(RepoFetcher):
 
     def get_hash(self, identifier):
         try:
-            response = requests.get(self.url + f"/repository/branches/{identifier}")
+            response = requests.get(self.url + f"/repository/branches/{identifier}", verify=self.verify_ssl)
             response.raise_for_status()
             branch_data = response.json()
             return branch_data['commit']['id']
