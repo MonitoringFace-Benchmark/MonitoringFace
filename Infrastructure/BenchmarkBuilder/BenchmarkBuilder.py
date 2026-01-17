@@ -207,7 +207,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
         for path_to_folder in path_generator(self.gen_mode, self.experiment, self.path_to_named_experiment):
             sfh = ScratchFolderHandler(path_to_folder)
             for num_len in self.experiment.num_data_set_sizes:
-                setting_id = str(path_to_folder.removeprefix(self.path_to_named_experiment))
+                setting_id = str(path_to_folder.removeprefix(self.path_to_named_experiment)) + f"/{num_len}"
                 data_file = f"data_{num_len}.csv"
                 for tool in tools:
                     if isinstance(tool, InvalidReturnType):
