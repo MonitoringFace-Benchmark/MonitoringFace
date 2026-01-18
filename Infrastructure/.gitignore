@@ -1,8 +1,8 @@
 .DS_Store
+.idea
+
 build/
 results/
 experiments/
 environment/
-.idea
-
 __pycache__/

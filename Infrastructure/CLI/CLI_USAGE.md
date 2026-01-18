@@ -4,54 +4,20 @@
 
 MonitoringFace provides a command-line interface (CLI) that allows users to configure and run benchmark experiments using YAML configuration files. The framework uses **[Hydra](https://hydra.cc/)**, a powerful configuration framework that provides structured configs, type safety, and automatic validation.
 
-## Key Benefits of Hydra Integration
 
-- **Type Safety**: Structured configs with dataclasses ensure type correctness
-- **Automatic Validation**: Configuration errors are caught early with clear error messages
-- **Composability**: Easy to override specific configuration values
-- **Clean Syntax**: Natural YAML structure without excessive nesting
-
-## Installation
-
-1. Install dependencies (includes hydra-core and omegaconf):
-```bash
-cd Infrastructure
-pip install -r requirements.txt
-```
-
-2. Ensure Docker is running (required for building and running monitoring tools)
-
-## Quick Start
-
-### Running a Single Experiment
-
-```bash
-python -m Infrastructure.main example_synthetic_experiment.yaml
-```
-
-### Running Multiple Experiments (Suite)
-
-```bash
-python -m Infrastructure.main experiments_suite.yaml
-```
-
-### Validating Configuration (Dry Run)
-
-```bash
-python -m Infrastructure.main example_synthetic_experiment.yaml --dry-run
-```
 
 ## Command-Line Options
 
 ```
 usage: MonitoringFace [-h] [--build-dir BUILD_DIR] [--exp-dir EXP_DIR] 
-                      [--dry-run] [--verbose] [--suite] config
+                      [--dry-run] [--verbose] [--suite] [--debug] config
 
 positional arguments:
   config                Path to YAML configuration file (single experiment or suite)
 
 optional arguments:
   -h, --help           Show help message and exit
+  --debug              Enable debug mode with additional logging
   --dry-run            Validate configuration without running experiments
   --verbose, -v        Enable verbose output
   --suite              Force treat config as experiment suite (auto-detected by default)
@@ -289,22 +255,18 @@ This example shows how to:
 
 ### 1. Create a New Experiment
 
-1. Copy an existing example YAML file:
-```bash
-cp Archive/Benchmarks/example_synthetic_experiment.yaml \
-   Archive/Benchmarks/my_experiment.yaml
-```
+1. Copy an existing example YAML file.
 
 2. Edit the configuration to match your needs
 
 3. Validate the configuration:
 ```bash
-python -m Infrastructure.main my_experiment.yaml --dry-run
+python -m Infrastructure.main my_folder/my_experiment.yaml --dry-run
 ```
 
 4. Run the experiment:
 ```bash
-python -m Infrastructure.main my_experiment.yaml --verbose
+python -m Infrastructure.main my_folder/my_experiment.yaml --verbose
 ```
 
 ### 2. Create an Experiment Suite
@@ -314,17 +276,17 @@ python -m Infrastructure.main my_experiment.yaml --verbose
 2. Create a suite file:
 ```yaml
 experiments:
-  - path: experiment1.yaml
+  - path: my_folder/experiment1.yaml
     enabled: true
     description: "First experiment"
-  - path: experiment2.yaml
+  - path: my_folder/experiment2.yaml
     enabled: true
     description: "Second experiment"
 ```
 
 3. Run the suite:
 ```bash
-python -m Infrastructure.main my_suite.yaml
+python -m Infrastructure.main my_folder/my_suite.yaml
 ```
 
 ### 3. Parameter Sweeps
@@ -360,102 +322,6 @@ Archive/Benchmarks/
     └── with_optimization.yaml
 ```
 
-## Advanced Features
-
-### Verbose Output
-
-Get detailed information during execution:
-
-```bash
-python -m Infrastructure.main my_experiment.yaml --verbose
-```
-
-### Programmatic Usage
-
-You can also use the CLI programmatically in Python:
-
-```python
-from Infrastructure.cli import CLI
-
-cli = CLI()
-cli.run(['experiments/my_experiment.yaml', '--verbose'])
-```
-
-### Using the YAML Parser Directly
-
-For more control, use the parser directly:
-
-```python
-from Infrastructure.Parser.YamlParser import YamlParser
-
-parser = YamlParser('my_experiment.yaml')
-experiment_config = parser.parse_experiment()
-
-# Access parsed components
-tool_manager = experiment_config['tool_manager']
-monitor_manager = experiment_config['monitor_manager']
-# ... etc
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**1. Docker not running:**
-```
-Error: Docker is not running
-```
-Solution: Start Docker before running experiments
-
-**2. YAML syntax error:**
-```
-Error parsing YAML file: ...
-```
-Solution: Validate YAML syntax using an online validator or `python -c "import yaml; yaml.safe_load(open('file.yaml'))"`
-
-**3. Configuration validation error:**
-```
-Configuration error: Missing 'tools' section in YAML configuration
-```
-Solution: Ensure all required sections are present in your YAML file
-
-**4. Module import error:**
-```
-Import "omegaconf" could not be resolved
-```
-Solution: Install dependencies: `pip install -r requirements.txt`
-
-**5. Experiment file not found:**
-```
-Experiment file not found: ...
-```
-Solution: Check that paths in suite files are correct (relative or absolute)
-
-### Debug Mode
-
-Enable verbose output to see detailed execution information:
-
-```bash
-python -m Infrastructure.main my_experiment.yaml --verbose
-```
-
-### Validate Before Running
-
-Always validate configuration before running expensive experiments:
-
-```bash
-python -m Infrastructure.main my_experiment.yaml --dry-run
-```
-
-## Migration from Hardcoded Configuration
-
-To migrate from the old `Evaluator.py` approach:
-
-1. Identify your current configuration in `Evaluator.py`
-2. Copy an appropriate example YAML file
-3. Transfer your configuration values to the YAML file
-4. Validate with `--dry-run`
-5. Run the experiment using the CLI
 
 ## Additional Resources
 
@@ -465,14 +331,3 @@ To migrate from the old `Evaluator.py` approach:
 - Review `Infrastructure/Parser/YamlParser.py` for all configuration options
 - Review `Infrastructure/Parser/HydraConfig.py` for structured config definitions
 - Check `Infrastructure/cli.py` for CLI implementation details
-
-## Contributing
-
-When adding new configuration options:
-
-1. Update the structured config dataclass in `HydraConfig.py`
-2. Add parsing logic in `YamlParser.py` if needed
-3. Update this documentation with examples
-4. Add example configurations to `Archive/Benchmarks/` directory
-
-The use of Hydra means most configuration changes only require updating the dataclass definitions.

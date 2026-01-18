@@ -1,20 +1,29 @@
 # MonitoringFace Benchmark Framework
+MonitoringFace is a comprehensive benchmark framework for evaluating runtime monitoring tools and techniques.
 
-MonitoringFace is a comprehensive benchmark framework for evaluating runtime monitoring tools and techniques. It uses **Hydra** for powerful, type-safe YAML configuration management.
+## Prerequisites
 
-## Quick Start
+Docker must be installed and running on your system. You can download Docker from
+[here](https://www.docker.com/get-started).
+Recommended/Minimum Docker system requirements:
+
+    - RAM: 6GB
+    - 4 CPU cores
+    - Swap memory: 1GB
+    - Disk space: 64GB
+    - Allow Docker to access the folder where MonitoringFace is located under Settings> Resources > File Sharing.
+
+Python 3.9 or higher must be installed. You can download Python from
+[here](https://www.python.org/downloads/).
 
 ### Installation
-
+Clone the repository and install dependencies:
 ```bash
 cd Infrastructure
 pip install -r requirements.txt
 ```
 
-Ensure Docker is running before executing experiments.
-
 ### Running Experiments
-
 The framework uses Hydra-powered YAML configuration for experiments:
 
 ```bash
@@ -25,19 +34,17 @@ python -m Infrastructure.main examples/example_synthetic_experiment.yaml
 python -m Infrastructure.main examples/experiments_suite.yaml
 
 # Validate configuration without running
-python -m Infrastructure.main my_experiment.yaml --dry-run
+python -m Infrastructure.main my_folder/my_experiment.yaml --dry-run
 ```
 
 ### Documentation
 
-- **[CLI Usage Guide](CLI_USAGE.md)** - Complete documentation for the command-line interface and YAML configuration
-- **[Quick Reference](CLI_QUICK_REFERENCE.md)** - Quick reference for common commands and configuration options
+- **[CLI Usage Guide](Infrastructure/CLI/CLI_USAGE.md)** - Complete documentation for the command-line interface and YAML configuration
 - **[Archive README](Archive/README.md)** - How to add Dockerfiles for new tools
 - **[Infrastructure README](Infrastructure/README.md)** - How to integrate new software components
 
 ## Key Features
 
-- **Hydra Configuration**: Leverages [Hydra](https://hydra.cc/) for powerful, type-safe YAML configuration with structured configs
 - **YAML-based Experiments**: Define experiments using simple, version-controlled YAML files
 - **Experiment Suites**: Run multiple experiments in sequence from a single suite file
 - **Flexible Monitoring**: Support for multiple monitoring tools (TimelyMon, MonPoly, WhyMon, EnfGuard)
@@ -45,7 +52,6 @@ python -m Infrastructure.main my_experiment.yaml --dry-run
 - **Oracle Support**: Correctness verification using oracles (VeriMon, DataGolf)
 - **Time Guards**: Configurable execution time limits
 - **Dry Run Mode**: Validate configurations before execution
-- **Configuration Validation**: Hydra's OmegaConf provides runtime type checking
 
 ## Project Structure
 
@@ -60,6 +66,7 @@ MonitoringFace/
 │   ├── BenchmarkBuilder/    # Benchmark construction
 │   ├── Monitors/            # Monitor implementations
 │   ├── Oracles/             # Oracle implementations
+│   ├── Builders/            # Generator and Converter implementations
 │   └── ...
 ├── Archive/                 # Tool Dockerfiles and configurations
 │   ├── Benchmarks/         # Example experiment configurations
@@ -67,7 +74,8 @@ MonitoringFace/
 │   │   │   ├── example_synthetic_experiment.yaml
 │   │   │   ├── example_patterns.yaml
 │   │   │   ├── example_case_study.yaml
-│   │   │   └── experiments_suite.yaml
+│   │   │   ├── experiments_suite.yaml
+│   │   │   └── ...
 ├── CLI_USAGE.md            # Complete CLI documentation
 └── CLI_QUICK_REFERENCE.md  # Quick reference guide
 ```
@@ -134,29 +142,39 @@ python -m Infrastructure.main path/my_experiment.yaml --dry-run
 python -m Infrastructure.main path/my_experiment.yaml --verbose
 ```
 
+### 3. Debugging
+Run with `--debug` to store intermediate results and temporary files.
+```bash
+# Validate configuration
+python -m Infrastructure.main path/my_experiment.yaml --debug
+
+# Run experiment
+python -m Infrastructure.main path/my_experiment.yaml --verbose --debug
+```
+
 ## Configuration Options
 
 ### Benchmark Types
 - **Synthetic**: Automatically generated benchmarks with configurable parameters
 - **Case Study**: Real-world case studies (e.g., Nokia)
 
-### Data Generators
+### Data Generators (examples)
 - **Signature**: Generate traces based on signature specifications
 - **Patterns**: Generate traces with specific patterns (linear, star, triangle)
 - **DataGolf**: Use DataGolf-based generation
 
-### Monitoring Tools
+### Monitoring Tools (examples)
 - TimelyMon
 - MonPoly
 - WhyMon
 - EnfGuard
 
-### Oracles
-- VeriMonOracle (based on verified MonPoly)
-- DataGolfOracle
+### Oracles (examples)
+- VeriMonOracle (based on verified MonPoly aka. VeriMon)
+- DataGolfOracle (based on DataGolf)
+
 
 ## Advanced Usage
-
 ### Multiple Experiments (Suite)
 
 Create a suite file `experiments_suite.yaml`:
@@ -176,7 +194,7 @@ experiments:
 
 Run the suite:
 ```bash
-python -m Infrastructure.main experiments_suite.yaml
+python -m Infrastructure.main my_folder/experiments_suite.yaml
 ```
 
 ### Parameter Sweeps
@@ -202,35 +220,55 @@ See [Infrastructure/README.md](Infrastructure/README.md) for integration guideli
 ### Updating Configuration Schema
 When adding new configuration options:
 1. Update the relevant dataclass/contract
-2. Add parsing logic in `YamlParser.py`
-3. Update documentation in `CLI_USAGE.md`
-4. Add example configurations
+2. Update documentation in `CLI_USAGE.md`
+3. Add example configurations
 
 ## Troubleshooting
 
-**Docker not running:**
+### Common Issues
+
+**1. Docker not running:**
 ```
 Error: Docker is not running
 ```
-Start Docker before running experiments.
+Solution: Start Docker before running experiments
 
-**YAML syntax errors:**
-Use `--dry-run` to validate configuration before running:
+**2. YAML syntax error:**
+```
+Error parsing YAML file: ...
+```
+Solution: Validate YAML syntax using an online validator or `python -c "import yaml; yaml.safe_load(open('file.yaml'))"`
+
+**3. Configuration validation error:**
+```
+Configuration error: Missing 'tools' section in YAML configuration
+```
+Solution: Ensure all required sections are present in your YAML file
+
+**4. Module import error:**
+```
+Import "omegaconf" could not be resolved
+```
+Solution: Install dependencies: `pip install -r requirements.txt`
+
+**5. Experiment file not found:**
+```
+Experiment file not found: ...
+```
+Solution: Check that paths in suite files are correct (relative or absolute)
+
+### Debug Mode
+
+Enable verbose output to see detailed execution information:
+
 ```bash
-python -m Infrastructure.main my_experiment.yaml --dry-run
+python -m Infrastructure.main my_experiment.yaml --verbose
 ```
 
-**Missing dependencies:**
+### Validate Before Running
+
+Always validate configuration before running expensive experiments:
+
 ```bash
-pip install -r Infrastructure/requirements.txt
+python -m Infrastructure.main my_folder/my_experiment.yaml --dry-run
 ```
-
-For more troubleshooting tips, see [CLI_USAGE.md](CLI_USAGE.md#troubleshooting).
-
-## License
-
-[Add your license information here]
-
-## Contact
-
-[Add contact information here]

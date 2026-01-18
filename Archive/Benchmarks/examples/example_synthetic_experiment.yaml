@@ -12,6 +12,9 @@ tools:
   - name: MonPoly
     branch: master
     release: branch
+  - name: VeriMon
+    branch: master
+    release: branch
   - name: WhyMon
     branch: main
     release: branch

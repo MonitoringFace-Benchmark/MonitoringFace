@@ -23,7 +23,13 @@ CaseStudies: Software creating predefined structures and instructions.
 Utilities: All software that is needed with in the other categories but doesn't fit in the other categories.
 
 ## Conventions
-Guidelines and conventions to add software to the archive.
+Guidelines and conventions to add software to the archive. The Dockerfile provides the tool with the required and
+correct installation pipeline, this might include special dependencies, compiler flags or build steps. Furthermore, the
+Dockerfile follows the conventions to be compatible with the framework automation. 
+
+The tool.properties file provides metadata about the tool, such as its name, repository information, and other relevant details. 
+This file is essential for the framework to identify and manage the tool version correctly. The information
+from the properties file is used to access the API of the git-provider to retrieve metadata such as commit-hashes.
 ### Tools
 1. Dockerfile:
     1. Uses the appropriate base image (supporting the correct version of the tech stack etc.). 
