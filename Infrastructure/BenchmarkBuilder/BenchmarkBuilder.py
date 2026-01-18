@@ -106,9 +106,11 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
                 old_data_setup_fingerprint = fph.get_attr(FINGERPRINT_DATA)
                 old_experiment_fingerprint = fph.get_attr(FINGERPRINT_EXPERIMENT)
                 new_data_setup_fingerprint = data_class_to_finger_print(data_setup)
-                if not (old_experiment_fingerprint == new_experiment_fingerprint
-                        and old_data_setup_fingerprint == new_data_setup_fingerprint):
+                if not (old_experiment_fingerprint == new_experiment_fingerprint and old_data_setup_fingerprint == new_data_setup_fingerprint):
                     self._build()
+                    fph = FingerPrintHandler({FINGERPRINT_DATA: new_data_setup_fingerprint, FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
+                    fph.to_file(fingerprint_location)
+
             else:
                 self._build()
                 new_data_setup_fingerprint = data_class_to_finger_print(data_setup)
