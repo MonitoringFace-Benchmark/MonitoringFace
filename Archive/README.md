@@ -64,9 +64,21 @@ Dockerfile (Hint): The repo contains a variety of Dockerfiles that can be consul
    5. branch= ... (desired branch/state of the repo)
 
 
+### CaseStudies
+A case study is a loose two component based structure consisting of a folder containing all needed files in any desired format called ``data`` 
+and an instruction file called ``instructions.txt``, in which each line describes the combination of the data, policy and signature,
+by specifying the relative path from within the case study folder to each element.
+
+
 ### PolicyConverters, DataConverters, and Utilities
 Since these categories do not directly interact with the Framework automation, no conventions are imposed. 
 Because each instance of this is assumed to be tool-specific and
 as such unique, hence each standardization could restrict the expressiveness and complicate usage. 
 However, it is encouraged to be as general as possible and follow reasonable coding standards 
 to allow for extended usability and better integration into other tools.
+
+### Shared Images
+To allow for building multiple tools on a single Dockerfile without implicit name resolving, we provide symbolic links
+VeriMon and MonPoly are packaged in a single repository, Dockerfile and binary. But they are two related but different tools.
+The ``Archive/Tools/VeriMon``-folder does not contain a Dockerfile or tool.properties, instead it contains symbolic link file 
+``symbolic_link`` pointing to the location of the MonPoly folder (``Archive/Tools/MonPoly``) including the Docker and Properties file.
