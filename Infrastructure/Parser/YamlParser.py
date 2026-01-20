@@ -262,11 +262,11 @@ class YamlParser:
         
         enabled = time_guard_dict.get('enabled', False)
         lower_bound = time_guard_dict.get('lower_bound')
-        upper_bound = time_guard_dict.get('upper_bound', 200)
-        guard_type_str = time_guard_dict.get('guard_type', 'Monitor')
+        upper_bound = time_guard_dict.get('upper_bound')
+        guard_type_str = time_guard_dict.get('guard_type')
         guard_name = time_guard_dict.get('guard_name')
         
-        guard_type = self._parse_time_guarding_tool(guard_type_str)
+        guard_type = self._parse_time_guarding_tool(guard_type_str) if guard_type_str else None
         
         return TimeGuarded(
             time_guarded=enabled,
@@ -300,6 +300,11 @@ class YamlParser:
     def get_experiment_type(self) -> ExperimentType:
         exp_type_str = self.cfg.get('experiment_type', 'Signature')
         return self._parse_experiment_type(exp_type_str)
+
+    def get_repeat_experiments(self) -> int:
+        if 'repeats' not in self.cfg:
+            return 1
+        return self.cfg.get('repeats')
     
     def parse_experiment(self) -> Dict[str, Any]:
         tool_manager = self.parse_tool_manager()
@@ -310,6 +315,7 @@ class YamlParser:
         tools_to_build = self.get_tools_to_build()
         oracle_name = self.get_oracle_config()
         experiment_type = self.get_experiment_type()
+        repeats = self.get_repeat_experiments()
         oracle_tuple = (oracle_manager, oracle_name) if oracle_manager and oracle_name else None
 
         is_case_study = experiment_type == ExperimentType.CaseStudy
@@ -325,6 +331,7 @@ class YamlParser:
             'path_to_project': self.path_to_project,
             'path_to_build': self.path_to_build,
             'path_to_experiments': self.path_to_experiments,
+            'repeat_experiments': repeats,
             'data_setup': None if is_case_study else self.parse_data_generator_setup(),
             'seeds': None if is_case_study else self.parse_seeds()
         }

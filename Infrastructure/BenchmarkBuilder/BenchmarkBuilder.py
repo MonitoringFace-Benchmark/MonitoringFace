@@ -1,5 +1,6 @@
 import dataclasses
 import os.path
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from typing import AnyStr, Any, List, Optional
@@ -46,12 +47,13 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
     def __init__(
             self, contract, path_to_project, data_setup,
             gen_mode: ExperimentType, time_guard: TimeGuarded,
-            tools_to_build, oracle=None, seeds=None, debug_mode=False
+            tools_to_build, repeat_runs, oracle=None, seeds=None, debug_mode=False
     ):
         print_headline("(Starting) Init Benchmark")
         self.contract = contract
         self.seeds = seeds
         self.debug_mode = debug_mode
+        self.repeat_runs = repeat_runs
 
         self.path_to_build = path_to_project + "/Infrastructure/build"
         self.path_to_experiment = path_to_project + "/Infrastructure/experiments"
@@ -172,10 +174,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
             seed_dict[setting_key] = (gen_seed, policy_seed)
         return seed_dict
 
-    def run(
-            self, tools: List[GetMonitorsReturnType],
-            parameters: dict[AnyStr, dict[AnyStr, Any]]
-    ) -> ResultAggregator:
+    def run(self, tools: List[GetMonitorsReturnType], parameters: dict[AnyStr, dict[AnyStr, Any]]) -> ResultAggregator:
         print("\n" + "-" * LENGTH)
         normal_line("Run Experiments")
         print("-" * LENGTH)
@@ -211,22 +210,23 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
             for num_len in self.experiment.num_data_set_sizes:
                 setting_id = str(path_to_folder.removeprefix(self.path_to_named_experiment)) + f"/{num_len}"
                 data_file = f"data_{num_len}.csv"
-                for tool in tools:
-                    if isinstance(tool, InvalidReturnType):
-                        print_headline(f"Missing {tool.name}")
-                        result_aggregator.add_missing(tool.name, setting_id)
-                        print_footline()
-                    elif isinstance(tool, ValidReturnType):
-                        run_tools(
-                            result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
-                            oracle=self.oracle, path_to_folder=path_to_folder, setting_id=setting_id,
-                            data_file=data_file, signature_file=signature_file, formula_file=formula_file,
-                            sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug
-                        )
-                    else:
-                        raise NotImplemented(f"Not implemented for object {tool}")
-
-                    sfh.clean_up_folder()
+                for i in range(0, self.repeat_runs):
+                    tmp_setting_id = f"{setting_id}_{i}"
+                    for tool in tools:
+                        if isinstance(tool, InvalidReturnType):
+                            print_headline(f"Missing {tool.name}")
+                            result_aggregator.add_missing(tool.name, tmp_setting_id)
+                            print_footline()
+                        elif isinstance(tool, ValidReturnType):
+                            run_tools(
+                                result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
+                                oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
+                                data_file=data_file, signature_file=signature_file, formula_file=formula_file,
+                                sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug
+                            )
+                        else:
+                            raise NotImplemented(f"Not implemented for object {tool}")
+                        sfh.clean_up_folder()
             sfh.remove_folder()
         return result_aggregator
 

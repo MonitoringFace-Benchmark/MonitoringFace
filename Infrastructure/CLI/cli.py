@@ -126,8 +126,7 @@ Examples:
             if dry_run:
                 print(f"✓ Configuration validated successfully: {yaml_file}")
                 return None
-            
-            # Create benchmark - note: parameter name is 'contract' not 'benchmark_contract'
+
             benchmark = BenchmarkBuilder(
                 contract=experiment_config['benchmark_contract'],
                 path_to_project=experiment_config['path_to_project'],
@@ -137,6 +136,7 @@ Examples:
                 tools_to_build=experiment_config['tools_to_build'],
                 oracle=experiment_config['oracle'],
                 seeds=experiment_config['seeds'],
+                repeat_runs=experiment_config['repeat_experiments'],
                 debug_mode=debug
             )
             
