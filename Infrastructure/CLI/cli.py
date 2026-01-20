@@ -149,7 +149,7 @@ Examples:
                 print(f"Running experiment with {len(monitors)} monitor(s)...")
             
             # Run benchmark
-            results = benchmark.run(monitors, {})
+            results = benchmark.run(monitors)
             experiment_name = os.path.splitext(os.path.basename(yaml_file))[0]
 
             # Use provided result_folder or create a new timestamped one

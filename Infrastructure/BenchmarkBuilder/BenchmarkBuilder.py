@@ -1,11 +1,7 @@
-import dataclasses
 import os.path
-import sys
-from abc import ABC, abstractmethod
 from dataclasses import asdict
-from typing import AnyStr, Any, List, Optional
-
-import pandas
+from enum import Enum
+from typing import AnyStr, List, Optional
 
 from Infrastructure.Analysis.ResultAggregator import ResultAggregator
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilderException import BenchmarkCreationFailed
@@ -19,39 +15,29 @@ from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
 from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 from Infrastructure.DataTypes.Types.custome_type import ExperimentType
 
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate, run_monitor
+from Infrastructure.Monitors.AbstractMonitorTemplate import run_monitor
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
 from Infrastructure.constants import FINGERPRINT_DATA, FINGERPRINT_EXPERIMENT, LENGTH
 from Infrastructure.printing import print_headline, print_footline, normal_line
 
 
-class BenchmarkBuilderTemplate(ABC):
-    @abstractmethod
-    def _build(self):
-        pass
-
-    @abstractmethod
-    def run(self, tools: list[AbstractMonitorTemplate], parameters: dict[AnyStr, dict[AnyStr, Any]]) -> pandas.DataFrame:
-        pass
+class RunToolResult(Enum):
+    OK = 1
+    TIMEOUT = 2
+    TOOL_ERROR = 3
+    VALIDATION_ERROR = 4
 
 
-@dataclasses.dataclass
-class TimeGuard:
-    lower_time: int
-    upper_time: int
-    time_guard: str
-
-
-class BenchmarkBuilder(BenchmarkBuilderTemplate):
-    def __init__(
-            self, contract, path_to_project, data_setup,
-            gen_mode: ExperimentType, time_guard: TimeGuarded,
-            tools_to_build, repeat_runs, oracle=None, seeds=None, debug_mode=False
+class BenchmarkBuilder:
+    def __init__(self, contract, path_to_project, data_setup,
+        gen_mode: ExperimentType, time_guard: TimeGuarded,
+        tools_to_build, repeat_runs, oracle=None, seeds=None, short_cut=None, debug_mode=False
     ):
         print_headline("(Starting) Init Benchmark")
         self.contract = contract
         self.seeds = seeds
+        self.short_cut = short_cut
         self.debug_mode = debug_mode
         self.repeat_runs = repeat_runs
 
@@ -60,7 +46,6 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
         self.path_to_named_experiment = self.path_to_experiment + "/" + self.contract.experiment_name
         self.path_to_debug = self.path_to_named_experiment + "/debug"
 
-        # Initialize oracle to None by default
         self.oracle = None
         self.oracle_name = None
         if oracle:
@@ -174,7 +159,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
             seed_dict[setting_key] = (gen_seed, policy_seed)
         return seed_dict
 
-    def run(self, tools: List[GetMonitorsReturnType], parameters: dict[AnyStr, dict[AnyStr, Any]]) -> ResultAggregator:
+    def run(self, tools: List[GetMonitorsReturnType]) -> ResultAggregator:
         print("\n" + "-" * LENGTH)
         normal_line("Run Experiments")
         print("-" * LENGTH)
@@ -207,6 +192,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
 
         for path_to_folder in path_generator(self.gen_mode, self.experiment, self.path_to_named_experiment):
             sfh = ScratchFolderHandler(path_to_folder)
+            time_out_dict = set()
             for num_len in self.experiment.num_data_set_sizes:
                 setting_id = str(path_to_folder.removeprefix(self.path_to_named_experiment)) + f"/{num_len}"
                 data_file = f"data_{num_len}.csv"
@@ -218,12 +204,20 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
                             result_aggregator.add_missing(tool.name, tmp_setting_id)
                             print_footline()
                         elif isinstance(tool, ValidReturnType):
-                            run_tools(
-                                result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
-                                oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
-                                data_file=data_file, signature_file=signature_file, formula_file=formula_file,
-                                sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug
-                            )
+                            if tool.tool.name in time_out_dict:
+                                print_headline(f"Short cutting {tool.tool.name}")
+                                result_aggregator.add_timeout(tool.tool.name, tmp_setting_id, self.time_guard.upper_bound)
+                                print_footline()
+                            else:
+                                res = run_tools(
+                                    result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
+                                    oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
+                                    data_file=data_file, signature_file=signature_file, formula_file=formula_file,
+                                    sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug
+                                )
+
+                                if res == RunToolResult.TIMEOUT:
+                                    time_out_dict.add(tool.tool.name)
                         else:
                             raise NotImplemented(f"Not implemented for object {tool}")
                         sfh.clean_up_folder()
@@ -231,7 +225,7 @@ class BenchmarkBuilder(BenchmarkBuilderTemplate):
         return result_aggregator
 
 
-def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file, sfh=None, debug_mode=False, debug_path=None):
+def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file, sfh=None, debug_mode=False, debug_path=None) -> RunToolResult:
     try:
         prep, runtime, prop = run_monitor(
             tool, time_guard, path_to_folder, data_file,
@@ -251,17 +245,20 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
             tool.name, setting_id, prep, runtime, prop,
             wall_time, max_mem, cpu
         )
+        return RunToolResult.OK
     except TimedOut as e:
         print(f"Monitor {tool.name} timed out: {e}")
         if debug_mode and sfh is not None and debug_path is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
         timeout_value = time_guard.upper_bound if time_guard else None
         result_aggregator.add_timeout(tool.name, setting_id, timeout_value)
+        return RunToolResult.TIMEOUT
     except ToolException as e:
         print(f"ToolException for monitor {tool.name}: {e}")
         if debug_mode and sfh is not None and debug_path is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
         result_aggregator.add_tool_error(tool.name, setting_id, str(e))
+        return RunToolResult.TOOL_ERROR
     except ResultErrorException as e:
         print(f"ResultErrorException for monitor {tool.name}: {e.args[1]}")
         if debug_mode and sfh is not None and debug_path is not None:
@@ -277,10 +274,12 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
             tool.name, setting_id, prep, runtime, prop,
             wall_time, max_mem, cpu, str(e.args[1])
         )
+        return RunToolResult.VALIDATION_ERROR
     except Exception as e:
         if debug_mode and sfh is not None and debug_path is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
         result_aggregator.add_tool_error(tool.name, setting_id, str(e))
+        return RunToolResult.TOOL_ERROR
 
 
 def path_generator(mode: ExperimentType, experiment, path_to_named_experiment: AnyStr) -> list[AnyStr]:
