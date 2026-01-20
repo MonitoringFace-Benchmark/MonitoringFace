@@ -23,6 +23,7 @@ class ScratchFolderHandler:
         safe_tool_name = tool_name.replace("/", "_").replace(" ", "_")
 
         debug_folder = os.path.join(debug_base_path, safe_setting_id, safe_tool_name)
+        print(f"Debug information are available at:\n{debug_folder}")
         os.makedirs(debug_folder, exist_ok=True)
 
         # Copy all files from scratch to debug folder
