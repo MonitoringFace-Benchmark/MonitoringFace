@@ -53,6 +53,7 @@ class IndirectToolImageManager(AbstractToolImageManager):
             self._build_image()
 
         in_build = os.path.exists(f"{self.path}{META_FILE_VALUE}")
+        os.makedirs(self.path, exist_ok=True)
         if not in_build:
             self._build_image()
         elif not image_exists(self.image_name):
