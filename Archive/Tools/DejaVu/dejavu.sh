@@ -24,7 +24,7 @@ DEBUG=${4:-} # default is no debugging
 
 DEJAVU=/home/dejavu
 
-SPECHASH=$(echo $SPEC | md5sum | cut -d' ' -f1)
+SPECHASH=$(cat $SPEC | md5sum | cut -d' ' -f1)
 SPECFOLDER=$(echo $SPEC-$SPECHASH)
 
 if [ ! -e ${SPECFOLDER}/TraceMonitor.class ]; then
@@ -47,8 +47,10 @@ fi
 
 
 # Run the compiled monitor on trace:
-scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG | egrep "\*\*\*"
+scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG > ${SPECFOLDER}/dejavu_output.txt
 res=$?
+cat ${SPECFOLDER}/dejavu_output.txt | egrep "\*\*\*"
+
 if [ $res -ne 0 ]; then
     echo "DejaVu: Error during trace monitoring."
     exit $res

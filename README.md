@@ -19,11 +19,15 @@ Python 3.9 or higher must be installed. You can download Python from
 ### Installation
 Clone the repository and install dependencies:
 ```bash
-cd Infrastructure
-pip install -r requirements.txt
+$ python -m venv .venv
+$ source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
+(.venv) $ pip install -r Infrastructure/requirements.txt
 ```
 
 ### Running Experiments
+
+Make sure Docker is running and that you have an internet connection.
+
 The framework uses Hydra-powered YAML configuration for experiments:
 
 ```bash
