@@ -22,15 +22,15 @@ class DataGolfContract(AbstractContract):
                     setattr(self, key, value)
         return self
 
-    sig_file: str
-    formula: str
-    path: str
-    seed: Optional[int]
+    sig_file: str = ""
+    formula: str = ""
+    path: str = ""
+    seed: Optional[int] = None
 
-    trace_length: int
-    oracle: bool
+    trace_length: int = 10
+    oracle: bool = False
 
-    no_rewrite: Optional[bool]
-    tup_ts: list[int]
-    tup_amt: int
-    tup_val: int
+    no_rewrite: Optional[bool] = None
+    tup_ts: list[int] = None
+    tup_amt: int = 10
+    tup_val: int = 0

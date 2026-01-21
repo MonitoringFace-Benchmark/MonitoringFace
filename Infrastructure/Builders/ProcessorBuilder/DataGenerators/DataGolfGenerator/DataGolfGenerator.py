@@ -9,7 +9,7 @@ from Infrastructure.Monitors.MonitorExceptions import GeneratorException
 from Infrastructure.constants import DATAGOLF_POLICY_CHECK, COMMAND_KEY, WORKDIR_KEY, WORKDIR_VAL, VOLUMES_KEY
 
 
-DEFAULT_SEED = -1
+DEFAULT_SEED = -1  # default seed
 
 
 class DataGolfGenerator(DataGeneratorTemplate):

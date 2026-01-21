@@ -22,24 +22,24 @@ class PatternContract(AbstractContract):
                     setattr(self, key, value)
         return self
 
-    trace_length: int
-    seed: Optional[int]
-    event_rate: int
-    index_rate: Optional[int]
-    time_stamp: Optional[int]
+    trace_length: int = 1000
+    seed: Optional[int] = None
+    event_rate: int = 1000
+    index_rate: Optional[int] = None
+    time_stamp: Optional[int] = None
 
-    star: Optional
-    linear: Optional
-    triangle: Optional
-    pattern: Optional[str]
+    star: Optional = None
+    linear: Optional = 1
+    triangle: Optional = None
+    pattern: Optional[str] = None
 
-    violations: Optional[float]
-    interval: Optional[str]
-    zipf: str
+    violations: Optional[float] = 1.0
+    interval: Optional[str] = None
+    zipf: str = "x=1.5+3,z=2"
 
-    prob_a: float
-    prob_b: float
-    prob_c: float
+    prob_a: float = 0.2
+    prob_b: float = 0.3
+    prob_c: float = 0.5
 
 
 def patterns_to_commands(contract: PatternContract) -> list[str]:

@@ -32,7 +32,7 @@ class RunToolResult(Enum):
 class BenchmarkBuilder:
     def __init__(self, contract, path_to_project, data_setup,
         gen_mode: ExperimentType, time_guard: TimeGuarded,
-        tools_to_build, repeat_runs, oracle=None, seeds=None, short_cut=None, debug_mode=False
+        tools_to_build, repeat_runs, oracle=None, seeds=None, short_cut=True, debug_mode=False
     ):
         print_headline("(Starting) Init Benchmark")
         self.contract = contract
@@ -165,6 +165,10 @@ class BenchmarkBuilder:
         print("-" * LENGTH)
         result_aggregator = ResultAggregator()
 
+        if os.path.exists(self.path_to_debug):
+            sfh_debug = ScratchFolderHandler(self.path_to_debug)
+            sfh_debug.remove_folder()
+
         if self.gen_mode == ExperimentType.CaseStudy:
             path_to_folder = f"{self.path_to_named_experiment}/data"
             sfh = ScratchFolderHandler(path_to_folder)
@@ -204,7 +208,7 @@ class BenchmarkBuilder:
                             result_aggregator.add_missing(tool.name, tmp_setting_id)
                             print_footline()
                         elif isinstance(tool, ValidReturnType):
-                            if tool.tool.name in time_out_dict:
+                            if tool.tool.name in time_out_dict and self.short_cut:
                                 print_headline(f"Short cutting {tool.tool.name}")
                                 result_aggregator.add_timeout(tool.tool.name, tmp_setting_id, self.time_guard.upper_bound)
                                 print_footline()

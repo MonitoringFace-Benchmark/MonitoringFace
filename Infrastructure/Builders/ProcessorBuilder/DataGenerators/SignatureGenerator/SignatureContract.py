@@ -8,7 +8,7 @@ from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 class SignatureContract(AbstractContract):
     def default_contract(self):
         return SignatureContract(
-            trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None,
+            trace_length=None, seed=None, event_rate=1000, index_rate=None, time_stamp=None,
             sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None
         )
 
@@ -22,17 +22,16 @@ class SignatureContract(AbstractContract):
                     setattr(self, key, value)
         return self
 
-    trace_length: int
-    seed: Optional[int]
-    event_rate: int
-    index_rate: Optional[int]
-    time_stamp: Optional[int]
-
-    sig: str
-    sample_queue: Optional[int]
-    fresh_value_rate: Optional[float]
-    domain: Optional[int]
-    string_length: Optional[int]
+    trace_length: Optional[int] = None
+    seed: Optional[int] = None
+    event_rate: int = 1000
+    index_rate: Optional[int] = None
+    time_stamp: Optional[int] = None
+    sig: str = ""
+    sample_queue: Optional[int] = None
+    fresh_value_rate: Optional[float] = None
+    domain: Optional[int] = None
+    string_length: Optional[int] = None
 
 
 def signature_to_commands(contract: SignatureContract) -> list[str]:

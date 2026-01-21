@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields
-from typing import AnyStr, Optional, Any
+from typing import Optional
 
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
@@ -22,5 +22,5 @@ class PatternPolicyContract(AbstractContract):
                     setattr(self, key, value)
         return self
 
-    interval: Optional[str]
-    policy: Optional[str]
+    interval: Optional[str] = None
+    policy: Optional[str] = None

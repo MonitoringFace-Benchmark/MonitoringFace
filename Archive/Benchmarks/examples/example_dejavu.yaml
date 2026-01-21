@@ -7,26 +7,26 @@ benchmark_type: synthetic
 # Tools configuration
 tools:
   - name: DejaVu
-    branch: main
+    branch: master
+    release: branch
+  - name: TimelyMon
+    branch: development
     release: branch
 
 # Monitors configuration
 monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 6
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
   - identifier: DejaVu
     name: DejaVu
-    branch: main
+    branch: master
     params:
       replayer: gen_data
-      translator: qtl_translator
-
-
-# Time guard configuration
-time_guard:
-  enabled: false
-  lower_bound: null  # null for None
-  upper_bound: 200
-  guard_type: Monitor  # Monitor, Oracle, or Generator
-  guard_name: TimelyMon 6
+      translator: qtl-translator
 
 # Data setup - Hydra structured format
 data_setup:

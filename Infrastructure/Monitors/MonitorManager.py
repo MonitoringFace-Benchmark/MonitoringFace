@@ -71,8 +71,8 @@ class MonitorManager:
                     branch=branch, name=name, params=params
                 )
                 print(f"    -> (Success)")
-            except Exception:
-                print(f"    -> (Failure)")
+            except Exception as e:
+                print(f"    -> (Failure) Exception: {e}")
                 failed_builds += [f"{identifier} - {branch}"]
 
         if failed_builds:
