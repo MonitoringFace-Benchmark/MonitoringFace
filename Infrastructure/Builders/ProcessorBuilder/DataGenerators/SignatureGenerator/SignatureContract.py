@@ -2,6 +2,7 @@ from dataclasses import dataclass, fields
 from typing import Optional, Dict, Any
 
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
+from Infrastructure.constants import PLACEHOLDER_EVENT
 
 
 @dataclass
@@ -60,4 +61,5 @@ def signature_to_commands(contract: SignatureContract) -> list[str]:
 def signature_contract_to_commands(contract_params: Dict[str, Any]) -> list[str]:
     valid_fields = {f.name for f in fields(SignatureContract)}
     contract = SignatureContract(**{k: v for k, v in contract_params.items() if k in valid_fields})
+    contract.sig = contract.sig.replace(PLACEHOLDER_EVENT, '').strip()
     return signature_to_commands(contract)

@@ -55,8 +55,8 @@ def construct_synthetic_experiment_pattern(
                     data_setup["seed"] = gen_seed
 
                 print(f"    Build {num_path}")
-                if time_guard is None or not time_guard.time_guarded:
-                    unguarded_synthetic_experiment_pattern(num_path, experiment.num_data_set_sizes,
+            if time_guard is None or not time_guard.time_guarded:
+                unguarded_synthetic_experiment_pattern(num_path, experiment.num_data_set_sizes,
                                                        data_source, data_setup, oracle, None)
             else:
                 guarded_synthetic_experiment_pattern(num_path, data_source, data_setup,
