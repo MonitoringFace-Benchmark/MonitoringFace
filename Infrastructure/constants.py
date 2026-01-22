@@ -60,8 +60,8 @@ class Measure:
 
     @classmethod
     def set_measure(cls, value: bool):
-        cls.verbose = value
+        cls.measure = value
 
     @classmethod
     def is_measure(cls) -> bool:
-        return cls.verbose
+        return cls.measure
