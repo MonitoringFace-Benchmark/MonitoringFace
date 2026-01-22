@@ -53,3 +53,15 @@ class Config:
     @classmethod
     def is_verbose(cls) -> bool:
         return cls.verbose
+
+
+class Measure:
+    measure = True
+
+    @classmethod
+    def set_measure(cls, value: bool):
+        cls.verbose = value
+
+    @classmethod
+    def is_measure(cls) -> bool:
+        return cls.verbose

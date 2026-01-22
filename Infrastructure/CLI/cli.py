@@ -11,7 +11,7 @@ from typing import List, Any, AnyStr
 from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
 from Infrastructure.Parser.YamlParser import YamlParser, ExperimentSuiteParser, YamlParserException
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
-from Infrastructure.constants import LENGTH, Config
+from Infrastructure.constants import LENGTH, Config, Measure
 
 
 class CLI:
@@ -90,6 +90,12 @@ Examples:
             '--debug',
             action='store_true',
             help='Enable debug mode - preserves scratch folder data for each tool execution'
+        )
+
+        parser.add_argument(
+            '--no-measure',
+            action='store_true',
+            help='Disable the use of usr/bin/time measurement inside containers'
         )
 
         return parser
@@ -256,6 +262,8 @@ Examples:
 
         # Set global verbose flag
         Config.set_verbose(args.verbose)
+        if args.no_measure:
+            Measure.set_measure(False)
 
         br = BenchmarkResolver(name=args.config, path_to_infra=self.infra_folder, path_to_archive=self.archive_folder)
         location = br.resolve()
