@@ -1,5 +1,7 @@
+import os
 import re
 import ast
+import sys
 
 from typing import AnyStr, List, Tuple
 
@@ -9,10 +11,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrd
 
 
 def term_and_set(str_: AnyStr) -> Tuple[AnyStr, PDTSets]:
-    #print(str_)
     split_list = str_.split(IN_SYMBOL)
-    #print(split_list)
-    #print("==============")
     term_ = split_list[0].strip()
     pdt_set = resolve_set(split_list[1].strip())
     return term_, pdt_set
@@ -33,29 +32,28 @@ IN_SYMBOL = "∈"
 
 
 def parse_tree(raw_string: str):
-    raw_string = raw_string.strip()
-    string = raw_string.replace(EXPLANATION_PREFIX, "").strip()
-    string = string.strip().removeprefix(OPEN_BRACKET).removesuffix(CLOSED_BRACKET).strip()
-
-    def _inner_parse_tree(raw_str):
-        if raw_str == 'true' or raw_str.startswith("S"):
+    def _inner_new(raw_level: str):
+        raw_level_string = raw_level.strip()
+        string = raw_level_string.replace(EXPLANATION_PREFIX, "").strip()
+        level = string.strip().removeprefix(OPEN_BRACKET).removesuffix(CLOSED_BRACKET).strip()
+        level = level.strip()
+        if level == 'true' or level.startswith("S"):
             return PDTLeaf(value=True)
-        elif raw_str.startswith("V"):
+        elif level.startswith("V"):
             return PDTLeaf(value=False)
 
-        tmp = map(lambda s: s.strip(), raw_str.split(CLOSED_BRACKET))
-        tmp = list(filter(None, map(lambda s: s.split(OPEN_BRACKET), tmp)))
-
-        terms, values = [], []
-        for sub in list(map(lambda s: [s.strip() for s in s], tmp)):
-            if not sub[0] or not sub[1]:
-                continue
-            term_, set_ = term_and_set(sub[0])
-            sub_tree_ = _inner_parse_tree(sub[1])
-            terms.append(term_)
-            values.append((set_, sub_tree_))
-        return PDTNode(term=unify_term(terms), values=values)
-    return _inner_parse_tree(string)
+        level_term = level.split(IN_SYMBOL)[0].strip()
+        all_sub_trees_raw = level.split(f"{level_term} {IN_SYMBOL}")
+        all_sub_trees = list(filter(None, map(lambda s: s.strip(), all_sub_trees_raw)))
+        values = []
+        for tree in all_sub_trees:
+            raw_split = tree.split("\n", 1)
+            raw_set = raw_split[0].strip()
+            guard_set = resolve_set(raw_set)
+            raw_sub_tree = _inner_new(raw_split[1].strip())
+            values.append((guard_set, raw_sub_tree))
+        return PDTNode(term=level_term, values=values)
+    return _inner_new(raw_string)
 
 
 def unify_term(terms: List[AnyStr]) -> AnyStr:
@@ -100,3 +98,11 @@ def str_to_proposition_tree(raw_string: AnyStr) -> PropositionTree:
         tree.insert(PDTTree(parse_tree(pair[1])), tp, ts)
     tree.variable_order = variable_ordering_tree(tree)
     return tree
+
+
+if __name__ == "__main__":
+    with open("/Users/krq770/Desktop/PastedText1.txt", "r") as f:
+        print(str_to_proposition_tree(f.read()))
+
+    with open("/Users/krq770/Desktop/PastedText.txt", "r") as f:
+        print(str_to_proposition_tree(f.read()))
