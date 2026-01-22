@@ -47,7 +47,7 @@ class DejaVu(AbstractMonitorTemplate):
             str(self.params["formula"]),
             str(self.params["data"])
         ]
-        return self.image.run(self.params["folder"], cmd, time_on, time_out)
+        return self.image.run(self.params["folder"], cmd, time_on, time_out, measure=False)
 
     def variable_order(self) -> VariableOrdering:
         return DefaultVariableOrder()

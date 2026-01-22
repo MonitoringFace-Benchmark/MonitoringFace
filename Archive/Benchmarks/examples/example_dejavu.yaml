@@ -47,14 +47,17 @@ data_setup:
 policy_setup:
   type: GenFmaContract
   GenFmaContract:
-    size: 4
+    size: 3
+    past_only: True
+    max_lb: -1
+
 
 # Synthetic benchmark specific configuration
 synthetic_config:
   data_source: SignatureGenerator
   policy_source: GenFmaGenerator
   experiment:
-    num_operators: [5]
+    num_operators: [2]
     num_fvs: [2]
     num_setting: [0, 1]
     num_data_set_sizes: [50]
@@ -68,5 +71,5 @@ tools_to_build:
   - DejaVu
 
 seeds:
-  '[5, 2, 0]': [314159265,87006]
-  '[5, 2, 1]': [314159265,53339]
+  '[2, 2, 0]': [314159265,87006]
+  '[2, 2, 1]': [314159265,53339]

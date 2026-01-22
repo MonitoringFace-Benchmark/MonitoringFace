@@ -11,8 +11,8 @@ class QTLTranslator:
     def convert(self, path_to_folder: AnyStr, data_file: AnyStr, tool: AnyStr, name: AnyStr, dest: AnyStr, params):
         command = ["docker", "run", "--rm", 
                    "-iv", f"{path_to_folder}:/home/qtl-translator/work",
-                   f"{self.image.image_name.lower()}"] + params + [f"{path_to_folder}/{data_file}"]
-        
+                   f"{self.image.image_name.lower()}"] + params + [data_file]
+                
         result = subprocess.run(command, capture_output=True, text=True)
         if result.returncode == 0:
             with open(f"{dest}/{name}.{tool}", "w") as f:
