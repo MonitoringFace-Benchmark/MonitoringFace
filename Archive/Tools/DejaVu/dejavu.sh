@@ -28,6 +28,7 @@ SPECHASH=$(cat $SPEC | md5sum | cut -d' ' -f1)
 SPECFOLDER=$(echo $SPEC-$SPECHASH)
 
 if [ ! -e ${SPECFOLDER}/TraceMonitor.class ]; then
+    echo SPECFOLDER
     mkdir -p ${SPECFOLDER}
     # Parse specification and synthesize monitor:
     java -cp $DEJAVU/dejavu.jar dejavu.Verify $SPEC > /dev/null 2>&1
