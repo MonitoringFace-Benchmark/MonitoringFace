@@ -4,7 +4,7 @@ from typing import AnyStr
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import Processor, ImageManager
 
 
-class QTLTranslator():
+class QTLTranslator:
     def __init__(self, name, path_to_project):
         self.image = ImageManager(name, Processor.PolicyConverters, path_to_project)
 

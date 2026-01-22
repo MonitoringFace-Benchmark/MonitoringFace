@@ -1,3 +1,4 @@
+import sys
 from typing import Dict, AnyStr, Any, Tuple
 
 from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.QTLTranslator.QTLTranslator import QTLTranslator
@@ -27,6 +28,7 @@ class DejaVu(AbstractMonitorTemplate):
             dest=f"{path_to_folder}/scratch",
             params=["-a", "0", "-d", "e"]
         )
+
         trimmed_formula_file = os.path.basename(formula_file)
         self.translator.convert(
             path_to_folder,
