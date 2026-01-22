@@ -32,7 +32,7 @@ IN_SYMBOL = "∈"
 
 
 def parse_tree(raw_string: str):
-    def _inner_new(raw_level: str):
+    def _inner_parse_tree(raw_level: str):
         raw_level_string = raw_level.strip()
         string = raw_level_string.replace(EXPLANATION_PREFIX, "").strip()
         level = string.strip().removeprefix(OPEN_BRACKET).removesuffix(CLOSED_BRACKET).strip()
@@ -50,10 +50,10 @@ def parse_tree(raw_string: str):
             raw_split = tree.split("\n", 1)
             raw_set = raw_split[0].strip()
             guard_set = resolve_set(raw_set)
-            raw_sub_tree = _inner_new(raw_split[1].strip())
+            raw_sub_tree = _inner_parse_tree(raw_split[1].strip())
             values.append((guard_set, raw_sub_tree))
         return PDTNode(term=level_term, values=values)
-    return _inner_new(raw_string)
+    return _inner_parse_tree(raw_string)
 
 
 def unify_term(terms: List[AnyStr]) -> AnyStr:
