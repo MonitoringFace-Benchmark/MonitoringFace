@@ -4,6 +4,7 @@ from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.QTLTranslator.QTL
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import ReplayerConverter
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 import os
@@ -27,6 +28,7 @@ class DejaVu(AbstractMonitorTemplate):
             dest=f"{path_to_folder}/scratch",
             params=["-a", "0", "-d", "e"]
         )
+
         trimmed_formula_file = os.path.basename(formula_file)
         self.translator.convert(
             path_to_folder,
@@ -51,7 +53,14 @@ class DejaVu(AbstractMonitorTemplate):
         return DefaultVariableOrder()
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        print(stdout_input)
-        return stdout_input.split("\n")
-
-
+        prop_list = PropositionList()
+        if stdout_input:
+            lines = stdout_input.strip()
+            for line in filter(lambda l: "violated on event number" in l, lines.split("\n")):
+                if len(line) > 1:
+                    num_str = line[1].strip().rstrip(":")
+                    try:
+                        prop_list.insert(False, int(num_str))
+                    except ValueError:
+                        pass
+        return prop_list

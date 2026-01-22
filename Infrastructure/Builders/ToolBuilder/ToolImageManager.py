@@ -9,7 +9,7 @@ from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.constants import (IMAGE_POSTFIX, BUILD_ARG_GIT_BRANCH, VOLUMES_KEY, COMMAND_KEY, WORKDIR_KEY,
                                       DOCKERFILE_VALUE, DOCKERFILE_KEY, PROP_FILES_VALUE, PROP_FILES_KEY,
-                                      META_FILE_VALUE, VERSION_KEY, SYMLINK_KEY)
+                                      META_FILE_VALUE, VERSION_KEY, SYMLINK_KEY, Measure)
 
 
 def to_file(path, name, content):
@@ -79,7 +79,8 @@ class IndirectToolImageManager(AbstractToolImageManager):
     def run(self, path_to_data, parameters, time_on=None, time_out=None, measure=True):
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
-        if measure:
+
+        if measure and Measure.is_measure():
             inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.binary_name] + parameters
         else:
             inner_contract_[COMMAND_KEY] = [self.binary_name] + parameters

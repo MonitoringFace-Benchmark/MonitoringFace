@@ -108,8 +108,7 @@ class YamlParser:
     def parse_seeds(self) -> Optional[Dict[str, Tuple[int, int]]]:
         if 'seeds' not in self.cfg:
             return None
-        seeds_dict = OmegaConf.to_container(self.cfg.seeds, resolve=True)
-        return {key: (int(value[0]), int(value[1])) for key, value in seeds_dict.items()}
+        return OmegaConf.to_container(self.cfg.seeds, resolve=True)
 
     @staticmethod
     def _parse_data_generators(path_to_module, name: str) -> DataGeneratorTemplate:

@@ -24,15 +24,15 @@ time_guard:
   lower_bound: null  # null for None
   upper_bound: 200
   guard_type: Monitor  # Monitor, Oracle, or Generator
-  guard_name: TimelyMon 6
+  guard_name: WhyMon
 
 # Data setup - Hydra structured format
 data_setup:
   type: SignatureContract
   SignatureContract:
-    trace_length: 1000
+    trace_length: 100
     seed: null
-    event_rate: 1000
+    event_rate: 20
     index_rate: null
     time_stamp: null
     sig: ""
@@ -45,25 +45,65 @@ data_setup:
 policy_setup:
   type: GenFmaContract
   GenFmaContract:
-    size: 4
+    nolet: true
 
 # Synthetic benchmark specific configuration
 synthetic_config:
   data_source: SignatureGenerator
   policy_source: GenFmaGenerator
   experiment:
-    num_operators: [5]
-    num_fvs: [2]
-    num_setting: [0, 1]
-    num_data_set_sizes: [50]
+    num_operators: [5,10,15,20]
+    num_fvs: [2,3]
+    num_setting: [0, 1, 2, 3, 4]
+    num_data_set_sizes: [20,50,100]
+
+# repeats: 3
 
 # Experiment execution settings
 experiment_type: Signature  # Pattern, Signature, or CaseStudy
 
 # Tools to build and run (list of monitor names)
 tools_to_build:
-  - TimelyMon 6
+  - WhyMon
 
-seeds:
-  '[5, 2, 0]': [314159265,87006]
-  '[5, 2, 1]': [314159265,53339]
+# seeds:
+'[5, 2, 0]': [42,0]
+'[5, 2, 1]': [43,1]
+'[5, 2, 2]': [44,2]
+'[5, 2, 3]': [45,3]
+'[5, 2, 4]': [46,4]
+'[5, 3, 0]': [42,0]
+'[5, 3, 1]': [43,1]
+'[5, 3, 2]': [44,2]
+'[5, 3, 3]': [45,3]
+'[5, 3, 4]': [46,4]
+'[10, 2, 0]': [42,0]
+'[10, 2, 1]': [43,1]
+'[10, 2, 2]': [44,2]
+'[10, 2, 3]': [45,3]
+'[10, 2, 4]': [46,4]
+'[10, 3, 0]': [42,0]
+'[10, 3, 1]': [43,1]
+'[10, 3, 2]': [44,2]
+'[10, 3, 3]': [45,3]
+'[10, 3, 4]': [46,4]
+'[15, 2, 0]': [42,0]
+'[15, 2, 1]': [43,1]
+'[15, 2, 2]': [44,2]
+'[15, 2, 3]': [45,3]
+'[15, 2, 4]': [46,4]
+'[15, 3, 0]': [42,0]
+'[15, 3, 1]': [43,1]
+'[15, 3, 2]': [44,2]
+'[15, 3, 3]': [45,3]
+'[15, 3, 4]': [46,4]
+'[20, 2, 0]': [42,0]
+'[20, 2, 1]': [43,1]
+'[20, 2, 2]': [44,2]
+'[20, 2, 3]': [45,3]
+'[20, 2, 4]': [46,4]
+'[20, 3, 0]': [42,0]
+'[20, 3, 1]': [43,1]
+'[20, 3, 2]': [44,2]
+'[20, 3, 3]': [45,3]
+'[20, 3, 4]': [46,4]
