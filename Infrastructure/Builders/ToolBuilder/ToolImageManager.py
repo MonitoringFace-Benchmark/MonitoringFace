@@ -131,7 +131,7 @@ class DirectToolImageManager(AbstractToolImageManager):
     def run(self, path_to_data, parameters, time_on=None, time_out=None, measure=True):
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
-        if measure:
+        if measure and Measure.is_measure():
             inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.name.lower()] + parameters
         else:
             inner_contract_[COMMAND_KEY] = [self.name.lower()] + parameters
