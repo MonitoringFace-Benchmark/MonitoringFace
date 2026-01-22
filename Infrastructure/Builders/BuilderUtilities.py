@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Dict, AnyStr, Any
 
@@ -69,6 +70,7 @@ def run_image(image_name, generic_contract: Dict[AnyStr, Any], time_on=None, tim
     client = docker.from_env()
 
     command = generic_contract.get(COMMAND_KEY)
+    command = list(filter(None, command))
     if Config.is_verbose() and is_tool_image:
         print(" ".join(command))
     volumes = generic_contract.get(VOLUMES_KEY)
