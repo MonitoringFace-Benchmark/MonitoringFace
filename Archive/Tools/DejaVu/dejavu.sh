@@ -47,10 +47,9 @@ fi
 
 
 # Run the compiled monitor on trace:
-scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG > ${SPECFOLDER}/dejavu_output.txt
-res=$?
-cat ${SPECFOLDER}/dejavu_output.txt | egrep "\*\*\*"
+scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG | egrep "\*\*\*"
 
+res=${PIPESTATUS[0]}
 if [ $res -ne 0 ]; then
     echo "DejaVu: Error during trace monitoring."
     exit $res
