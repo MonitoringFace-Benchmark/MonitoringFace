@@ -15,7 +15,15 @@ class ScratchFolderHandler:
         os.rmdir(self.folder)
 
     def clean_up_folder(self):
-        [os.remove(os.path.join(self.folder, f)) for f in os.listdir(self.folder)]
+        for f in os.listdir(self.folder):
+            path = os.path.join(self.folder, f)
+            try:
+                if os.path.isfile(path) or os.path.islink(path):
+                    os.remove(path)
+                elif os.path.isdir(path):
+                    shutil.rmtree(path)
+            except Exception as e:
+                print(f'Failed to delete {path}. Reason: {e}')
 
     def copy_to_debug(self, debug_base_path: str, setting_id: str, tool_name: str) -> str:
         # Sanitize setting_id for use as folder name
