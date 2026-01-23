@@ -49,7 +49,7 @@ class DejaVu(AbstractMonitorTemplate):
         ]
         name = self.image.name
         self.image.name = ""
-        code, out = self.image.run(self.params["folder"], cmd, time_on, time_out)
+        out, code = self.image.run(self.params["folder"], cmd, time_on, time_out, measure=False)
         self.image.name = name
         return out, code
 
@@ -58,13 +58,15 @@ class DejaVu(AbstractMonitorTemplate):
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         prop_list = PropositionList()
-        if stdout_input:
-            lines = stdout_input.strip()
-            for line in filter(lambda l: "violated on event number" in l, lines.split("\n")):
-                if len(line) > 1:
-                    num_str = line[1].strip().rstrip(":")
-                    try:
-                        prop_list.insert(False, int(num_str))
-                    except ValueError:
-                        pass
+
+        if stdout_input == "":
+            return prop_list
+
+        lines = stdout_input.strip()
+        for line in filter(lambda l: "violated on event number" in l, lines.split("\n")):
+            num_str = line.split("number")[1].strip().rstrip(":")
+            try:
+                prop_list.insert(False, int(num_str))
+            except ValueError:
+                pass
         return prop_list
