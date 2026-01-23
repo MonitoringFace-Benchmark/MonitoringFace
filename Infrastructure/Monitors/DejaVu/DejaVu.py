@@ -49,7 +49,7 @@ class DejaVu(AbstractMonitorTemplate):
         ]
         name = self.image.name
         self.image.name = ""
-        out, code = self.image.run(self.params["folder"], cmd, time_on, time_out, measure=False)
+        out, code = self.image.run(self.params["folder"], cmd, time_on, time_out)
         self.image.name = name
         return out, code
 

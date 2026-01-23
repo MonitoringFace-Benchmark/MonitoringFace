@@ -5,6 +5,8 @@ from typing import Tuple
 import pandas as pd
 
 from Infrastructure.Analysis.Formatting import parse_wall_time
+from Infrastructure.Analysis.Formatting import parse_memory
+from Infrastructure.Analysis.Formatting import parse_cpu
 
 
 class Status(Enum):
@@ -61,7 +63,7 @@ class ResultAggregator:
         """Add a valid run result."""
         self.valid_results.loc[len(self.valid_results)] = [
             Status.OK, tool_name, setting_id, prep, runtime, prop,
-            parse_wall_time(wall_time), max_mem, cpu
+            parse_wall_time(wall_time), parse_memory(max_mem), parse_cpu(cpu)
         ]
 
     def add_timeout(
@@ -101,7 +103,7 @@ class ResultAggregator:
         """Add a result error (verification failed)."""
         self.result_error_results.loc[len(self.result_error_results)] = [
             Status.RE, tool_name, setting_id, prep, runtime, prop,
-            parse_wall_time(wall_time), max_mem, cpu, error_msg
+            parse_wall_time(wall_time), parse_memory(max_mem), parse_cpu(cpu), error_msg
         ]
 
     def add_missing(

@@ -18,7 +18,7 @@ from Infrastructure.DataTypes.Types.custome_type import ExperimentType
 from Infrastructure.Monitors.AbstractMonitorTemplate import run_monitor
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
-from Infrastructure.constants import FINGERPRINT_DATA, FINGERPRINT_EXPERIMENT, LENGTH
+from Infrastructure.constants import FINGERPRINT_DATA, FINGERPRINT_EXPERIMENT, LENGTH, Measure
 from Infrastructure.printing import print_headline, print_footline, normal_line
 
 
@@ -243,7 +243,10 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
         if stats is not None:
             wall_time, max_mem, cpu = stats
         else:
-            wall_time, max_mem, cpu = "", "", ""
+            if Measure.is_measure():
+                wall_time, max_mem, cpu = "", "", ""
+            else:
+                wall_time, max_mem, cpu = None, None, None
 
         result_aggregator.add_valid(
             tool.name, setting_id, prep, runtime, prop,
@@ -271,8 +274,10 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
         if stats is not None:
             wall_time, max_mem, cpu = stats
         else:
-            wall_time, max_mem, cpu = "", "", ""
-
+            if Measure.is_measure():
+                wall_time, max_mem, cpu = "", "", ""
+            else:
+                wall_time, max_mem, cpu = None, None, None
         (prep, runtime, prop) = e.args[0]
         result_aggregator.add_result_error(
             tool.name, setting_id, prep, runtime, prop,

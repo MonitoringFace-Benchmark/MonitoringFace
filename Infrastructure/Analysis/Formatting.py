@@ -1,7 +1,10 @@
 import re
 
 
-def parse_wall_time(s: str) -> float:
+def parse_wall_time(s: str) -> float | str:
+    if s is None:
+        return "N/A"
+    
     s = s.strip()
     if re.fullmatch(r"\d+(\.\d+)?", s):
         return float(s)
@@ -33,3 +36,14 @@ def parse_wall_time(s: str) -> float:
     if s.endswith("s"):
         return float(s[:-1])
     raise ValueError(f"Unknown time format: '{s}'")
+
+
+def parse_memory(s: str) -> str:
+    if s is None:
+        return "N/A"
+    return s.strip()
+
+def parse_cpu(s: str) -> str:
+    if s is None:
+        return "N/A"
+    return s.strip()
