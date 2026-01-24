@@ -30,7 +30,7 @@ class SignatureGenerator(DataGeneratorTemplate):
                 elif segment_tp == parse_tp(line):
                     segments.append(line)
                 else:
-                    segments.append(">WATERMARK " + str(segment_tp) + "<\n")
+                    segments.append(">WATERMARK " + str(segment_tp) + "<")
                     segment_tp = parse_tp(line)
                     segments.append(line)
             out = "\n".join(segments)
