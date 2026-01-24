@@ -23,8 +23,7 @@ class TimelyMon(AbstractMonitorTemplate):
         reordering = "mode" in self.params
         trimmed_data_file = os.path.basename(data_file)
         if reordering:
-            oooc = OutOfOrderConverter(None, None)
-            oooc.convert(
+            OutOfOrderConverter(None, None).convert(
                 path_to_folder, data_file, self.name.lower(),
                 os.path.basename(data_file), dest=f"{path_to_folder}/scratch", params=self.params
             )

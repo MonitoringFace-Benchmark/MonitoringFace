@@ -20,6 +20,11 @@ class WhyMon(AbstractMonitorTemplate):
         self.params["signature"] = signature_file
         self.params["formula"] = formula_file
 
+        if "preprocessing" in self.params:
+            if not self.params["preprocessing"]:
+                self.params["data"] = data_file
+                return
+
         trimmed_data_file = os.path.basename(data_file)
         self.replayer.convert(
             path_to_folder,

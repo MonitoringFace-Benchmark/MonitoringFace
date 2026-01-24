@@ -20,6 +20,12 @@ class DejaVu(AbstractMonitorTemplate):
     def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
         self.params["folder"] = path_to_folder
 
+        if "preprocessing" in self.params:
+            if not self.params["preprocessing"]:
+                self.params["data"] = data_file
+                self.params["formula"] = formula_file
+                return
+
         trimmed_data_file = os.path.basename(data_file)
         self.replayer.convert(
             path_to_folder,
