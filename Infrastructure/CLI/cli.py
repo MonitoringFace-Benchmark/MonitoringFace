@@ -265,21 +265,22 @@ Examples:
         if args.no_measure:
             Measure.set_measure(False)
 
-        br = BenchmarkResolver(name=args.config, path_to_infra=self.infra_folder, path_to_archive=self.archive_folder)
+        config_name = args.config.removeprefix(self.benchmark_folder)
+        br = BenchmarkResolver(name=config_name, path_to_infra=self.infra_folder, path_to_archive=self.archive_folder)
         location = br.resolve()
         if location == Location.Unavailable:
-            raise ValueError(f"The configuration File {args.config} is unavailable local and remote")
+            raise ValueError(f"The configuration File {config_name} is unavailable local and remote")
         elif location == Location.Remote:
-            br.get_remote_config(path_to_archive_benchmark=self.benchmark_folder, name=args.config)
+            br.get_remote_config(path_to_archive_benchmark=self.benchmark_folder, name=config_name)
 
         # Detect if suite or single experiment
-        is_suite = args.suite or self._is_suite_config(f"{self.benchmark_folder}/{args.config}")
+        is_suite = args.suite or self._is_suite_config(f"{self.benchmark_folder}/{config_name}")
         
         if is_suite:
             if args.verbose:
                 print("Detected experiment suite configuration")
             self.run_experiment_suite(
-                suite_name=args.config,
+                suite_name=config_name,
                 dry_run=args.dry_run,
                 verbose=args.verbose,
                 debug=args.debug
@@ -288,7 +289,7 @@ Examples:
             if args.verbose:
                 print("Detected single experiment configuration")
             self.run_single_experiment(
-                config_name=args.config,
+                config_name=config_name,
                 dry_run=args.dry_run,
                 verbose=args.verbose,
                 debug=args.debug
