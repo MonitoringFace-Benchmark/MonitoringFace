@@ -6,13 +6,20 @@ import docker
 from docker.errors import APIError, BuildError
 
 from Infrastructure.Monitors.MonitorExceptions import TimedOut
-from Infrastructure.constants import COMMAND_KEY, WORKDIR_KEY, VOLUMES_KEY, ENTRYPOINT_KEY, Config
+from Infrastructure.constants import COMMAND_KEY, WORKDIR_KEY, VOLUMES_KEY, ENTRYPOINT_KEY, Config, LINE_BUFFER
 
 
 def to_prop_file(path, name, content: dict):
     with open(path + f"{name}", mode='w') as f:
         for (k, v) in content.items():
             f.write(f"{k}={v}\n")
+
+
+def clean_lines_up(number_of_lines):
+    cursor = '\x1b[{0}A'.format(number_of_lines)
+    print(cursor, end="")
+    clean_to_end = '\033[J'
+    print(clean_to_end, end="")
 
 
 def image_exists(name):
@@ -43,6 +50,7 @@ def image_building(image_name, build_dir, args=None):
 
         error_in_build = False
 
+        i = 0
         for chunk in build_output:
             if 'stream' in chunk:
                 print(chunk['stream'], end='')
@@ -52,6 +60,10 @@ def image_building(image_name, build_dir, args=None):
             elif 'status' in chunk:
                 msg = chunk.get('progress', chunk['status'])
                 print(msg)
+            i += 1
+            if i >= LINE_BUFFER:
+                clean_lines_up(i)
+                i = 0
 
         if error_in_build:
             raise ImageBuildException(f" Failed to built image: {image_name}")

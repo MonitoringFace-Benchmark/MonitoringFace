@@ -42,6 +42,8 @@ BENCHMARK_BUILDING_OFFSET = (" " * 8)
 LENGTH = 80
 HEADER_ROW = "=" * LENGTH
 
+LINE_BUFFER = 100
+
 
 class Config:
     verbose = False
