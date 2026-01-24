@@ -19,7 +19,27 @@ class SignatureGenerator(DataGeneratorTemplate):
         seed_raw = contract_inner["seed"]
         seed = seed_raw if seed_raw else DEFAULT_SEED
         out, code = self.image.run(inner_contract, time_on=time_on, time_out=time_out)
+
+        if contract_inner.get("watermarks"):
+            out = out.strip()
+            segment_tp = None
+            segments = []
+            for line in out.split("\n"):
+                if segment_tp is None:
+                    segment_tp = parse_tp(line)
+                elif segment_tp == parse_tp(line):
+                    segments.append(line)
+                else:
+                    segments.append(">WATERMARK " + str(segment_tp) + "<\n")
+                    segment_tp = parse_tp(line)
+                    segments.append(line)
+            out = "\n".join(segments)
+
         return seed, out, code
 
     def check_policy(self, path_inner, signature, formula) -> bool:
         return True
+
+
+def parse_tp(line):
+    return int(line.split(",")[1].split("=")[1])

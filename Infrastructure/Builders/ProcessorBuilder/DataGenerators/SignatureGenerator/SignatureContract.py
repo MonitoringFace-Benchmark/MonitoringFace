@@ -10,7 +10,7 @@ class SignatureContract(AbstractContract):
     def default_contract(self):
         return SignatureContract(
             trace_length=None, seed=None, event_rate=1000, index_rate=None, time_stamp=None,
-            sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None
+            sig="", sample_queue=None, string_length=None, fresh_value_rate=None, domain=None, watermarks=None
         )
 
     def instantiate_contract(self, params: Dict[str, Any]):
@@ -33,6 +33,7 @@ class SignatureContract(AbstractContract):
     fresh_value_rate: Optional[float] = None
     domain: Optional[int] = None
     string_length: Optional[int] = None
+    watermarks: Optional[bool] = None
 
 
 def signature_to_commands(contract: SignatureContract) -> list[str]:
