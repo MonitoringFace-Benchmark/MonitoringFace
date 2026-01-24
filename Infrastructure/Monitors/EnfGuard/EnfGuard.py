@@ -1,7 +1,7 @@
 import re
 from typing import Dict, AnyStr, Any, Tuple
 
-from Infrastructure.Builders.ToolBuilder import ToolImageManager
+from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import ReplayerConverter
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, DefaultVariableOrder
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
@@ -11,7 +11,7 @@ import os
 
 
 class EnfGuard(AbstractMonitorTemplate):
-    def __init__(self, image: ToolImageManager, name, params: Dict[AnyStr, Any]):
+    def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
         self.replayer = ReplayerConverter(self.params["replayer"], self.params["path_to_project"])
 
