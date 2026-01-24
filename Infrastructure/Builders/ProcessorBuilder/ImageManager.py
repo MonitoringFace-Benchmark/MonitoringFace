@@ -1,5 +1,4 @@
 import os
-import sys
 from typing import AnyStr, Dict, Any
 
 from Infrastructure.DataLoader import init_repo_fetcher
