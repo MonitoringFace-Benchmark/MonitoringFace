@@ -1,6 +1,6 @@
 from typing import Dict, AnyStr, Any, Tuple
 
-from Infrastructure.Builders.ToolBuilder import AbstractToolImageManager
+from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import ReplayerConverter
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PropositionTree
