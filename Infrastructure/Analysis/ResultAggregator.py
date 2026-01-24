@@ -26,7 +26,7 @@ class ResultAggregator:
     def __init__(self):
         # Valid runs: full timing and stats
         self.valid_results = pd.DataFrame(columns=[
-            "Status", "Name", "Setting", "pre", "runtime", "post", "wall_time", "max_mem", "cpu"
+            "Status", "Name", "Setting", "pre", "compilation", "runtime", "post", "wall_time", "max_mem", "cpu"
         ])
 
         # Timed out runs: only status, tool name, setting, and timeout value
@@ -41,7 +41,7 @@ class ResultAggregator:
 
         # Result errors: same as valid but with error message
         self.result_error_results = pd.DataFrame(columns=[
-            "Status", "Name", "Setting", "pre", "runtime", "post", "wall_time", "max_mem", "cpu", "error_msg"
+            "Status", "Name", "Setting", "pre", "compilation", "runtime", "post", "wall_time", "max_mem", "cpu", "error_msg"
         ])
 
         # Missing tools: status, tool name, setting
@@ -54,6 +54,7 @@ class ResultAggregator:
             tool_name: str,
             setting_id: str,
             prep: float,
+            compiled: float,
             runtime: float,
             prop: float,
             wall_time: str,
@@ -62,7 +63,7 @@ class ResultAggregator:
     ) -> None:
         """Add a valid run result."""
         self.valid_results.loc[len(self.valid_results)] = [
-            Status.OK, tool_name, setting_id, prep, runtime, prop,
+            Status.OK, tool_name, setting_id, prep, compiled, runtime, prop,
             parse_wall_time(wall_time), parse_memory(max_mem), parse_cpu(cpu)
         ]
 
@@ -93,6 +94,7 @@ class ResultAggregator:
             tool_name: str,
             setting_id: str,
             prep: float,
+            compiled: float,
             runtime: float,
             prop: float,
             wall_time: str,
@@ -102,7 +104,7 @@ class ResultAggregator:
     ) -> None:
         """Add a result error (verification failed)."""
         self.result_error_results.loc[len(self.result_error_results)] = [
-            Status.RE, tool_name, setting_id, prep, runtime, prop,
+            Status.RE, tool_name, setting_id, prep, compiled, runtime, prop,
             parse_wall_time(wall_time), parse_memory(max_mem), parse_cpu(cpu), error_msg
         ]
 

@@ -14,7 +14,7 @@
 
 
 if [ "$#" -lt 2 ]; then
-    echo "Usage: dejavu <specFile> <traceFile> [<bitsPerVariable> [debug]]"
+    echo "Usage: run <specFile> <traceFile> [<bitsPerVariable> [debug]]"
     exit 1
 fi
 SPEC=$1
@@ -27,28 +27,8 @@ DEJAVU=/home/dejavu
 SPECHASH=$(cat $SPEC | md5sum | cut -d' ' -f1)
 SPECFOLDER=$(echo $SPEC-$SPECHASH)
 
-if [ ! -e ${SPECFOLDER}/TraceMonitor.class ]; then
-    echo SPECFOLDER
-    mkdir -p ${SPECFOLDER}
-    # Parse specification and synthesize monitor:
-    java -cp $DEJAVU/dejavu.jar dejavu.Verify $SPEC > /dev/null 2>&1
-    # Compile synthesized monitor:
-    scalac -cp .:$DEJAVU/dejavu.jar TraceMonitor.scala > /dev/null 2>&1
-
-    res=$?
-    if [ $res -ne 0 ]; then
-        echo "DejaVu: Error during specification parsing or monitor synthesis."
-        exit $res
-    fi
-
-    mv *.class ${SPECFOLDER}
-    mv TraceMonitor.scala ${SPECFOLDER}
-    mv ast.dot ${SPECFOLDER}
-fi
-
-
 # Run the compiled monitor on trace:
-scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG | egrep "\*\*\*"
+exec /usr/bin/time -v -o scratch/stats.txt scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG | egrep "\*\*\*"
 
 res=${PIPESTATUS[0]}
 if [ $res -ne 0 ]; then

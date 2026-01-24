@@ -231,7 +231,7 @@ class BenchmarkBuilder:
 
 def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file, sfh=None, debug_mode=False, debug_path=None) -> RunToolResult:
     try:
-        prep, runtime, prop = run_monitor(
+        prep, compiled, runtime, prop = run_monitor(
             tool, time_guard, path_to_folder, data_file,
             signature_file, formula_file, oracle
         )
@@ -249,8 +249,7 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
                 wall_time, max_mem, cpu = None, None, None
 
         result_aggregator.add_valid(
-            tool.name, setting_id, prep, runtime, prop,
-            wall_time, max_mem, cpu
+            tool.name, setting_id, prep, compiled, runtime, prop, wall_time, max_mem, cpu
         )
         return RunToolResult.OK
     except TimedOut as e:
@@ -278,9 +277,9 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
                 wall_time, max_mem, cpu = "", "", ""
             else:
                 wall_time, max_mem, cpu = None, None, None
-        (prep, runtime, prop) = e.args[0]
+        (prep, compiled, runtime, prop) = e.args[0]
         result_aggregator.add_result_error(
-            tool.name, setting_id, prep, runtime, prop,
+            tool.name, setting_id, prep, compiled, runtime, prop,
             wall_time, max_mem, cpu, str(e.args[1])
         )
         return RunToolResult.VALIDATION_ERROR

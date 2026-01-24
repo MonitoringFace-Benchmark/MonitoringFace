@@ -16,6 +16,13 @@ class AbstractMonitorTemplate(ABC):
         self.name = name
 
     """
+        run the monitor
+    """
+    def compile(self):
+        # build tool that requires compilation
+        pass
+
+    """
         transform csv into the tool format, e.g. sorted
         @param path_to_data:      path to the initial data in the standard csv format 
         @param path_to_signature: path to the signature 
@@ -55,10 +62,16 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
                 path_to_folder: AnyStr, data_file: AnyStr,
                 signature_file: AnyStr, formula_file: AnyStr, oracle=None):
     print_headline(f"Run {mon.name}")
+
     start = time.perf_counter()
     mon.pre_processing(path_to_folder, data_file, signature_file, formula_file)
     end = time.perf_counter()
     preprocessing_elapsed = end - start
+
+    start_compile = time.perf_counter()
+    mon.compile()
+    end_compile = time.perf_counter()
+    compile_elapsed = end_compile - start_compile
 
     start = time.perf_counter()
     timeout_value = guarded.upper_bound if guarded else None
@@ -77,17 +90,17 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
     end = time.perf_counter()
     postprocessing_elapsed = end - start
 
-    print(f"Prep:    {preprocessing_elapsed}\nRuntime: {run_offline_elapsed}\nPost:    {postprocessing_elapsed}")
+    print(f"Prep:        {preprocessing_elapsed}\nCompilation: {compile_elapsed}\nRuntime:     {run_offline_elapsed}\nPost:        {postprocessing_elapsed}")
 
     if oracle is not None:
         try:
             verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, formula_file)
         except Exception as e:
             print(f"Oracle verification failed with exception: {e}")
-            raise ResultErrorException((preprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed), str(e))
+            raise ResultErrorException((preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed), str(e))
         print_headline(f"Verified: {verified}")
         if not verified:
-            raise ResultErrorException((preprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
+            raise ResultErrorException((preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
 
     print_footline()
-    return preprocessing_elapsed, run_offline_elapsed, postprocessing_elapsed
+    return preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed

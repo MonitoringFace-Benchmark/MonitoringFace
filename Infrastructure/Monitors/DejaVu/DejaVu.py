@@ -1,5 +1,6 @@
 from typing import Dict, AnyStr, Any, Tuple
 
+from Infrastructure.Monitors.MonitorExceptions import ToolException
 from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.QTLTranslator.QTLTranslator import QTLTranslator
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import ReplayerConverter
@@ -42,14 +43,20 @@ class DejaVu(AbstractMonitorTemplate):
         self.params["data"] = f"scratch/{trimmed_data_file}.dejavu-encoded"
         self.params["formula"] = f"scratch/{trimmed_formula_file}.qtl"
 
-    def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
-        cmd = [
-            str(self.params["formula"]),
-            str(self.params["data"])
-        ]
+    def compile(self):
         name = self.image.name
         self.image.name = ""
-        out, code = self.image.run(self.params["folder"], cmd, time_on, time_out)
+        cmd = ["build", str(self.params["formula"])]
+        out, code = self.image.run(self.params["folder"], cmd, measure=False)
+        self.image.name = name
+        if code != 0:
+            raise ToolException(f"DejaVu compilation failed with code {code} and output: {out}")
+
+    def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
+        cmd = ["run", str(self.params["formula"]), str(self.params["data"])]
+        name = self.image.name
+        self.image.name = ""
+        out, code = self.image.run(self.params["folder"], cmd, time_on, time_out, measure=False)
         self.image.name = name
         return out, code
 
