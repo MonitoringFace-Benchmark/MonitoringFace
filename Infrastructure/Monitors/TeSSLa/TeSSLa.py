@@ -24,5 +24,4 @@ class TeSSLa(AbstractMonitorTemplate):
         raise NotImplemented("Not implemented variable order")
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        print(stdout_input)
         return PropositionList()

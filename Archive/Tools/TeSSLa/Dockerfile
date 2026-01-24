@@ -14,9 +14,10 @@ WORKDIR /build/tessla
 RUN sbt assembly
 
 FROM eclipse-temurin:17-jre
+RUN apt-get update && apt-get install -y time && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=builder /build/tessla/target/scala-*/tessla-assembly-*.jar /app/tessla.jar
-RUN echo '#!/bin/sh\nexec java -jar /app/tessla.jar "$@"' > /usr/local/bin/tessla && chmod +x /usr/local/bin/tessla
+RUN echo '#!/bin/sh\n/usr/bin/time -v -o scratch/stats.txt java -jar /app/tessla.jar "$@"' > /usr/local/bin/tessla && chmod +x /usr/local/bin/tessla
 
 ENTRYPOINT ["tessla"]
