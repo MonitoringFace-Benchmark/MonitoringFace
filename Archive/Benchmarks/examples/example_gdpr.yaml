@@ -1,0 +1,24 @@
+experiment_name: GDPR_case_study
+
+benchmark_type: case_study
+experiment_type: CaseStudy
+
+# Tools configuration
+tools:
+  - name: EnfGuard
+    branch: enfguard
+    release: branch
+
+# Monitors configuration
+monitors:
+  - identifier: EnfGuard
+    name: EnfGuard
+    branch: enfguard
+
+# Case study specific configuration
+case_study_config:
+  case_study_name: GDPR
+
+# Tools to build and run
+tools_to_build:
+  - EnfGuard
