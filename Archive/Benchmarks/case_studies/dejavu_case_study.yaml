@@ -1,0 +1,44 @@
+# Example YAML configuration for a case study benchmark experiment
+experiment_name: DejaVu_case_study
+
+# Benchmark type: 'synthetic' or 'case_study'
+benchmark_type: case_study
+
+# Tools configuration
+tools:
+  - name: DejaVu
+    branch: master
+    release: branch
+
+# Monitors configuration
+monitors:
+  - identifier: DejaVu
+    name: DejaVu
+    branch: master
+    params:
+      replayer: gen_data
+      translator: qtl-translator
+      preprocessing: false
+
+# Time guard configuration
+time_guard:
+  enabled: false
+  lower_bound: null
+  upper_bound: 300
+  guard_type: Monitor
+  guard_name: DejaVu
+
+# Case study specific configuration
+case_study_config:
+  case_study_name: DejaVu
+
+# Experiment execution settings
+experiment_type: CaseStudy
+
+# Tools to build and run
+tools_to_build:
+  - DejaVu
+
+# No oracle needed for case study
+oracle:
+  enabled: false
