@@ -9,7 +9,8 @@ class PatternContract(AbstractContract):
     def default_contract(self):
         return PatternContract(
             trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None, linear=1, interval=None,
-            star=None, triangle=None, pattern=None, violations=1.0, zipf="x=1.5+3,z=2", prob_a=0.2,  prob_b=0.3, prob_c=0.5
+            star=None, triangle=None, pattern=None, violations=1.0, zipf="x=1.5+3,z=2", prob_a=0.2,  prob_b=0.3, prob_c=0.5,
+            watermarks=None
         )
 
     def instantiate_contract(self, params: Dict[str, Any]):
@@ -27,6 +28,7 @@ class PatternContract(AbstractContract):
     event_rate: int = 1000
     index_rate: Optional[int] = None
     time_stamp: Optional[int] = None
+    watermarks: Optional[bool] = None
 
     star: Optional = None
     linear: Optional = 1
