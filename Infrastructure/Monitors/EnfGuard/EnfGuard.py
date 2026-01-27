@@ -5,7 +5,7 @@ from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import Abstrac
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import ReplayerConverter
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, DefaultVariableOrder
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
-from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 import os
 
@@ -44,6 +44,7 @@ class EnfGuard(AbstractMonitorTemplate):
             "-log", str(self.params["data"])
         ]
 
+        #if self.params.get("monitoring", False):
         cmd += ["-monitoring"]
 
         if "func" in self.params:
@@ -55,17 +56,4 @@ class EnfGuard(AbstractMonitorTemplate):
         return DefaultVariableOrder()
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        def parse_pattern(pattern_str: str):
-            match = re.match(r'@(\d+)\s*\(time point (\d+)\):\s*(.*)', pattern_str)
-            tuples_list = [[num for num in tup.split(',') if num] for tup in re.findall(r'\(([^)]*)\)', match.group(3))]
-            return int(match.group(1)), int(match.group(2)), tuples_list
-
-        verdicts = Verdicts(variable_order=self.variable_order())
-        if stdout_input == "":
-            return verdicts
-
-        verdicts = Verdicts(variable_order=self.variable_order())
-        for line in stdout_input.strip().split("\n"):
-            ts, tp, vals = parse_pattern(line)
-            verdicts.insert(vals, tp, ts)
-        return verdicts
+        return PropositionList()

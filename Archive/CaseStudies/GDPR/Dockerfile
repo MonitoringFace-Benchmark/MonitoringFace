@@ -6,7 +6,11 @@ WORKDIR /data
 
 RUN git clone https://github.com/runtime-enforcement/whyenf.git /tmp/whyenf && \
     cd /tmp/whyenf && \
-    git checkout enfguard && \
-    cp -r examples/MonitoringFace /data && \
-    rm -rf /tmp/whyenf
+    git checkout enfguard
 
+CMD sh -c "\
+mkdir -p data/Formula data/Signature data/Trace && \
+cp -r /tmp/whyenf/examples/MonitoringFace/data/Formula/* data/Formula/ && \
+cp -r /tmp/whyenf/examples/MonitoringFace/data/Signature/* data/Signature/ && \
+cp -r /tmp/whyenf/examples/MonitoringFace/data/Trace/* data/Trace/ && \
+cp /tmp/whyenf/examples/MonitoringFace/instructions.txt ."
