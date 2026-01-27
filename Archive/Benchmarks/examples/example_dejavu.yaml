@@ -9,18 +9,18 @@ tools:
   - name: DejaVu
     branch: master
     release: branch
-  - name: TimelyMon
-    branch: development
+  - name: MonPoly
+    branch: master
     release: branch
+
 
 # Monitors configuration
 monitors:
-  - identifier: TimelyMon
-    name: TimelyMon 6
-    branch: development
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
     params:
-      worker: 6
-      output_mode: 1
+      replayer: gen_data
   - identifier: DejaVu
     name: DejaVu
     branch: master
@@ -67,9 +67,15 @@ experiment_type: Signature  # Pattern, Signature, or CaseStudy
 
 # Tools to build and run (list of monitor names)
 tools_to_build:
-  - TimelyMon 6
+  - MonPoly
   - DejaVu
 
 seeds:
   '[2, 2, 0]': [314159265,87006]
-  '[2, 2, 1]': [314159265,53339]
+  '[2, 2, 1]': [314159265,54252]
+  # '[2, 2, 2]': [314159265,75643]
+  # '[2, 2, 3]': [314159265,67534]
+  # '[2, 2, 4]': [314159265,54355]
+  # '[2, 2, 5]': [314159265,87535]
+  # '[2, 2, 6]': [314159265,64355]
+  # '[2, 2, 7]': [314159265,42436]
