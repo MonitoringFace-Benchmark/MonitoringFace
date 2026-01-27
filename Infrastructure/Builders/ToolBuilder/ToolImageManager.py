@@ -114,8 +114,6 @@ class DirectToolImageManager(AbstractToolImageManager):
         self.parent_path = f"{path_to_build}/Monitor/{self.name}"
         self.path = f"{self.parent_path}/{commit}" if commit else f"{self.parent_path}/{branch}"
 
-        print(location)
-
         if location == Location.Remote:
             os.makedirs(self.path, exist_ok=True)
             self._build_image()

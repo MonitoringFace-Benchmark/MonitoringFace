@@ -19,7 +19,7 @@ class MonPoly:
         self.logic.compile()
 
     def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
-        return self.logic.run_offline(time_on, time_out)
+        return self.logic.run_offline(time_on=time_on, time_out=time_out)
 
     def variable_order(self) -> VariableOrdering:
         return self.logic.variable_order()

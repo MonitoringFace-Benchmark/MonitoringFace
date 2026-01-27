@@ -70,7 +70,7 @@ class DejaVu(AbstractMonitorTemplate):
         return DefaultVariableOrder()
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        prop_list = PropositionList()
+        prop_list = PropositionList(self.variable_order())
 
         if stdout_input == "":
             return prop_list

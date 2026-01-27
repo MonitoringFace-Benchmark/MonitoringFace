@@ -2,10 +2,10 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 
 
 class PropositionList(AbstractOutputStructure):
-    def __init__(self):
+    def __init__(self, variable_order):
         self.prop_list = dict()
         self.tp_to_ts = dict()
-        self.variable_order = None
+        self.variable_order = variable_order
 
     def retrieve(self, time_point):
         if time_point in self.prop_list:

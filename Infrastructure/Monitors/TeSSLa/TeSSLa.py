@@ -2,7 +2,8 @@ from typing import AnyStr, Tuple
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
-from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, \
+    DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 
 
@@ -21,7 +22,7 @@ class TeSSLa(AbstractMonitorTemplate):
         return self.image.run(self.params["folder"], cmd, time_on, time_out, measure=False)
 
     def variable_order(self) -> VariableOrdering:
-        raise NotImplemented("Not implemented variable order")
+        return DefaultVariableOrder()
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        return PropositionList()
+        return PropositionList(self.variable_order())
