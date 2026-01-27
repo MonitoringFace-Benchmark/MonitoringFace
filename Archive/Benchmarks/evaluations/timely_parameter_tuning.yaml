@@ -1,0 +1,118 @@
+experiment_name: timely_version_comparison_signature
+
+benchmark_type: synthetic
+experiment_type: Signature
+
+tools:
+  - name: TimelyMon
+    branch: development
+    release: branch
+
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 1 S1
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+      step: 11
+  - identifier: TimelyMon
+    name: TimelyMon 1 S1000
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+      step: 1000
+  - identifier: TimelyMon
+    name: TimelyMon 1 S10000
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+      step: 10000
+  - identifier: TimelyMon
+    name: TimelyMon 3 S1
+    branch: development
+    params:
+      worker: 3
+      output_mode: 1
+      step: 1
+  - identifier: TimelyMon
+    name: TimelyMon 3 S1000
+    branch: development
+    params:
+      worker: 3
+      output_mode: 1
+      step: 1000
+  - identifier: TimelyMon
+    name: TimelyMon 3 S10000
+    branch: development
+    params:
+      worker: 3
+      output_mode: 1
+      step: 10000
+  - identifier: TimelyMon
+    name: TimelyMon 6 S1
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+      step: 1
+  - identifier: TimelyMon
+    name: TimelyMon 6 S1000
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+      step: 1000
+  - identifier: TimelyMon
+    name: TimelyMon 6 S10000
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+      step: 10000
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    watermarks: true
+    event_rate: 1000
+
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_once: 0.4
+    prob_eventually: 0.4
+    prob_eand: 0
+    prob_rand: 0
+    prob_let: 0
+    prob_matchF: 0
+    prob_matchP: 0
+
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [0, 1, 2]
+    num_data_set_sizes: [50]
+
+tools_to_build:
+  - TimelyMon 1 S1
+  - TimelyMon 1 S1000
+  - TimelyMon 1 S10000
+  - TimelyMon 3 S1
+  - TimelyMon 3 S1000
+  - TimelyMon 3 S10000
+  - TimelyMon 6 S1
+  - TimelyMon 6 S1000
+  - TimelyMon 6 S10000
+
+seeds:
+  '[5, 2, 0]': [314159265, 86383]
+  '[5, 2, 1]': [314159265, 61390]
+  '[5, 2, 2]': [314159265, 2658]
