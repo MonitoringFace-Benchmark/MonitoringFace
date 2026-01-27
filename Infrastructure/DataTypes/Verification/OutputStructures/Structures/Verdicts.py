@@ -10,6 +10,9 @@ class Verdicts(AbstractOutputStructure):
         self.tp_to_ts = dict()
         self.variable_order = variable_order
 
+    def retrieve_order(self):
+        return self.variable_order.retrieve_order()
+
     def retrieve(self, time_point):
         selected = [val for (tp, _, val) in self.verdict if tp == time_point]
         if selected:
