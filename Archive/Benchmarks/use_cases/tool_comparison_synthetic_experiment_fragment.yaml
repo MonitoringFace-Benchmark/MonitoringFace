@@ -58,7 +58,6 @@ monitors:
     params:
       replayer: gen_data
       translator: qtl-translator
-      preprocessing: false
 
 
 # Oracles configuration (optional)
@@ -116,7 +115,7 @@ synthetic_config:
   experiment:
     num_operators: [5]
     num_fvs: [2]
-    num_setting: [0, 1]
+    num_setting: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     num_data_set_sizes: [50]
 
 # Experiment execution settings
@@ -139,3 +138,11 @@ oracle:
 seeds:
   '[5, 2, 0]': [314159265,87006]
   '[5, 2, 1]': [314159265,53339]
+  '[5, 2, 2]': [314159265,34134]
+  '[5, 2, 3]': [314159265,16519]
+  '[5, 2, 4]': [314159265,41414]
+  '[5, 2, 5]': [314159265,99113]
+  '[5, 2, 6]': [314159265,98765]
+  '[5, 2, 7]': [314159265,65359]
+  '[5, 2, 8]': [314159265,11320]
+  '[5, 2, 9]': [314159265,53326]
