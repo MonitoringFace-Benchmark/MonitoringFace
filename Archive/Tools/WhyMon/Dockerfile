@@ -5,7 +5,9 @@ RUN sudo apk add --update --no-cache gmp-dev libffi-dev m4 perl pkgconfig git ba
 RUN sudo mkdir -p /usr/src/app && sudo chown opam:opam /usr/src/app
 
 ARG GIT_BRANCH=main
-RUN git clone --depth 1 --branch $GIT_BRANCH https://github.com/runtime-monitoring/whymon.git /usr/src/app/whymon
+ARG GIT_COMMIT=""
+RUN git clone --branch "$GIT_BRANCH" https://github.com/runtime-monitoring/whymon.git /usr/src/app/whymon \
+    && if [ -n "$GIT_COMMIT" ]; then cd /usr/src/app/whymon  && git checkout "$GIT_COMMIT"; fi
 
 WORKDIR /usr/src/app/whymon
 

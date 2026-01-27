@@ -1,4 +1,3 @@
-import os
 import time
 from typing import Dict, AnyStr, Any
 
@@ -61,7 +60,7 @@ def image_building(image_name, build_dir, args=None):
                 msg = chunk.get('progress', chunk['status'])
                 print(msg)
             i += 1
-            if i >= LINE_BUFFER:
+            if i >= LINE_BUFFER: # todo make optional
                 clean_lines_up(i)
                 i = 0
 
