@@ -61,6 +61,10 @@ class EnfGuard(AbstractMonitorTemplate):
             return int(match.group(1)), int(match.group(2)), tuples_list
 
         verdicts = Verdicts(variable_order=self.variable_order())
+        if stdout_input == "":
+            return verdicts
+
+        verdicts = Verdicts(variable_order=self.variable_order())
         for line in stdout_input.strip().split("\n"):
             ts, tp, vals = parse_pattern(line)
             verdicts.insert(vals, tp, ts)
