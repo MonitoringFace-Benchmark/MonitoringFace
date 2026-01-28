@@ -75,10 +75,10 @@ class GeneralUtilitiesDownloader(Downloader):
         super().__init__(path_to_infra)
 
     def get_all_names(self):
-        return url_dir_getter(self.url, "/GeneralUtilities", self.err)
+        return url_dir_getter(self.url, "/Utilities", self.err)
 
     def get_content(self, name):
-        i = url_getter(self.url, f"/GeneralUtilities/{name}", f"General Utility {name} is not reachable", self.path_to_infra)[0]
+        i = url_getter(self.url, f"/Utilities/{name}", f"General Utility {name} is not reachable", self.path_to_infra)[0]
         return requests.get(i["download_url"]).content.decode()
 
 
