@@ -1,0 +1,79 @@
+experiment_name: GDPR_case_study
+
+benchmark_type: case_study
+experiment_type: CaseStudy
+
+# Tools configuration
+tools:
+  - name: MonPoly
+    branch: master
+    release: branch
+  - name: VeriMon
+    branch: master
+    release: branch
+  - name: TimelyMon
+    branch: development
+    release: branch
+  - name: EnfGuard
+    branch: enfguard
+    release: branch
+
+# Monitors configuration
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
+    params:
+      replayer: gen_data
+      preprocessing: false
+  - identifier: VeriMon
+    name: VeriMon
+    branch: master
+    params:
+      replayer: gen_data
+      preprocessing: false
+  - identifier: TimelyMon
+    name: TimelyMon 1
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+      replayer: gen_data
+      preprocessing: false
+  - identifier: TimelyMon
+    name: TimelyMon 6
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+      replayer: gen_data
+      preprocessing: false
+      ignore_signature: true
+  - identifier: EnfGuard
+    name: EnfGuard Monitor
+    branch: enfguard
+    params:
+      monitoring: true
+      replayer: gen_data
+      preprocessing: false
+
+repeats: 3
+
+time_guard:
+  enabled: true
+  lower_bound: null
+  upper_bound: 30
+  guard_type: Monitor
+  guard_name: Guard
+
+# Case study specific configuration
+case_study_config:
+  case_study_name: GDPR_MonPoly
+
+# Tools to build and run
+tools_to_build:
+  - MonPoly
+  - VeriMon
+  - TimelyMon 1
+  - TimelyMon 6
+  - EnfGuard Monitor

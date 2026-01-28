@@ -1,27 +1,12 @@
-experiment_name: GDPR_case_study
-
-benchmark_type: case_study
-experiment_type: CaseStudy
-
-# Tools configuration
-tools:
-  - name: EnfGuard
-    branch: enfguard
-    release: branch
-
-# Monitors configuration
-monitors:
-  - identifier: EnfGuard
-    name: EnfGuard
-    branch: enfguard
-    params:
-      replayer: gen_data
-      preprocessing: false
-
-# Case study specific configuration
-case_study_config:
-  case_study_name: GDPR
-
-# Tools to build and run
-tools_to_build:
-  - EnfGuard
+experiments:
+  - path: examples/example_gdpr_enfguard.yaml
+    enabled: true
+    description: "GDPR benchmarks for EnfGuard (enforcer + monitor)"
+  
+  - path: examples/example_gdpr_monpoly.yaml
+    enabled: true
+    description: "GDPR benchmarks for MonPoly, VeriMon, and TimelyMon (1 + 6 workers)"
+  
+  - path: examples/example_gdpr_whymon.yaml
+    enabled: true
+    description: "GDPR benchmarks for WhyMon"

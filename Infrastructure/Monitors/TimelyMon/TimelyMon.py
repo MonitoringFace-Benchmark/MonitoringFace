@@ -31,7 +31,11 @@ class TimelyMon(AbstractMonitorTemplate):
         self.params["data"] = f"scratch/{trimmed_data_file}.{self.name.lower()}" if reordering else data_file
 
     def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
-        cmd = [self.params["formula"], self.params["data"], "--sig-file", self.params["signature"]]
+        cmd = [self.params["formula"], self.params["data"]]
+        
+        if not self.params.get("ignore_signature", False):
+           cmd += ["--sig-file", self.params["signature"]]
+
         if "worker" in self.params:
             cmd += ["-w", str(self.params["worker"])]
 
