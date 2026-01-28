@@ -34,20 +34,24 @@ class VeriMonOracle(AbstractOracleTemplate):
         with open(output_file_name, "w") as file:
             file.write(std_out_str)
 
-    def verify(self, path_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure, sig_file, formula_file) -> Tuple[bool, AnyStr]:
-        oracle_verdicts = self.get_oracle_verdicts(path_to_result_folder, data_file, sig_file, formula_file)
+    def verify(self, path_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure, sig_file, formula_file, case_study_mapper=None) -> Tuple[bool, AnyStr]:
+        oracle_verdicts = self.get_oracle_verdicts(path_to_result_folder, data_file, sig_file, formula_file, case_study_mapper)
         return comparing(oracle_verdicts, tool_verdicts)
 
-    def get_oracle_verdicts(self, path_to_result_folder, data_file, sig_file, formula_file) -> AbstractOutputStructure:
+    def get_oracle_verdicts(self, path_to_result_folder, data_file, sig_file, formula_file, case_study_mapper=None) -> AbstractOutputStructure:
         def extract_data_number(path: str) -> Optional[int]:
             m = re.compile(r"^data_(\d+)\.csv$", re.IGNORECASE).match(Path(path).name)
             return int(m.group(1)) if m else None
 
-        data_file_size = extract_data_number(data_file)
+        if case_study_mapper:
+            data_file_size = case_study_mapper.result_id((data_file, formula_file, sig_file))
+        else:
+            data_file_size = extract_data_number(data_file)
         self.verimon.logic.params["folder"] = path_to_result_folder
         self.verimon.logic.params["signature"] = sig_file
         self.verimon.logic.params["formula"] = formula_file
         variable_order = self.verimon.variable_order()
+
         result_file = path_to_result_folder + f"/result/result_{data_file_size}.res"
         if os.path.exists(result_file):
             with open(result_file, "r") as file:

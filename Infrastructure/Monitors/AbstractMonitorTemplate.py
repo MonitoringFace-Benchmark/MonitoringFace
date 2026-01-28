@@ -60,7 +60,7 @@ class AbstractMonitorTemplate(ABC):
 
 def run_monitor(mon: AbstractMonitorTemplate, guarded,
                 path_to_folder: AnyStr, data_file: AnyStr,
-                signature_file: AnyStr, formula_file: AnyStr, oracle=None):
+                signature_file: AnyStr, formula_file: AnyStr, oracle=None, case_study_mapper=None) -> Tuple[float, float, float, float]:
     print_headline(f"Run {mon.name}")
 
     start = time.perf_counter()
@@ -94,7 +94,7 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
 
     if oracle is not None:
         try:
-            verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, formula_file)
+            verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, formula_file, case_study_mapper=case_study_mapper)
         except Exception as e:
             print(f"Oracle verification failed with exception: {e}")
             raise ResultErrorException((preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed), str(e))

@@ -21,9 +21,9 @@ class Verdicts(AbstractOutputStructure):
 
     def insert(self, value, time_point, time_stamp):
         self.tp_to_ts[time_point] = time_stamp
-        values = value if isinstance(value, list) else [value]
-        if self.variable_order:
-            values = list(map(lambda va: Assignment(va, self.variable_order), values))
+        if not self.variable_order.retrieve_order():
+            values = [Proposition(True)]  # needs to consider negation eventually
         else:
-            values = list(map(lambda va: Proposition(va), values))
+            values = value if isinstance(value, list) else [value]
+            values = list(map(lambda va: Assignment(va, self.variable_order), values))
         self.verdict.append((time_stamp, time_point, values))

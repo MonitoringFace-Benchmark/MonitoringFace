@@ -172,7 +172,8 @@ class BenchmarkBuilder:
         if self.gen_mode == ExperimentType.CaseStudy:
             path_to_folder = f"{self.path_to_named_experiment}/data"
             sfh = ScratchFolderHandler(path_to_folder)
-            for (num, (data, formula, sig)) in self.data_setup["case_study_mapper"].iterate_settings():
+            case_study_mapper = self.data_setup["case_study_mapper"]
+            for (num, (data, formula, sig)) in case_study_mapper.iterate_settings():
                 setting_id = f"{num} -> Data: {data}, Formula: {formula}, Signature: {sig}"
                 for tool in tools:
                     if isinstance(tool, InvalidReturnType):
@@ -183,7 +184,7 @@ class BenchmarkBuilder:
                         run_tools(result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
                                   oracle=self.oracle, path_to_folder=path_to_folder, setting_id=setting_id,
                                   data_file=data, signature_file=sig, formula_file=formula,
-                                  sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug)
+                                  sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug, case_study_mapper=case_study_mapper)
                     else:
                         raise NotImplemented(f"Not implemented for object {tool}")
                 sfh.clean_up_folder()
@@ -228,11 +229,11 @@ class BenchmarkBuilder:
         return result_aggregator
 
 
-def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file, sfh=None, debug_mode=False, debug_path=None) -> RunToolResult:
+def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file, sfh=None, debug_mode=False, debug_path=None, case_study_mapper=None) -> RunToolResult:
     try:
         prep, compiled, runtime, prop = run_monitor(
             tool, time_guard, path_to_folder, data_file,
-            signature_file, formula_file, oracle
+            signature_file, formula_file, oracle, case_study_mapper
         )
 
         if debug_mode and sfh is not None and debug_path is not None:
