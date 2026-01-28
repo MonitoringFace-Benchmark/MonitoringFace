@@ -58,7 +58,6 @@ monitors:
     params:
       replayer: gen_data
       translator: qtl-translator
-      preprocessing: false
 
 
 # Oracles configuration (optional)
@@ -83,15 +82,7 @@ data_setup:
   type: SignatureContract
   SignatureContract:
     trace_length: 1000
-    seed: null
     event_rate: 1000
-    index_rate: null
-    time_stamp: null
-    sig: ""
-    sample_queue: null
-    string_length: null
-    fresh_value_rate: null
-    domain: null
 
 # Policy setup
 policy_setup:
