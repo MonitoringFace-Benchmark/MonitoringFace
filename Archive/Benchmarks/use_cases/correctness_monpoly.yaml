@@ -1,23 +1,27 @@
-experiment_name: Monpoly_correctness
+experiment_name: correctness_monpoly
 
 # Benchmark type: 'synthetic' or 'case_study'
 benchmark_type: case_study
+experiment_type: CaseStudy
 
 # Tools configuration
 tools:
-  - name: Monpoly
+  - name: MonPoly
     branch: master
     release: branch
-  - name: Monpoly
+  - name: MonPoly
     commit: 23a655563715dc1e6dcd92fb7a641f404b7ac158
     branch: master
     release: branch
-  - name: Monpoly
+  - name: MonPoly
     commit: ff3506eea6829c4e151faa2474724353ee2038e7
     branch: master
     release: branch
-  - name: Monpoly
+  - name: MonPoly
     commit: 11c27e7e2c945e99553fbfe5a248397bf7a413b5
+    branch: master
+    release: branch
+  - name: VeriMon
     branch: master
     release: branch
 
@@ -26,6 +30,11 @@ tools:
 monitors:
   - identifier: MonPoly
     name: MonPoly
+    branch: master
+    params:
+      replayer: gen_data
+  - identifier: VeriMon
+    name: VeriMon
     branch: master
     params:
       replayer: gen_data
@@ -68,12 +77,12 @@ time_guard:
 case_study_config:
   case_study_name: Monpoly_Correctness
 
-# Experiment execution settings
-experiment_type: CaseStudy
-
 # Tools to build and run
 tools_to_build:
-  - Monpoly
+  - MonPoly v1
+  - MonPoly v2
+  - MonPoly v3
+  - MonPoly
   - VeriMon
 
 

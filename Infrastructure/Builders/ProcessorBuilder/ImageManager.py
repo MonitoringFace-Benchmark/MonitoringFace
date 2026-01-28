@@ -28,6 +28,7 @@ class ImageManager(AbstractImageManager):
     def __init__(self, name, proc: Processor, path_to_project_inner):
         super().__init__()
         self.name = name
+        self.proc = proc
         self.identifier = processor_to_identifier(proc)
         self.path = path_to_project_inner + "/Infrastructure/build"
         self.path_to_infra = path_to_project_inner + "/Infrastructure"
@@ -35,7 +36,7 @@ class ImageManager(AbstractImageManager):
         self.path_to_archive = f"{path_to_project_inner}/Archive/{self.identifier}"
         self.path_named_archive = path_to_project_inner + f"/Archive/{self.identifier}/{self.name}"
 
-        pr = ProcessorResolver(self.name, self.identifier, self.path_to_archive, self.path_to_infra)
+        pr = ProcessorResolver(self.name, self.proc, self.path_to_archive, self.path_to_infra)
         self.location = pr.resolve()
 
         self.path_to_build = f"{self.path}/{self.identifier}/{self.name}"
@@ -51,7 +52,7 @@ class ImageManager(AbstractImageManager):
         self.image_name = f"{linked.lower() if linked else name.lower()}_{self.identifier.lower()}{IMAGE_POSTFIX}"
         if linked:
             new_path_to_named_archive = f"{self.path_to_archive}/{linked}"
-            new_tl = ProcessorResolver(linked, self.identifier, self.path_to_archive, self.path_to_infra)
+            new_tl = ProcessorResolver(linked, self.proc, self.path_to_archive, self.path_to_infra)
             new_location = new_tl.resolve()
             self.linked_location = new_location
             if new_location == Location.Unavailable:

@@ -23,7 +23,7 @@ class DataLoader:
         elif p == Processor.GeneralUtilities:
             self.downloader = GeneralUtilitiesDownloader(path_to_infra)
         else:
-            raise NotImplementedError("Not implemented {p}")
+            raise NotImplementedError(f"Not implemented {p}")
 
     def get_all_names(self):
         return self.downloader.get_all_names()
