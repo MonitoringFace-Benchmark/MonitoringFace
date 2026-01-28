@@ -5,7 +5,9 @@ RUN sudo apk add --update --no-cache gmp-dev libffi-dev m4 perl pkgconfig git ba
 RUN sudo mkdir -p /usr/src/app && sudo chown opam:opam /usr/src/app
 
 ARG GIT_BRANCH=master
-RUN git clone --depth 1 --branch $GIT_BRANCH https://bitbucket.org/jshs/monpoly.git /usr/src/app/monpoly
+ARG GIT_COMMIT=""
+RUN git clone --branch "$GIT_BRANCH" https://bitbucket.org/jshs/monpoly.git /usr/src/app/monpoly  \
+    && if [ -n "$GIT_COMMIT" ]; then cd /usr/src/app/monpoly && git checkout "$GIT_COMMIT"; fi
 
 WORKDIR /usr/src/app/monpoly
 

@@ -6,8 +6,11 @@ RUN sudo apt-get update && sudo apt-get install -y \
     && sudo rm -rf /var/lib/apt/lists/*
 RUN sudo mkdir -p /usr/src/app && sudo chown opam:opam /usr/src/app
 
+
 ARG GIT_BRANCH=enfguard
-RUN git clone --depth 1 --branch ${GIT_BRANCH} https://github.com/runtime-enforcement/whyenf.git /usr/src/app/whyenf
+ARG GIT_COMMIT=""
+RUN git clone --branch "$GIT_BRANCH" https://github.com/runtime-enforcement/whyenf.git /usr/src/app/whyenf \
+    && if [ -n "$GIT_COMMIT" ]; then cd /usr/src/app/whyenf  && git checkout "$GIT_COMMIT"; fi
 
 WORKDIR /usr/src/app/whyenf
 

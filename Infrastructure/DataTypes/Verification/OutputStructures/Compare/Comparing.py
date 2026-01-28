@@ -49,8 +49,10 @@ def comparing(oracle_structure: AbstractOutputStructure, tool_structure: Abstrac
         oracle_intermediate_list = to_raw_intermediate_list(oracle_structure)
         tool_intermediate_list = to_raw_intermediate_list(tool_structure)
 
-        if set(oracle_structure.variable_order.variable_order) != set(tool_structure.variable_order.variable_order):
-            return False, "Verified: Variable orders differ"
+        oracle_variables = set(oracle_structure.retrieve_order())
+        tool_variables = set(tool_structure.retrieve_order())
+        if oracle_variables != tool_variables:
+            return False, "Verified: Variable orders differ! Oracle variables: {oracle_variables}, Tool variables: {tool_variables}"
 
         for ((l_tp, l_ts, l_vals), (r_tp, r_ts, r_vals)) in zip(oracle_intermediate_list.values, tool_intermediate_list.values):
             if l_tp != r_tp or l_ts != r_ts:

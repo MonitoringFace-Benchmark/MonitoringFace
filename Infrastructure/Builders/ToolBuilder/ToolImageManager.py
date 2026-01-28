@@ -9,7 +9,7 @@ from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.constants import (IMAGE_POSTFIX, BUILD_ARG_GIT_BRANCH, VOLUMES_KEY, COMMAND_KEY, WORKDIR_KEY,
                                       DOCKERFILE_VALUE, DOCKERFILE_KEY, PROP_FILES_VALUE, PROP_FILES_KEY,
-                                      META_FILE_VALUE, VERSION_KEY, SYMLINK_KEY, Measure)
+                                      META_FILE_VALUE, VERSION_KEY, SYMLINK_KEY, Measure, BUILD_ARG_GIT_COMMIT)
 
 
 def to_file(path, name, content):
@@ -33,20 +33,21 @@ def remote_content_handler(path_to_named_archive, path_to_infra, name):
 
 
 class IndirectToolImageManager(AbstractToolImageManager):
-    def __init__(self, name, linked_name, branch, release, path_to_repo, path_to_archive, path_to_infra, location):
+    def __init__(self, name, linked_name, branch, commit, release, path_to_repo, path_to_archive, path_to_infra, location):
         self.original_name = name
         self.linked_name = linked_name
         self.binary_name = linked_name.lower()
         self.branch = branch
-        self.args = {BUILD_ARG_GIT_BRANCH: branch}
+        self.commit = commit
+        self.args = {BUILD_ARG_GIT_BRANCH: branch, BUILD_ARG_GIT_COMMIT: commit} if commit else {BUILD_ARG_GIT_BRANCH: branch}
 
         self.named_archive = f"{path_to_archive}/Tools/{self.original_name}"
         self.linked_named_archive = f"{path_to_archive}/Tools/{self.linked_name}"
-        self.image_name = f"{self.linked_name.lower()}_{self.branch.lower()}{IMAGE_POSTFIX}"
+        self.image_name = f"{self.linked_name.lower()}_{commit}{IMAGE_POSTFIX}" if commit else f"{self.linked_name.lower()}_{self.branch.lower()}{IMAGE_POSTFIX}"
 
         self.path_to_infra = path_to_infra
         self.parent_path = f"{path_to_repo}/Monitor/{self.original_name}"
-        self.path = f"{self.parent_path}/{self.branch}"
+        self.path = f"{self.parent_path}/{self.commit}" if commit else f"{self.parent_path}/{self.branch}"
 
         if location == Location.Remote:
             os.makedirs(self.path, exist_ok=True)
@@ -57,23 +58,35 @@ class IndirectToolImageManager(AbstractToolImageManager):
         if not in_build:
             self._build_image()
         elif not image_exists(self.image_name):
-            # Files exist but Docker image is missing - rebuild it
-            print(f"Dockerfile exists but image missing for {self.original_name} - {self.branch}, building...")
+            if self.commit:
+                print(f"Dockerfile exists but image missing for {self.original_name} - {self.commit}, building...")
+            else:
+                print(f"Dockerfile exists but image missing for {self.original_name} - {self.branch}, building...")
             self._build_image()
         else:
             current_version = PropertiesHandler.from_file(f"{self.path}{META_FILE_VALUE}").get_attr(VERSION_KEY)
-            fl = PropertiesHandler.from_file(self.linked_named_archive + PROP_FILES_VALUE)
-            version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
+            if commit:
+                version = commit
+            else:
+                fl = PropertiesHandler.from_file(self.linked_named_archive + PROP_FILES_VALUE)
+                version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
+
             if not current_version == version:
                 if release == BranchOrRelease.Branch:
                     self._build_image()
             else:
-                print(f"    Exists {self.original_name} - {branch}")
+                if self.commit:
+                    print(f"    Exists {self.original_name} - {self.commit}")
+                else:
+                    print(f"    Exists {self.original_name} - {self.branch}")
 
     def _build_image(self):
-        fl = PropertiesHandler.from_file(self.linked_named_archive + PROP_FILES_VALUE)
-        version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
-        to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
+        if self.commit:
+            to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: self.commit})
+        else:
+            fl = PropertiesHandler.from_file(self.linked_named_archive + PROP_FILES_VALUE)
+            version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
+            to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, self.linked_named_archive, self.args)
 
     def run(self, path_to_data, parameters, time_on=None, time_out=None, measure=True):
@@ -89,16 +102,17 @@ class IndirectToolImageManager(AbstractToolImageManager):
 
 
 class DirectToolImageManager(AbstractToolImageManager):
-    def __init__(self, name, branch, release, path_to_build, path_to_archive, path_to_infra, location):
+    def __init__(self, name, branch, release, commit, path_to_build, path_to_archive, path_to_infra, location):
         self.name = name
+        self.commit = commit
         self.branch = branch
-        self.args = {BUILD_ARG_GIT_BRANCH: branch}
-        self.image_name = f"{name.lower()}_{branch.lower()}{IMAGE_POSTFIX}"
+        self.args = {BUILD_ARG_GIT_BRANCH: branch, BUILD_ARG_GIT_COMMIT: commit} if commit else {BUILD_ARG_GIT_BRANCH: branch}
+        self.image_name = f"{name.lower()}_{commit}{IMAGE_POSTFIX}" if commit else f"{name.lower()}_{branch.lower()}{IMAGE_POSTFIX}"
 
         self.named_archive = f"{path_to_archive}/Tools/{name}"
         self.path_to_infra = path_to_infra
         self.parent_path = f"{path_to_build}/Monitor/{self.name}"
-        self.path = f"{self.parent_path}/{branch}"
+        self.path = f"{self.parent_path}/{commit}" if commit else f"{self.parent_path}/{branch}"
 
         if location == Location.Remote:
             os.makedirs(self.path, exist_ok=True)
@@ -108,24 +122,35 @@ class DirectToolImageManager(AbstractToolImageManager):
         if not in_build:
             self._build_image()
         elif not image_exists(self.image_name):
-            # Files exist but Docker image is missing - rebuild it
-            print(f"Dockerfile exists but image missing for {self.name} - {self.branch}, building...")
+            if self.commit:
+                print(f"Dockerfile exists but image missing for {self.name} - {self.commit}, building...")
+            else:
+                print(f"Dockerfile exists but image missing for {self.name} - {self.branch}, building...")
             self._build_image()
         else:
             current_version = PropertiesHandler.from_file(f"{self.path}{META_FILE_VALUE}").get_attr(VERSION_KEY)
-            fl = PropertiesHandler.from_file(self.named_archive + PROP_FILES_VALUE)
-            version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
+            if commit:
+                version = commit
+            else:
+                fl = PropertiesHandler.from_file(self.named_archive + PROP_FILES_VALUE)
+                version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
             if not current_version == version:
                 if release == BranchOrRelease.Branch:
                     self._build_image()
             else:
-                print(f"    Exists {self.name} - {self.branch}")
+                if commit:
+                    print(f"    Exists {self.name} - {self.commit}")
+                else:
+                    print(f"    Exists {self.name} - {self.branch}")
 
     def _build_image(self):
-        fl = PropertiesHandler.from_file(self.named_archive + PROP_FILES_VALUE)
-        version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
         os.makedirs(self.path, exist_ok=True)
-        to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
+        if self.commit:
+            to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: self.commit})
+        else:
+            fl = PropertiesHandler.from_file(self.named_archive + PROP_FILES_VALUE)
+            version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
+            to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, self.named_archive, self.args)
 
     def run(self, path_to_data, parameters, time_on=None, time_out=None, measure=True):
@@ -135,6 +160,5 @@ class DirectToolImageManager(AbstractToolImageManager):
             inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.name.lower()] + parameters
         else:
             inner_contract_[COMMAND_KEY] = [self.name.lower()] + parameters
-        print(path_to_data)
         inner_contract_[WORKDIR_KEY] = "/data"
         return run_image(self.image_name, inner_contract_, time_on, time_out, is_tool_image=True)

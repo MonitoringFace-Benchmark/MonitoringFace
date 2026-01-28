@@ -96,12 +96,13 @@ class YamlParser:
         for tool in self.cfg.tools:
             name = tool.get('name')
             branch = tool.get('branch')
+            commit = tool.get('commit')
             release = tool.get('release', 'branch')
             
             if not name or not branch:
                 raise YamlParserException(f"Tool configuration missing 'name' or 'branch': {tool}")
             
-            tools_to_build.append((name, branch, self._parse_branch_or_release(release)))
+            tools_to_build.append((name, branch, commit, self._parse_branch_or_release(release)))
         
         return ToolManager(tools_to_build=tools_to_build, path_to_project=self.path_to_project)
 
@@ -219,6 +220,7 @@ class YamlParser:
             identifier = monitor_dict.get('identifier')
             name = monitor_dict.get('name')
             branch = monitor_dict.get('branch')
+            commit = monitor_dict.get('commit')
             params = monitor_dict.get('params', {})
             
             if not identifier or not name or not branch:
@@ -228,7 +230,7 @@ class YamlParser:
             if 'path_to_project' not in params:
                 params['path_to_project'] = self.path_to_project
             
-            monitors_to_build.append((identifier, name, branch, params))
+            monitors_to_build.append((identifier, name, branch, commit, params))
         
         return MonitorManager(tool_manager=tool_manager, monitors_to_build=monitors_to_build)
     

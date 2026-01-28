@@ -186,7 +186,6 @@ class BenchmarkBuilder:
                                   sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug)
                     else:
                         raise NotImplemented(f"Not implemented for object {tool}")
-
                 sfh.clean_up_folder()
             sfh.remove_folder()
             return result_aggregator

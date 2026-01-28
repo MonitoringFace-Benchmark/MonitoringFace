@@ -37,14 +37,14 @@ class MonPolyVeriMonWrapper(AbstractMonitorTemplate):
 
         self.params["data"] = f"scratch/{trimmed_data_file}.{self.name.lower()}"
 
-    def run_offline(self, time_on=None, time_out=None) -> Tuple[str, int]:
+    def run_offline(self, verified=False, time_on=None, time_out=None) -> Tuple[str, int]:
         cmd = [
             "-sig", str(self.params["signature"]),
             "-formula", str(self.params["formula"]),
             "-log", str(self.params["data"])
         ]
 
-        if "verified" in self.params:
+        if ("verified" in self.params) or verified:
             cmd += ["-verified"]
             if "no_mw" in self.params:
                 cmd += ["-no_mw"]

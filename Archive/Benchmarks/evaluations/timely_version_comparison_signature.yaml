@@ -5,7 +5,7 @@ experiment_type: Signature
 
 tools:
   - name: TimelyMon
-    branch: development
+    branch: old_timely_version
     release: branch
   - name: TimelyMon
     branch: version_update
@@ -17,13 +17,13 @@ tools:
 monitors:
   - identifier: TimelyMon
     name: TimelyMon 1
-    branch: development
+    branch: old_timely_version
     params:
       worker: 1
       output_mode: 1
   - identifier: TimelyMon
     name: TimelyMon 6
-    branch: development
+    branch: old_timely_version
     params:
       worker: 6
       output_mode: 1
@@ -39,43 +39,13 @@ monitors:
     params:
       worker: 6
       output_mode: 1
-  - identifier: VeriMon
-    name: VeriMon
-    branch: master
-    params:
-      replayer: gen_data
-
-oracles:
-  - identifier: VeriMonOracle
-    name: VeriMonOracle
-    monitor_name: VeriMon
-    params:
-      replayer: gen_data
-      verified: true
-
-oracle:
-  enabled: true
-  name: VeriMonOracle
-
-time_guard:
-  enabled: true
-  lower_bound: 2
-  upper_bound: 200
-  guard_type: Oracle
 
 data_setup:
   type: SignatureContract
   SignatureContract:
     trace_length: 1000
-    seed: null
+    watermarks: true
     event_rate: 1000
-    index_rate: null
-    time_stamp: null
-    sig: ""
-    sample_queue: null
-    string_length: null
-    fresh_value_rate: null
-    domain: null
 
 policy_setup:
   type: MfotlPolicyContract
@@ -95,7 +65,7 @@ synthetic_config:
   experiment:
     num_operators: [5, 10]
     num_fvs: [2, 4]
-    num_setting: [0, 1, 2, 3, 4, 5]
+    num_setting: [0, 1, 2]
     num_data_set_sizes: [50, 100]
 
 tools_to_build:
@@ -108,24 +78,13 @@ seeds:
   '[5, 2, 0]': [314159265, 86383]
   '[5, 2, 1]': [314159265, 61390]
   '[5, 2, 2]': [314159265, 2658]
-  '[5, 2, 3]': [314159265, 28466]
-  '[5, 2, 4]': [314159265, 9924]
-  '[5, 2, 5]': [314159265, 28055]
   '[5, 4, 0]': [314159265, 45070]
   '[5, 4, 1]': [314159265, 18357]
   '[5, 4, 2]': [314159265, 16076]
-  '[5, 4, 3]': [314159265, 26474]
-  '[5, 4, 4]': [314159265, 4867]
-  '[5, 4, 5]': [314159265, 78737]
   '[10, 2, 0]': [314159265, 56160]
   '[10, 2, 1]': [314159265, 97781]
   '[10, 2, 2]': [314159265, 99289]
-  '[10, 2, 3]': [314159265, 65810]
-  '[10, 2, 4]': [314159265, 78457]
-  '[10, 2, 5]': [314159265, 84244]
   '[10, 4, 0]': [314159265, 34754]
   '[10, 4, 1]': [314159265, 9718]
   '[10, 4, 2]': [314159265, 82282]
   '[10, 4, 3]': [314159265, 31159]
-  '[10, 4, 4]': [314159265, 70357]
-  '[10, 4, 5]': [314159265, 69513]

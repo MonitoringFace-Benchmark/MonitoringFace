@@ -63,9 +63,12 @@ class MonitorManager:
         print_headline("(Starting) Building MonitorManager")
         self.monitors = {}
         failed_builds = []
-        for (identifier, name, branch, params) in monitors_to_build:
+        for (identifier, name, branch, commit, params) in monitors_to_build:
             try:
-                print(f"-> Attempting to construct Monitor {identifier} - {branch}")
+                if commit:
+                    print(f"-> Attempting to construct Monitor {identifier} - {branch} @ {commit}")
+                else:
+                    print(f"-> Attempting to construct Monitor {identifier} - {branch}")
                 self.monitors[name] = identifier_to_monitor(
                     tool_manager=tool_manager, identifier=identifier,
                     branch=branch, name=name, params=params

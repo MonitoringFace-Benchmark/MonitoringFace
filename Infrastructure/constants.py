@@ -5,6 +5,7 @@ DATAGOLF_POLICY_CHECK = "[Main] The inputs satisfy all constraints."
 IMAGE_POSTFIX = "_mf_image"
 
 BUILD_ARG_GIT_BRANCH = "GIT_BRANCH"
+BUILD_ARG_GIT_COMMIT = "GIT_COMMIT"
 
 WORKDIR_KEY = "workdir"
 WORKDIR_VAL = "/data"

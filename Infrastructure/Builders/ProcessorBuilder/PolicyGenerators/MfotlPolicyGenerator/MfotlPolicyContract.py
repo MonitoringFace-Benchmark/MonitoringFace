@@ -32,6 +32,11 @@ class MfotlPolicyContract(AbstractContract):
 
     aggregation: bool = False
 
+    lb: int = 0
+    ub: int = 5
+    delta: int = 30
+    unbounded: bool = False
+
     prob_and: Optional[float] = None
     prob_or: Optional[float] = None
     prob_eand: Optional[float] = None
@@ -71,6 +76,13 @@ def policy_contract_to_commands(f_contract: MfotlPolicyContract) -> list[AnyStr]
 
     if f_contract.size is not None:
         args += ["-S", str(f_contract.size)]
+
+    args += ["-lb", str(f_contract.lb)]
+    args += ["-ub", str(f_contract.ub)]
+    args += ["-delta", str(f_contract.delta)]
+
+    if f_contract.unbounded:
+        args += ["-unbounded"]
 
     if f_contract.aggregation:
         args += ["-agg"]
