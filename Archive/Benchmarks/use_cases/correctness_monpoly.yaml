@@ -33,29 +33,34 @@ monitors:
     branch: master
     params:
       replayer: gen_data
+      preprocessing: false
   - identifier: VeriMon
     name: VeriMon
     branch: master
     params:
       replayer: gen_data
+      preprocessing: false
   - identifier: MonPoly
     name: MonPoly v1
     commit: 23a655563715dc1e6dcd92fb7a641f404b7ac158
     branch: master
     params:
       replayer: gen_data
+      preprocessing: false
   - identifier: MonPoly
     name: MonPoly v2
     commit: ff3506eea6829c4e151faa2474724353ee2038e7
     branch: master
     params:
       replayer: gen_data
+      preprocessing: false
   - identifier: MonPoly
     name: MonPoly v3
     commit: 11c27e7e2c945e99553fbfe5a248397bf7a413b5
     branch: master
     params:
       replayer: gen_data
+      preprocessing: false
 
 
 oracles:
@@ -63,19 +68,21 @@ oracles:
     name: VeriMonOracle
     monitor_name: VeriMon
     params:
-      replayer: gen_data
       verified: true
+      replayer: gen_data
+      preprocessing: false
 
 time_guard:
   enabled: false
   lower_bound: null
-  upper_bound: 300
+  upper_bound: 30
   guard_type: Monitor
   guard_name: MonPoly
 
 # Case study specific configuration
 case_study_config:
-  case_study_name: Monpoly_Correctness
+  case_study_name: Correctness
+  branch: master
 
 # Tools to build and run
 tools_to_build:
