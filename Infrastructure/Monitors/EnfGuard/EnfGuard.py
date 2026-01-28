@@ -44,8 +44,8 @@ class EnfGuard(AbstractMonitorTemplate):
             "-log", str(self.params["data"])
         ]
 
-        #if self.params.get("monitoring", False):
-        cmd += ["-monitoring"]
+        if self.params.get("monitoring", False):
+            cmd += ["-monitoring"]
 
         if "func" in self.params:
             cmd += ["-func", str(self.params["func"])]
