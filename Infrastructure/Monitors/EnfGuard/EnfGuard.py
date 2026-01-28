@@ -56,4 +56,4 @@ class EnfGuard(AbstractMonitorTemplate):
         return DefaultVariableOrder()
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        return PropositionList()
+        return PropositionList(self.variable_order())
