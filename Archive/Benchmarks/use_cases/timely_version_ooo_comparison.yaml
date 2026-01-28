@@ -5,7 +5,7 @@ experiment_type: Signature
 
 tools:
   - name: TimelyMon
-    branch: development
+    branch: old_timely_version
     release: branch
   - name: TimelyMon
     branch: version_update
@@ -17,14 +17,14 @@ tools:
 monitors:
   - identifier: TimelyMon
     name: TimelyMon 1
-    branch: development
+    branch: old_timely_version
     params:
       worker: 1
       output_mode: 1
       mode: oootps
   - identifier: TimelyMon
     name: TimelyMon 6
-    branch: development
+    branch: old_timely_version
     params:
       worker: 6
       output_mode: 1

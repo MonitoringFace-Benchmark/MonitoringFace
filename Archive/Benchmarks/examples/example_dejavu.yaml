@@ -32,7 +32,6 @@ monitors:
 data_setup:
   type: SignatureContract
   SignatureContract:
-    trace_length: 10
     seed: null
     event_rate: 10
     index_rate: null

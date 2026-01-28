@@ -19,6 +19,8 @@ class ToolManager:
         self.images = {}
         failed_builds = []
         for (tool, branch, commit, release) in tools_to_build:
+            if commit is None:
+                commit = ""
             try:
                 if commit:
                     print(f"-> Attempting to build Image {tool} - {branch} @ {commit}")
@@ -43,11 +45,11 @@ class ToolManager:
                         raise ImageBuildException(f"Linked {linked} does not exists either Local or Remote")
                     elif new_location == Location.Remote:  # local need no further treatment
                         remote_content_handler(new_path_to_named_archive, path_to_infra, new_tl)
-                    self.images[(tool, branch)] = IndirectToolImageManager(tool, linked, branch, commit, release,
+                    self.images[(tool, branch, commit)] = IndirectToolImageManager(tool, linked, branch, commit, release,
                                                                            path_to_build, path_to_archive,
                                                                            path_to_infra, new_location)
                 else:
-                    self.images[(tool, branch)] = DirectToolImageManager(tool, branch, release, commit, path_to_build,
+                    self.images[(tool, branch, commit)] = DirectToolImageManager(tool, branch, release, commit, path_to_build,
                                                                          path_to_archive, path_to_infra, location)
                 print(f"    -> (Success)")
             except ImageBuildException:
@@ -61,5 +63,7 @@ class ToolManager:
 
         print_footline("(Finished) Building ToolManager")
 
-    def get_image(self, tool, branch):
-        return self.images.get((tool, branch))
+    def get_image(self, tool, branch, commit):
+        if commit is None:
+            commit = ""
+        return self.images.get((tool, branch, commit))

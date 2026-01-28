@@ -18,7 +18,13 @@ class WhyMon(AbstractMonitorTemplate):
     def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
         self.params["folder"] = path_to_folder
         self.params["signature"] = signature_file
-        self.params["formula"] = formula_file
+
+        with open(f"{path_to_folder}/{formula_file}", 'r') as f:
+            file_content = f.read().strip()
+        rel_path = f"scratch/{formula_file}"
+        with open(f"{path_to_folder}/{rel_path}", 'w') as f:
+            f.write(f"NOT ({file_content})")
+        self.params["formula"] = rel_path
 
         if "preprocessing" in self.params:
             if not self.params["preprocessing"]:

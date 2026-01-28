@@ -50,6 +50,7 @@ def construct_case_study(data_gen, data_setup, path_to_named_experiment, oracle:
 
             with open(f"{result_folder}/result_{num}.res", "w") as file:
                 file.write(out)
+            mapper.add_result((data_file, formula, sig), num)
             i += 1
 
             sfh.clean_up_folder()
@@ -61,7 +62,14 @@ class CaseStudyMapper:
     def __init__(self, path_to_data, path_to_instructions):
         self.data_path = path_to_data
         self.instruction_path = path_to_instructions
+        self.results = {}
         self.settings = list(enumerate(self._parse_instructions()))
+
+    def add_result(self, key, result):
+        self.results[key] = result
+
+    def result_id(self, key):
+        return self.results[key]
 
     def iterate_settings(self):
         return self.settings
@@ -71,9 +79,12 @@ class CaseStudyMapper:
             raise InstructionMissing()
 
         settings = []
+        i = 0
         with open(self.instruction_path, "r") as f:
             for line in f.readlines():
                 l = [l.split()[0] for l in line.split(",")]
                 l = l + [None] * (3 - len(l))
                 settings.append(l)
+                self.add_result((l[0], l[1], l[2]), i)
+                i += 1
         return settings

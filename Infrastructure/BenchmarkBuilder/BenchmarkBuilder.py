@@ -230,11 +230,11 @@ class BenchmarkBuilder:
         return result_aggregator
 
 
-def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file, sfh=None, debug_mode=False, debug_path=None) -> RunToolResult:
+def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file, sfh=None, debug_mode=False, debug_path=None, case_study_mapper=None) -> RunToolResult:
     try:
         prep, compiled, runtime, prop = run_monitor(
             tool, time_guard, path_to_folder, data_file,
-            signature_file, formula_file, oracle
+            signature_file, formula_file, oracle, case_study_mapper
         )
 
         if debug_mode and sfh is not None and debug_path is not None:

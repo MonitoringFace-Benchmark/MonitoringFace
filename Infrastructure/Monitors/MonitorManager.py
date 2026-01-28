@@ -28,7 +28,7 @@ def _discover_monitors():
     return monitors
 
 
-def identifier_to_monitor(tool_manager, identifier, branch, name, params):
+def identifier_to_monitor(tool_manager, identifier, branch, name, commit, params):
     available_monitors = _discover_monitors()
     if identifier not in available_monitors:
         available = ', '.join(available_monitors.keys())
@@ -36,9 +36,12 @@ def identifier_to_monitor(tool_manager, identifier, branch, name, params):
             f"Unknown monitor identifier: '{identifier}'. "
             f"Available monitors: {available}"
         )
-    image = tool_manager.get_image(identifier, branch)
+    image = tool_manager.get_image(identifier, branch, commit)
     if image is None:
-        raise ValueError(f"Image missing for '{identifier} - {branch}'")
+        if commit:
+            raise ValueError(f"Image missing for '{identifier} - {branch} @ {commit}'")
+        else:
+            raise ValueError(f"Image missing for '{identifier} - {branch}'")
     
     monitor_class = available_monitors[identifier]
     return monitor_class(image, name, params)
@@ -71,7 +74,7 @@ class MonitorManager:
                     print(f"-> Attempting to construct Monitor {identifier} - {branch}")
                 self.monitors[name] = identifier_to_monitor(
                     tool_manager=tool_manager, identifier=identifier,
-                    branch=branch, name=name, params=params
+                    branch=branch, name=name, commit=commit, params=params
                 )
                 print(f"    -> (Success)")
             except Exception as e:

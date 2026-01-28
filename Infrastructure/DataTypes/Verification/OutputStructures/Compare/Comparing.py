@@ -48,20 +48,22 @@ def comparing(oracle_structure: AbstractOutputStructure, tool_structure: Abstrac
     elif intermediate_compare(oracle_structure, tool_structure):
         oracle_intermediate_list = to_raw_intermediate_list(oracle_structure)
         tool_intermediate_list = to_raw_intermediate_list(tool_structure)
-
         oracle_variables = set(oracle_structure.retrieve_order())
         tool_variables = set(tool_structure.retrieve_order())
+
         if oracle_variables != tool_variables:
             return False, "Verified: Variable orders differ! Oracle variables: {oracle_variables}, Tool variables: {tool_variables}"
+
+        if len(oracle_intermediate_list.values) != len(tool_intermediate_list.values):
+            return False, "Verified: Structures are not equivalent"
 
         for ((l_tp, l_ts, l_vals), (r_tp, r_ts, r_vals)) in zip(oracle_intermediate_list.values, tool_intermediate_list.values):
             if l_tp != r_tp or l_ts != r_ts:
                 return False, "Verified: Structures are not equivalent"
-
-            if isinstance(l_vals, Proposition) and isinstance(r_vals, Proposition):
-                if l_vals.value != r_vals.value:
+            if isinstance(l_vals[0], Proposition) and isinstance(r_vals[0], Proposition):
+                if l_vals[0].value != r_vals[0].value:
                     return False, f"Verified: Structures are not equivalent unequal propositions {l_tp}"
-            elif not isinstance(l_vals, Proposition) and not isinstance(r_vals, Proposition):
+            elif not isinstance(l_vals[0], Proposition) and not isinstance(r_vals[0], Proposition):
                 l_vals = [ass.retrieve_order(oracle_structure.variable_order) for ass in l_vals]
                 if set(l_vals) != set(r_vals):
                     return False, "Verified: Structures are not equivalent"
