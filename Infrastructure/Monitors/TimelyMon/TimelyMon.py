@@ -93,14 +93,19 @@ class TimelyMon(AbstractMonitorTemplate):
 def parse_output_structure(input_val: AnyStr, variable_ordering) -> AbstractOutputStructure:
     def parse_pattern(pattern_str: str):
         match = re.match(r'@(\d+)\s*\(time point (\d+)\):\s*(.*)', pattern_str)
+        if not match:
+            raise ValueError()
         tuples_list = [[num for num in tup.split(',') if num] for tup in re.findall(r'\(([^)]*)\)', match.group(3))]
         return int(match.group(1)), int(match.group(2)), tuples_list
 
     verdicts = OooVerdicts(variable_order=variable_ordering)
-    if input_val == "":
+    if input_val.strip() == "":
         return verdicts
 
     for line in input_val.strip().split("\n"):
-        ts, tp, tuples = parse_pattern(line)
-        verdicts.insert(tuples, tp, ts)
+        try:
+            ts, tp, tuples = parse_pattern(line)
+            verdicts.insert(tuples, tp, ts)
+        except Exception:
+            pass
     return verdicts
