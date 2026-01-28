@@ -1,0 +1,82 @@
+experiment_name: Monpoly_correctness
+
+# Benchmark type: 'synthetic' or 'case_study'
+benchmark_type: case_study
+
+# Tools configuration
+tools:
+  - name: Monpoly
+    branch: master
+    release: branch
+  - name: Monpoly
+    commit: 23a655563715dc1e6dcd92fb7a641f404b7ac158
+    branch: master
+    release: branch
+  - name: Monpoly
+    commit: ff3506eea6829c4e151faa2474724353ee2038e7
+    branch: master
+    release: branch
+  - name: Monpoly
+    commit: 11c27e7e2c945e99553fbfe5a248397bf7a413b5
+    branch: master
+    release: branch
+
+
+# Monitors configuration
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
+    params:
+      replayer: gen_data
+  - identifier: MonPoly
+    name: MonPoly v1
+    commit: 23a655563715dc1e6dcd92fb7a641f404b7ac158
+    branch: master
+    params:
+      replayer: gen_data
+  - identifier: MonPoly
+    name: MonPoly v2
+    commit: ff3506eea6829c4e151faa2474724353ee2038e7
+    branch: master
+    params:
+      replayer: gen_data
+  - identifier: MonPoly
+    name: MonPoly v3
+    commit: 11c27e7e2c945e99553fbfe5a248397bf7a413b5
+    branch: master
+    params:
+      replayer: gen_data
+
+
+oracles:
+  - identifier: VeriMonOracle
+    name: VeriMonOracle
+    monitor_name: VeriMon
+    params:
+      replayer: gen_data
+      verified: true
+
+time_guard:
+  enabled: false
+  lower_bound: null
+  upper_bound: 300
+  guard_type: Monitor
+  guard_name: MonPoly
+
+# Case study specific configuration
+case_study_config:
+  case_study_name: Monpoly_Correctness
+
+# Experiment execution settings
+experiment_type: CaseStudy
+
+# Tools to build and run
+tools_to_build:
+  - Monpoly
+  - VeriMon
+
+
+oracle:
+  enabled: true
+  name: VeriMonOracle

@@ -1,0 +1,134 @@
+# Example YAML configuration for a synthetic benchmark experiment
+experiment_name: test_synthetic_experiment
+
+# Benchmark type: 'synthetic' or 'case_study'
+benchmark_type: synthetic
+
+# Tools configuration
+tools:
+  - name: TimelyMon
+    branch: development
+    release: branch
+  - name: MonPoly
+    branch: master
+    release: branch
+  - name: VeriMon
+    branch: master
+    release: branch
+  - name: WhyMon
+    branch: main
+    release: branch
+  - name: DejaVu
+    branch: master
+    release: branch
+
+# Monitors configuration
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 1
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+  - identifier: TimelyMon
+    name: TimelyMon 6
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
+    params:
+      replayer: gen_data
+  - identifier: VeriMon
+    name: VeriMon
+    branch: master
+    params:
+      replayer: gen_data
+      verified: true
+  - identifier: WhyMon
+    name: WhyMon
+    branch: main
+    params:
+      replayer: gen_data
+      mode: light
+  - identifier: DejaVu
+    name: DejaVu
+    branch: master
+    params:
+      replayer: gen_data
+      translator: qtl-translator
+
+
+# Oracles configuration (optional)
+oracles:
+  - identifier: VeriMonOracle
+    name: VeriMonOracle
+    monitor_name: VeriMon
+    params:
+      replayer: gen_data
+      verified: true
+
+# Time guard configuration
+time_guard:
+  enabled: false
+  lower_bound: null  # null for None
+  upper_bound: 200
+  guard_type: Monitor  # Monitor, Oracle, or Generator
+  guard_name: TimelyMon 6
+
+# Data setup - Hydra structured format
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    event_rate: 1000
+
+# Policy setup
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_let: 0
+    prob_matchF: 0
+    prob_matchP: 0
+
+# Synthetic benchmark specific configuration
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    num_data_set_sizes: [50]
+
+# Experiment execution settings
+experiment_type: Signature  # Pattern, Signature, or CaseStudy
+
+# Tools to build and run (list of monitor names)
+tools_to_build:
+  - TimelyMon 1
+  - TimelyMon 6
+  - VeriMon
+  - MonPoly
+  - WhyMon
+  - DejaVu
+
+# Oracle to use (optional)
+oracle:
+  enabled: true
+  name: VeriMonOracle
+
+seeds:
+  '[5, 2, 0]': [314159265,87006]
+  '[5, 2, 1]': [314159265,53339]
+  '[5, 2, 2]': [314159265,34134]
+  '[5, 2, 3]': [314159265,16519]
+  '[5, 2, 4]': [314159265,41414]
+  '[5, 2, 5]': [314159265,99113]
+  '[5, 2, 6]': [314159265,98765]
+  '[5, 2, 7]': [314159265,65359]
+  '[5, 2, 8]': [314159265,11320]
+  '[5, 2, 9]': [314159265,53326]
