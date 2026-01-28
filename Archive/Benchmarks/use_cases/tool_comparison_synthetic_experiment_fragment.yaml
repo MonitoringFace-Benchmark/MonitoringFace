@@ -52,6 +52,7 @@ monitors:
     branch: main
     params:
       replayer: gen_data
+      mode: light
   - identifier: DejaVu
     name: DejaVu
     branch: master
