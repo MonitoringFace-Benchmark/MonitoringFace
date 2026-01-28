@@ -24,17 +24,18 @@ class TimelyMon(AbstractMonitorTemplate):
         self.params["formula"] = formula_file
 
         if "preprocessing" in self.params:
-            self.replayer.convert(
-                path_to_folder=path_to_folder,
-                data_file=data_file,
-                tool="csv",
-                name=os.path.basename(data_file),
-                source="monpoly",
-                dest=f"{path_to_folder}/scratch",
-                params=["-a", "0"]
-            )
-            self.params["data"] = f"scratch/{data_file}.csv"
-            return
+            if not self.params["preprocessing"]:
+                self.replayer.convert(
+                    path_to_folder=path_to_folder,
+                    data_file=data_file,
+                    tool="csv",
+                    name=os.path.basename(data_file),
+                    source="monpoly",
+                    dest=f"{path_to_folder}/scratch",
+                    params=["-a", "0"]
+                )
+                self.params["data"] = f"scratch/{data_file}.csv"
+                return
 
         reordering = "mode" in self.params
         trimmed_data_file = os.path.basename(data_file)
