@@ -29,7 +29,7 @@ tools:
 # Monitors configuration
 monitors:
   - identifier: MonPoly
-    name: MonPoly
+    name: MonPoly current
     branch: master
     params:
       replayer: gen_data
@@ -41,22 +41,22 @@ monitors:
       replayer: gen_data
       preprocessing: false
   - identifier: MonPoly
-    name: MonPoly v1
+    name: MonPoly Feb 15, 2023
     commit: 23a655563715dc1e6dcd92fb7a641f404b7ac158
     branch: master
     params:
       replayer: gen_data
       preprocessing: false
   - identifier: MonPoly
-    name: MonPoly v2
-    commit: ff3506eea6829c4e151faa2474724353ee2038e7
+    name: MonPoly Jan 4, 2023
+    commit: 11c27e7e2c945e99553fbfe5a248397bf7a413b5
     branch: master
     params:
       replayer: gen_data
       preprocessing: false
   - identifier: MonPoly
-    name: MonPoly v3
-    commit: 11c27e7e2c945e99553fbfe5a248397bf7a413b5
+    name: MonPoly Sep 8, 2022
+    commit: ff3506eea6829c4e151faa2474724353ee2038e7
     branch: master
     params:
       replayer: gen_data
@@ -82,14 +82,13 @@ time_guard:
 # Case study specific configuration
 case_study_config:
   case_study_name: Correctness
-  branch: master
 
 # Tools to build and run
 tools_to_build:
-  - MonPoly v1
-  - MonPoly v2
-  - MonPoly v3
-  - MonPoly
+  - MonPoly current
+  - MonPoly Feb 15, 2023
+  - MonPoly Jan 4, 2023
+  - MonPoly Sep 8, 2022
   - VeriMon
 
 
