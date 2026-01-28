@@ -108,7 +108,7 @@ synthetic_config:
     num_operators: [5]
     num_fvs: [2]
     num_setting: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    num_data_set_sizes: [50]
+    num_data_set_sizes: [50, 100, 500, 1000, 5000]
 
 # Experiment execution settings
 experiment_type: Signature  # Pattern, Signature, or CaseStudy
