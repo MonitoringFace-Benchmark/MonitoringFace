@@ -43,43 +43,12 @@ monitors:
       worker: 6
       output_mode: 1
       mode: oootps
-  - identifier: VeriMon
-    name: VeriMon
-    branch: master
-    params:
-      replayer: gen_data
-
-oracles:
-  - identifier: VeriMonOracle
-    name: VeriMonOracle
-    monitor_name: VeriMon
-    params:
-      replayer: gen_data
-      verified: true
-
-oracle:
-  enabled: true
-  name: VeriMonOracle
-
-time_guard:
-  enabled: true
-  lower_bound: 2
-  upper_bound: 200
-  guard_type: Oracle
 
 data_setup:
   type: SignatureContract
   SignatureContract:
     trace_length: 1000
-    seed: null
     event_rate: 1000
-    index_rate: null
-    time_stamp: null
-    sig: ""
-    sample_queue: null
-    string_length: null
-    fresh_value_rate: null
-    domain: null
 
 policy_setup:
   type: MfotlPolicyContract
@@ -92,6 +61,8 @@ policy_setup:
     prob_let: 0
     prob_matchF: 0
     prob_matchP: 0
+
+repeats: 3
 
 synthetic_config:
   data_source: SignatureGenerator
