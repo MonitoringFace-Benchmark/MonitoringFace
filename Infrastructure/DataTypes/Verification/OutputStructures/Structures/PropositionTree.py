@@ -3,7 +3,8 @@ from typing import AnyStr, List, Set, Tuple, Dict, Any
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
-from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, \
+    VariableOrdering
 
 
 class InvalidPDTTerm(Exception):
@@ -123,10 +124,13 @@ class PDTTree:
 
 
 class PropositionTree(AbstractOutputStructure):
-    def __init__(self, variable_order=None):
+    def __init__(self, variable_order: VariableOrdering):
         self.forest: Dict[int, PDTTree] = dict()
         self.tp_to_ts: Dict[int, int] = dict()
         self.variable_order = variable_order
+
+    def retrieve_order(self):
+        return self.variable_order.retrieve_order()
 
     def retrieve(self, time_point: int):
         if time_point in self.forest:

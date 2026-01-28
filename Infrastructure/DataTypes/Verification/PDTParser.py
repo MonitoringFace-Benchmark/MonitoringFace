@@ -79,7 +79,7 @@ def file_to_proposition_tree(file: AnyStr) -> PropositionTree:
     with open(file, "r") as raw:
         clean = "\n".join(line for line in raw.read().splitlines() if line.strip())
         diff_explanations = list(filter(None, re.split(r"(\d+:\d+)", clean)))
-        tree = PropositionTree()
+        tree = PropositionTree(DefaultVariableOrder())
         for pair in [(diff_explanations[i], diff_explanations[i + 1]) for i in range(0, len(diff_explanations), 2)]:
             (tp, ts) = time_extract(pair[0])
             tree.insert(PDTTree(parse_tree(pair[1])), tp, ts)
@@ -90,7 +90,7 @@ def file_to_proposition_tree(file: AnyStr) -> PropositionTree:
 def str_to_proposition_tree(raw_string: AnyStr) -> PropositionTree:
     clean = "\n".join(line for line in raw_string.splitlines() if line.strip())
     diff_explanations = list(filter(None, re.split(r"(\d+:\d+)", clean)))
-    tree = PropositionTree()
+    tree = PropositionTree(DefaultVariableOrder())
     for pair in [(diff_explanations[i], diff_explanations[i + 1]) for i in range(0, len(diff_explanations), 2)]:
         (tp, ts) = time_extract(pair[0])
         tree.insert(PDTTree(parse_tree(pair[1])), tp, ts)
