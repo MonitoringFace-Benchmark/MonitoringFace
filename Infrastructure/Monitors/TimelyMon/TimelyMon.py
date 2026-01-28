@@ -4,6 +4,8 @@ import re
 from typing import Dict, AnyStr, Any, Tuple
 
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.OutOfOrderConverter.OutOfOrderConverter import OutOfOrderConverter
+from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import \
+    ReplayerConverter
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
@@ -14,11 +16,25 @@ from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTempl
 class TimelyMon(AbstractMonitorTemplate):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
+        self.replayer = ReplayerConverter("gen_data", self.params["path_to_project"])
 
     def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
         self.params["folder"] = path_to_folder
         self.params["signature"] = signature_file
         self.params["formula"] = formula_file
+
+        if "preprocessing" in self.params:
+            self.replayer.convert(
+                path_to_folder=path_to_folder,
+                data_file=data_file,
+                tool="csv",
+                name=os.path.basename(data_file),
+                source="monpoly",
+                dest=f"{path_to_folder}/scratch",
+                params=["-a", "0"]
+            )
+            self.params["data"] = f"scratch/{data_file}.csv"
+            return
 
         reordering = "mode" in self.params
         trimmed_data_file = os.path.basename(data_file)
