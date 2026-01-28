@@ -21,6 +21,9 @@ tools:
   - name: DejaVu
     branch: master
     release: branch
+  - name: EnfGuard
+    branch: main
+    release: branch
 
 # Monitors configuration
 monitors:
@@ -59,6 +62,12 @@ monitors:
     params:
       replayer: gen_data
       translator: qtl-translator
+  - identifier: EnfGuard
+    name: EnfGuard
+    branch: main
+    params:
+      replayer: gen_data
+      monitoring: true
 
 
 # Oracles configuration (optional)
@@ -74,7 +83,7 @@ oracles:
 time_guard:
   enabled: false
   lower_bound: null  # null for None
-  upper_bound: 200
+  upper_bound: 30
   guard_type: Monitor  # Monitor, Oracle, or Generator
   guard_name: TimelyMon 6
 
@@ -102,7 +111,7 @@ synthetic_config:
     num_operators: [5]
     num_fvs: [2]
     num_setting: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    num_data_set_sizes: [50]
+    num_data_set_sizes: [10]
 
 # Experiment execution settings
 experiment_type: Signature  # Pattern, Signature, or CaseStudy
@@ -115,7 +124,7 @@ tools_to_build:
   - MonPoly
   - WhyMon
   - DejaVu
-
+  - EnfGuard
 # Oracle to use (optional)
 oracle:
   enabled: true
