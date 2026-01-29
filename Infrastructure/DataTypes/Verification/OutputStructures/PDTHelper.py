@@ -54,10 +54,8 @@ def negate_pdt(pdt: PDTComponents) -> PDTComponents:
 
 def equality_between_pdts(vars, left_tree: PDTTree, right_tree: PDTTree) -> bool:
     if len(vars) == 1:
-        print("Single level tree comparison")
         return single_level_tree(left_tree.tree, right_tree.tree)
     else:
-        print("Multi-level tree comparison")
         return collapse_pdt(apply2_reduce_inner(vars, (lambda x, y: x == y), left_tree.tree, right_tree.tree))
 
 
