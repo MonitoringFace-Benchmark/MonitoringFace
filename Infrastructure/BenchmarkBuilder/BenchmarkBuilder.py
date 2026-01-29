@@ -173,7 +173,8 @@ class BenchmarkBuilder:
             path_to_folder = f"{self.path_to_named_experiment}/data"
             sfh = ScratchFolderHandler(path_to_folder)
             # honor repeat_runs for case-study experiments as well
-            for (num, (data, formula, sig)) in self.data_setup["case_study_mapper"].iterate_settings():
+            case_study_mapper = self.data_setup["case_study_mapper"]
+            for (num, (data, formula, sig)) in  case_study_mapper.iterate_settings():
                 setting_id = f"{num} -> Data: {data}, Formula: {formula}, Signature: {sig}"
                 for i in range(0, self.repeat_runs):
                     tmp_setting_id = f"{setting_id}_{i}"
@@ -183,10 +184,11 @@ class BenchmarkBuilder:
                             result_aggregator.add_missing(tool.name, tmp_setting_id)
                             print_footline()
                         elif isinstance(tool, ValidReturnType):
-                            res = run_tools(result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
-                                            oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
-                                            data_file=data, signature_file=sig, formula_file=formula,
-                                            sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug)
+                            run_tools(result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
+                                oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
+                                data_file=data, signature_file=sig, formula_file=formula,
+                                sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug,
+                                case_study_mapper=case_study_mapper)
                         else:
                             raise NotImplemented(f"Not implemented for object {tool}")
                         sfh.clean_up_folder()
