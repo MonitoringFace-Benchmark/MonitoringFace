@@ -1,6 +1,5 @@
 import importlib
 import os
-import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union, Tuple
 from omegaconf import OmegaConf, DictConfig
@@ -29,18 +28,15 @@ class YamlParser:
         self.yaml_path = os.path.abspath(yaml_path)
         self.config_dir = os.path.dirname(self.yaml_path)
         self.config_name = os.path.splitext(os.path.basename(self.yaml_path))[0]
-        
-        # Setup paths
+
         your_path_to_mfb = os.getcwd()
         self.path_to_project = your_path_to_mfb
         self.path_to_build = path_to_build or f"{your_path_to_mfb}/Infrastructure/build"
         self.path_to_experiments = path_to_experiments or f"{your_path_to_mfb}/Infrastructure/experiments"
-        
-        # Ensure directories exist
+
         os.makedirs(self.path_to_build, exist_ok=True)
         os.makedirs(self.path_to_experiments, exist_ok=True)
-        
-        # Load configuration using Hydra
+
         self.cfg = self._load_config()
     
     def _load_config(self) -> DictConfig:
@@ -329,9 +325,6 @@ class YamlParser:
             'tools_to_build': tools_to_build,
             'experiment_type': experiment_type,
             'oracle': oracle_tuple,
-            'path_to_project': self.path_to_project,
-            'path_to_build': self.path_to_build,
-            'path_to_experiments': self.path_to_experiments,
             'repeat_experiments': repeats,
             'data_setup': None if is_case_study else self.parse_data_generator_setup(),
             'seeds': None if is_case_study else self.parse_seeds()

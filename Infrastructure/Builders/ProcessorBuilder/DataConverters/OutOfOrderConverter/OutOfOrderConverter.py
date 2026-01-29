@@ -1,9 +1,10 @@
 import random
 from enum import Enum
-from typing import AnyStr, List
+from typing import AnyStr, List, Tuple
 import re
 
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.DataConverterTemplate import DataConverterTemplate
+from Infrastructure.InputOutputFormats import InputOutputFormats
 
 DEFAULT_SEED = 42
 MAX_DISTANCE = 5
@@ -158,3 +159,7 @@ class OutOfOrderConverter(DataConverterTemplate):
 
         with open(f"{dest}/{name}.{tool}", "w") as f:
             f.write("\n".join(result))
+
+    @staticmethod
+    def conversion_scheme() -> List[Tuple[InputOutputFormats, InputOutputFormats]]:
+        return [(InputOutputFormats.CSV, InputOutputFormats.OOO_CSV)]

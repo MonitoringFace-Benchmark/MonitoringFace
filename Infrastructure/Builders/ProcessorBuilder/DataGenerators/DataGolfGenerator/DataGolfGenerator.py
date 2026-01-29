@@ -5,6 +5,7 @@ from typing import AnyStr
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfContract import DataGolfContract
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
+from Infrastructure.InputOutputFormats import InputOutputFormats
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException
 from Infrastructure.constants import DATAGOLF_POLICY_CHECK, COMMAND_KEY, WORKDIR_KEY, WORKDIR_VAL, VOLUMES_KEY
 
@@ -75,6 +76,10 @@ class DataGolfGenerator(DataGeneratorTemplate):
         else:
             out = out.strip()
             return out.__eq__(DATAGOLF_POLICY_CHECK)
+
+    @staticmethod
+    def output_formats():
+        return [InputOutputFormats.MONPOLY]
 
 
 def stdout_to_csv(in_str: AnyStr):

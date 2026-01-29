@@ -9,17 +9,17 @@ from datetime import datetime
 from typing import List, Any, AnyStr
 
 from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.Parser.YamlParser import YamlParser, ExperimentSuiteParser, YamlParserException
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
 from Infrastructure.constants import LENGTH, Config, Measure
 
 
 class CLI:
-    """Command-line interface for MonitoringFace"""
-    
     def __init__(self, path_to_module: AnyStr):
         self.parser = self._create_parser()
 
+        self.path_manager = PathManager()
         self.path_to_module = path_to_module
         self.infra_folder = f"{self.path_to_module}/Infrastructure"
         self.build_folder = f"{self.infra_folder}/build"
@@ -29,13 +29,19 @@ class CLI:
         self.benchmark_folder = f"{self.archive_folder}/Benchmarks"
 
         self.result_base_folder = f"{self.infra_folder}/results"
-        os.makedirs(self.result_base_folder, exist_ok=True)
 
+        self.path_manager.add_path("path_to_project", self.path_to_module)
+        self.path_manager.add_path("path_to_build", self.build_folder)
+        self.path_manager.add_path("path_to_experiments", self.experiment_folder)
+        self.path_manager.add_path("path_to_archive", self.archive_folder)
+        self.path_manager.add_path("path_to_benchmark", self.benchmark_folder)
+        self.path_manager.add_path("path_to_results", self.result_base_folder)
+
+        os.makedirs(self.result_base_folder, exist_ok=True)
         os.makedirs(self.build_folder, exist_ok=True)
         os.makedirs(self.experiment_folder, exist_ok=True)
     
     def _create_timestamped_result_folder(self, experiment_name: str) -> str:
-        """Create a timestamped result folder for the current run."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         result_folder = os.path.join(self.result_base_folder, f"{experiment_name}_{timestamp}")
         os.makedirs(result_folder, exist_ok=True)
@@ -43,7 +49,6 @@ class CLI:
 
     @staticmethod
     def _create_parser() -> argparse.ArgumentParser:
-        """Create and configure argument parser"""
         parser = argparse.ArgumentParser(
             prog='MonitoringFace',
             description='MonitoringFace Benchmark Framework - Run monitoring experiments from YAML configurations',
@@ -120,7 +125,6 @@ Examples:
             print(f"Debug mode enabled - scratch folder data will be preserved")
 
         try:
-            # Parse configuration
             parser = YamlParser(yaml_path=yaml_file, path_to_build=self.build_folder, path_to_experiments=self.experiment_folder)
             experiment_config = parser.parse_experiment()
             
@@ -135,7 +139,7 @@ Examples:
 
             benchmark = BenchmarkBuilder(
                 contract=experiment_config['benchmark_contract'],
-                path_to_project=experiment_config['path_to_project'],
+                path_manager=self.path_manager,
                 data_setup=experiment_config['data_setup'],
                 gen_mode=experiment_config['experiment_type'],
                 time_guard=experiment_config['time_guarded'],
@@ -145,8 +149,7 @@ Examples:
                 repeat_runs=experiment_config['repeat_experiments'],
                 debug_mode=debug
             )
-            
-            # Get monitors to run
+
             monitors = experiment_config['monitor_manager'].get_monitors(
                 experiment_config['tools_to_build']
             )
@@ -158,7 +161,6 @@ Examples:
             results = benchmark.run(monitors)
             experiment_name = os.path.splitext(os.path.basename(yaml_file))[0]
 
-            # Use provided result_folder or create a new timestamped one
             if result_folder is None:
                 result_folder = self._create_timestamped_result_folder(experiment_name)
 
@@ -182,18 +184,6 @@ Examples:
             sys.exit(1)
     
     def run_experiment_suite(self, suite_name: str, dry_run: bool = False, verbose: bool = False, debug: bool = False) -> List[Any]:
-        """
-        Run multiple experiments from a suite configuration
-        
-        Args:
-            suite_name: Path to experiment suite YAML file
-            dry_run: If True, only validate without running
-            verbose: Enable verbose output
-            debug: Enable debug mode - preserves scratch folder data
-
-        Returns:
-            List of experiment results or empty list if dry_run
-        """
         if verbose:
             print(f"Loading experiment suite from: {suite_name}")
         
@@ -207,27 +197,23 @@ Examples:
             print(f"Found {len(experiment_paths)} enabled experiment(s) in suite")
             
             if dry_run:
-                # Validate all experiments
                 for i, exp_path in enumerate(experiment_paths, 1):
                     if verbose:
                         print(f"\nValidating experiment {i}/{len(experiment_paths)}: {exp_path}")
                     self.run_single_experiment(exp_path, dry_run=True, verbose=verbose, debug=debug)
                 print(f"\n✓ All {len(experiment_paths)} experiment(s) validated successfully")
                 return []
-            
-            # Create a single timestamped folder for the entire suite
+
             suite_name_clean = os.path.splitext(os.path.basename(suite_name))[0]
             suite_result_folder = self._create_timestamped_result_folder(suite_name_clean)
             print(f"Suite results will be saved to: {suite_result_folder}")
 
-            # Run all experiments
             results = []
             for i, exp_path in enumerate(experiment_paths, 1):
                 print(f"\n{'='*LENGTH}")
                 print(f"Running experiment {i}/{len(experiment_paths)}: {os.path.basename(exp_path)}")
                 print(f"{'='*LENGTH}")
                 
-                # Create a subfolder for each experiment within the suite folder
                 exp_name = os.path.splitext(os.path.basename(exp_path))[0]
                 exp_result_folder = os.path.join(suite_result_folder, exp_name)
                 os.makedirs(exp_result_folder, exist_ok=True)
@@ -252,15 +238,8 @@ Examples:
             sys.exit(1)
     
     def run(self, argv: List[str] = None):
-        """
-        Main entry point for CLI
-        
-        Args:
-            argv: Command-line arguments (defaults to sys.argv)
-        """
         args = self.parser.parse_args(argv)
 
-        # Set global verbose flag
         Config.set_verbose(args.verbose)
         if args.no_measure:
             Measure.set_measure(False)
@@ -273,7 +252,6 @@ Examples:
         elif location == Location.Remote:
             br.get_remote_config(path_to_archive_benchmark=self.benchmark_folder, name=config_name)
 
-        # Detect if suite or single experiment
         is_suite = args.suite or self._is_suite_config(f"{self.benchmark_folder}/{config_name}")
         
         if is_suite:

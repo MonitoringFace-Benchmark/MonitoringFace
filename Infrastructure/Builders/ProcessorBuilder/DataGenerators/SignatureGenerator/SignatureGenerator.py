@@ -1,6 +1,9 @@
+from typing import List
+
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureContract import signature_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
+from Infrastructure.InputOutputFormats import InputOutputFormats
 from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY
 
 # Initial Value taken from the original repository
@@ -39,6 +42,10 @@ class SignatureGenerator(DataGeneratorTemplate):
 
     def check_policy(self, path_inner, signature, formula) -> bool:
         return True
+
+    @staticmethod
+    def output_formats() -> List[InputOutputFormats]:
+        return [InputOutputFormats.CSV]
 
 
 def parse_tp(line):

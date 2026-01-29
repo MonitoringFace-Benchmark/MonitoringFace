@@ -1,8 +1,9 @@
-from typing import AnyStr
+from typing import AnyStr, List
 
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternContract import pattern_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
+from Infrastructure.InputOutputFormats import InputOutputFormats
 from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY
 
 
@@ -40,6 +41,11 @@ class PatternGenerator(DataGeneratorTemplate):
 
     def check_policy(self, path_inner: AnyStr, signature, formula) -> bool:
         return True
+
+    @staticmethod
+    def output_formats() -> List[InputOutputFormats]:
+        return [InputOutputFormats.CSV]
+
 
 def parse_tp(line):
     return int(line.split(",")[1].split("=")[1])

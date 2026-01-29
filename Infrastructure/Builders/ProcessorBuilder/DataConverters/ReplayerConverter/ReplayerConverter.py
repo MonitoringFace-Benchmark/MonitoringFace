@@ -1,8 +1,9 @@
 import subprocess
-from typing import AnyStr
+from typing import AnyStr, List, Tuple
 
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.DataConverterTemplate import DataConverterTemplate
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import Processor, ImageManager
+from Infrastructure.InputOutputFormats import InputOutputFormats
 from Infrastructure.Monitors.MonitorExceptions import ReplayerException
 
 
@@ -28,3 +29,24 @@ class ReplayerConverter(DataConverterTemplate):
                         f.write(line + "\n")
             else:
                 raise ReplayerException("Replayer Failed")
+
+    @staticmethod
+    def conversion_scheme() -> List[Tuple[InputOutputFormats, InputOutputFormats]]:
+        return [
+            (InputOutputFormats.MONPOLY, InputOutputFormats.CSV),
+            (InputOutputFormats.MONPOLY, InputOutputFormats.CSV_LINEAR),
+            (InputOutputFormats.MONPOLY, InputOutputFormats.DEJAVU),
+            (InputOutputFormats.MONPOLY, InputOutputFormats.DEJAVU_ENCODED),
+            (InputOutputFormats.MONPOLY, InputOutputFormats.DEJAVU_LINEAR),
+
+            (InputOutputFormats.CSV, InputOutputFormats.MONPOLY),
+            (InputOutputFormats.CSV, InputOutputFormats.MONPOLY_LINEAR),
+            (InputOutputFormats.CSV, InputOutputFormats.DEJAVU),
+            (InputOutputFormats.CSV, InputOutputFormats.DEJAVU_ENCODED),
+            (InputOutputFormats.CSV, InputOutputFormats.DEJAVU_LINEAR),
+
+            (InputOutputFormats.DEJAVU, InputOutputFormats.MONPOLY),
+            (InputOutputFormats.DEJAVU, InputOutputFormats.MONPOLY_LINEAR),
+            (InputOutputFormats.DEJAVU, InputOutputFormats.CSV),
+            (InputOutputFormats.DEJAVU, InputOutputFormats.CSV_LINEAR),
+        ]

@@ -40,4 +40,6 @@ Returns a tuple containing the seed, the generated data as a string, and the ret
 2. ``check_policy(self, path_inner, signature, formula) -> bool``: 
 Validates that the policy (signature and formula) is compatible with the data generator. 
 Returns ``True`` if the policy is valid for the generator, ``False`` otherwise.
+3. ``output_formats() -> List[InputOutputFormat]``: 
+Returns a list of produced output formats for the data generator.
 

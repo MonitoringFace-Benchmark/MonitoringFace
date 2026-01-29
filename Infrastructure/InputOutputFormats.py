@@ -3,6 +3,7 @@ from enum import Enum
 
 class InputOutputFormats(Enum):
     CSV = "csv"
+    OOO_CSV = "ooo-csv"
     CSV_LINEAR = "csv-linear"
     MONPOLY_LINEAR = "monpoly-linear"
     MONPOLY = "monpoly"

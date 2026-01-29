@@ -13,6 +13,7 @@ from Infrastructure.DataTypes.FileRepresenters.FingerPrintHandler import FingerP
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
 from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Types.custome_type import ExperimentType
 
 from Infrastructure.Monitors.AbstractMonitorTemplate import run_monitor
@@ -30,9 +31,10 @@ class RunToolResult(Enum):
 
 
 class BenchmarkBuilder:
-    def __init__(self, contract, path_to_project, data_setup,
-        gen_mode: ExperimentType, time_guard: TimeGuarded,
-        tools_to_build, repeat_runs, oracle=None, seeds=None, short_cut=True, debug_mode=False
+    def __init__(
+            self, contract, path_manager: PathManager, data_setup,
+            gen_mode: ExperimentType, time_guard: TimeGuarded,
+            tools_to_build, repeat_runs, oracle=None, seeds=None, short_cut=True, debug_mode=False
     ):
         print_headline("(Starting) Init Benchmark")
         self.contract = contract
@@ -41,10 +43,11 @@ class BenchmarkBuilder:
         self.debug_mode = debug_mode
         self.repeat_runs = repeat_runs
 
-        self.path_to_build = path_to_project + "/Infrastructure/build"
-        self.path_to_experiment = path_to_project + "/Infrastructure/experiments"
-        self.path_to_named_experiment = self.path_to_experiment + "/" + self.contract.experiment_name
-        self.path_to_debug = self.path_to_named_experiment + "/debug"
+        self.path_manager = path_manager
+        path_to_project = self.path_manager.get_path("path_to_project")
+        named_experiment_path = path_to_project + "/" + self.contract.experiment_name
+        self.path_manager.add_path("path_to_named_experiment", named_experiment_path)
+        self.path_manager.add_path("path_to_debug", named_experiment_path + "/debug")
 
         self.oracle = None
         self.oracle_name = None
@@ -57,16 +60,16 @@ class BenchmarkBuilder:
         self.time_out = self.time_guard.upper_bound if self.time_guard else None
         self.tools_to_build = tools_to_build
 
-        os.makedirs(self.path_to_experiment, exist_ok=True)
-        os.makedirs(self.path_to_named_experiment, exist_ok=True)
+        os.makedirs(self.path_manager.get_path("path_to_experiment"), exist_ok=True)
+        os.makedirs(self.path_manager.get_path("path_to_named_experiment"), exist_ok=True)
 
         data_setup = data_setup if data_setup else {}
         self.data_setup = data_setup if isinstance(data_setup, dict) else asdict(data_setup)
-        fingerprint_location = self.path_to_named_experiment + "/fingerprint"
+        fingerprint_location = self.path_manager.get_path("path_to_named_experiment") + "/fingerprint"
         new_experiment_fingerprint = data_class_to_finger_print(contract)
         if isinstance(contract, CaseStudyBenchmarkContract):
             self.data_gen = CaseStudyGenerator(contract.case_study_name, path_to_project)
-            self.data_setup["path"] = f"{self.path_to_named_experiment}/{contract.experiment_name}"
+            self.data_setup["path"] = self.path_manager.get_path("path_to_named_experiment") + "/" + contract.experiment_name
             print_footline("(Finished) Init Benchmark")
             if os.path.exists(fingerprint_location):
                 fph = FingerPrintHandler.from_file(fingerprint_location)
@@ -74,9 +77,10 @@ class BenchmarkBuilder:
                 if not new_experiment_fingerprint == old_experiment_fingerprint:
                     self._build()
                 else:
+                    path_named_experiment = self.path_manager.get_path("path_to_named_experiment")
                     self.data_setup["case_study_mapper"] = CaseStudyMapper(
-                        path_to_data=f"{self.path_to_named_experiment}/data",
-                        path_to_instructions=f"{self.path_to_named_experiment}/instructions.txt"
+                        path_to_data=f"{path_named_experiment}/data",
+                        path_to_instructions=f"{path_named_experiment}/instructions.txt"
                     )
             else:
                 self._build()
@@ -110,18 +114,18 @@ class BenchmarkBuilder:
             if self.gen_mode == ExperimentType.Signature:
                 print(" ... Build Signature-based Setup")
                 construct_synthetic_experiment_sig(
-                    self.experiment, self.path_to_named_experiment, self.data_setup, self.data_gen,
+                    self.experiment, self.path_manager.get_path("path_to_named_experiment"), self.data_setup, self.data_gen,
                     self.policy_setup, self.policy_gen, self.oracle, self.time_guard, self.seeds
                 )
             elif self.gen_mode == ExperimentType.Pattern:
                 print(" ... Build Pattern-based Setup")
                 construct_synthetic_experiment_pattern(
-                    self.experiment, self.path_to_named_experiment,
+                    self.experiment, self.path_manager.get_path("path_to_named_experiment"),
                     self.data_setup, self.data_gen, self.oracle, self.time_guard, self.seeds
                 )
             elif self.gen_mode == ExperimentType.CaseStudy:
                 print(" ... Build Case Study Setup")
-                construct_case_study(self.data_gen, self.data_setup, self.path_to_named_experiment, self.oracle, self.time_out)
+                construct_case_study(self.data_gen, self.data_setup, self.path_manager.get_path("path_to_named_experiment"), self.oracle, self.time_out)
             else:
                 raise BenchmarkCreationFailed("Not implemented")
             print_footline("(Finished) building Benchmark")
@@ -148,11 +152,12 @@ class BenchmarkBuilder:
                 return None
 
         seed_dict = dict()
-        for path in path_generator(self.gen_mode, self.experiment, self.path_to_named_experiment):
+        path_to_named_experiment = self.path_manager.get_path("path_to_named_experiment")
+        for path in path_generator(self.gen_mode, self.experiment, path_to_named_experiment):
             gen_seed = _read_file(f"{path}/Seeds/generator.seed")
             policy_seed = _read_file(f"{path}/Seeds/policy.seed")
 
-            clean_path = path.removeprefix(self.path_to_named_experiment)
+            clean_path = path.removeprefix(path_to_named_experiment)
             clean_list = list(filter(None, clean_path.split("/")))
             setting_raw = list(filter(lambda x: x is not None, map(lambda x: _apply_decoders(x), clean_list)))
             setting_key = str(setting_raw)
@@ -165,16 +170,18 @@ class BenchmarkBuilder:
         print("-" * LENGTH)
         result_aggregator = ResultAggregator()
 
-        if os.path.exists(self.path_to_debug):
-            sfh_debug = ScratchFolderHandler(self.path_to_debug)
+        path_to_debug = self.path_manager.get_path("path_to_debug")
+        path_to_named_experiment = self.path_manager.get_path("path_to_named_experiment")
+        if os.path.exists(path_to_debug):
+            sfh_debug = ScratchFolderHandler(path_to_debug)
             sfh_debug.remove_folder()
 
         if self.gen_mode == ExperimentType.CaseStudy:
-            path_to_folder = f"{self.path_to_named_experiment}/data"
+            path_to_folder = f"{path_to_named_experiment}/data"
             sfh = ScratchFolderHandler(path_to_folder)
             # honor repeat_runs for case-study experiments as well
             case_study_mapper = self.data_setup["case_study_mapper"]
-            for (num, (data, formula, sig)) in  case_study_mapper.iterate_settings():
+            for (num, (data, formula, sig)) in case_study_mapper.iterate_settings():
                 setting_id = f"{num} -> Data: {data}, Formula: {formula}, Signature: {sig}"
                 for i in range(0, self.repeat_runs):
                     tmp_setting_id = f"{setting_id}_{i}"
@@ -184,11 +191,13 @@ class BenchmarkBuilder:
                             result_aggregator.add_missing(tool.name, tmp_setting_id)
                             print_footline()
                         elif isinstance(tool, ValidReturnType):
-                            run_tools(result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
+                            run_tools(
+                                result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
                                 oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
                                 data_file=data, signature_file=sig, formula_file=formula,
-                                sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug,
-                                case_study_mapper=case_study_mapper)
+                                sfh=sfh, debug_mode=self.debug_mode, debug_path=path_to_debug,
+                                case_study_mapper=case_study_mapper
+                            )
                         else:
                             raise NotImplemented(f"Not implemented for object {tool}")
                         sfh.clean_up_folder()
@@ -198,11 +207,11 @@ class BenchmarkBuilder:
         signature_file = f"signature.sig"
         formula_file = f"formula.mfotl"
 
-        for path_to_folder in path_generator(self.gen_mode, self.experiment, self.path_to_named_experiment):
+        for path_to_folder in path_generator(self.gen_mode, self.experiment, path_to_named_experiment):
             sfh = ScratchFolderHandler(path_to_folder)
             time_out_dict = set()
             for num_len in self.experiment.num_data_set_sizes:
-                setting_id = str(path_to_folder.removeprefix(self.path_to_named_experiment)) + f"/{num_len}"
+                setting_id = str(path_to_folder.removeprefix(path_to_named_experiment)) + f"/{num_len}"
                 data_file = f"data_{num_len}.csv"
                 for i in range(0, self.repeat_runs):
                     tmp_setting_id = f"{setting_id}_{i}"
@@ -221,7 +230,7 @@ class BenchmarkBuilder:
                                     result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
                                     oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
                                     data_file=data_file, signature_file=signature_file, formula_file=formula_file,
-                                    sfh=sfh, debug_mode=self.debug_mode, debug_path=self.path_to_debug
+                                    sfh=sfh, debug_mode=self.debug_mode, debug_path=path_to_debug
                                 )
                                 if res == RunToolResult.TIMEOUT:
                                     time_out_dict.add(tool.tool.name)
