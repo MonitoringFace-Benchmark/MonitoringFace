@@ -1,0 +1,12 @@
+experiments:
+  - path: MindTheGap/pattern_linear.yaml
+    enabled: false
+    description: "Basic synthetic experiment with Signature data generator"
+
+  - path: MindTheGap/pattern_star.yaml
+    enabled: true
+    description: "Experiment using Patterns data generator"
+
+  - path: MindTheGap/pattern_triangle.yaml
+    enabled: true
+    description: "Nokia case study benchmark"
