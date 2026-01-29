@@ -65,6 +65,9 @@ class MonPolyVeriMonWrapper(AbstractMonitorTemplate):
             else:
                 cmd += ["no"]
 
+        if "nonewlastts" in self.params:
+            cmd += ["-nonewlastts"]
+
         if "no_rw" in self.params:
             cmd += ["-no_rw"]
 
