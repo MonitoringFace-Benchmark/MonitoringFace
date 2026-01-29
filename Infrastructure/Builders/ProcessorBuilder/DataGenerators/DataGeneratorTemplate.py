@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import AnyStr, Dict, Any, Optional, Tuple
+from typing import AnyStr, Dict, Any, Tuple
 
 
 class DataGeneratorTemplate(ABC):
