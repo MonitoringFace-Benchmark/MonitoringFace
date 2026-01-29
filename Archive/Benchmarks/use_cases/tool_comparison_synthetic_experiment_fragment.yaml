@@ -22,7 +22,7 @@ tools:
     branch: master
     release: branch
   - name: EnfGuard
-    branch: main
+    branch: enfguard
     release: branch
 
 # Monitors configuration
@@ -64,7 +64,7 @@ monitors:
       translator: qtl-translator
   - identifier: EnfGuard
     name: EnfGuard
-    branch: main
+    branch: enfguard
     params:
       replayer: gen_data
       monitoring: true
