@@ -1,5 +1,6 @@
 import os.path
 
+from Infrastructure.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import Location
@@ -9,7 +10,7 @@ from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.constants import (IMAGE_POSTFIX, BUILD_ARG_GIT_BRANCH, VOLUMES_KEY, COMMAND_KEY, WORKDIR_KEY,
                                       DOCKERFILE_VALUE, DOCKERFILE_KEY, PROP_FILES_VALUE, PROP_FILES_KEY,
-                                      META_FILE_VALUE, VERSION_KEY, SYMLINK_KEY, Measure, BUILD_ARG_GIT_COMMIT)
+                                      META_FILE_VALUE, VERSION_KEY, SYMLINK_KEY, BUILD_ARG_GIT_COMMIT)
 
 
 def to_file(path, name, content):
@@ -33,10 +34,11 @@ def remote_content_handler(path_to_named_archive, path_to_infra, name):
 
 
 class IndirectToolImageManager(AbstractToolImageManager):
-    def __init__(self, name, linked_name, branch, commit, release, path_to_repo, path_to_archive, path_to_infra, location):
+    def __init__(self, name, linked_name, branch, commit, release, path_to_repo, path_to_archive, path_to_infra, location, cli_args: CLIArgs):
         self.original_name = name
         self.linked_name = linked_name
         self.binary_name = linked_name.lower()
+        self.cli_args = cli_args
         self.branch = branch
         self.commit = commit
         self.args = {BUILD_ARG_GIT_BRANCH: branch, BUILD_ARG_GIT_COMMIT: commit} if commit else {BUILD_ARG_GIT_BRANCH: branch}
@@ -93,19 +95,20 @@ class IndirectToolImageManager(AbstractToolImageManager):
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
 
-        if measure and Measure.is_measure():
+        if measure and self.cli_args.measure:
             inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.binary_name] + parameters
         else:
             inner_contract_[COMMAND_KEY] = [self.binary_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_image(self.image_name, inner_contract_, time_on, time_out, is_tool_image=True)
+        return run_image(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
 
 
 class DirectToolImageManager(AbstractToolImageManager):
-    def __init__(self, name, branch, release, commit, path_to_build, path_to_archive, path_to_infra, location):
+    def __init__(self, name, branch, release, commit, path_to_build, path_to_archive, path_to_infra, location, cli_args: CLIArgs):
         self.name = name
         self.commit = commit
         self.branch = branch
+        self.cli_args = cli_args
         self.args = {BUILD_ARG_GIT_BRANCH: branch, BUILD_ARG_GIT_COMMIT: commit} if commit else {BUILD_ARG_GIT_BRANCH: branch}
         self.image_name = f"{name.lower()}_{commit}{IMAGE_POSTFIX}" if commit else f"{name.lower()}_{branch.lower()}{IMAGE_POSTFIX}"
 
@@ -156,9 +159,9 @@ class DirectToolImageManager(AbstractToolImageManager):
     def run(self, path_to_data, parameters, time_on=None, time_out=None, measure=True):
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
-        if measure and Measure.is_measure():
+        if measure and self.cli_args.measure:
             inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.name.lower()] + parameters
         else:
             inner_contract_[COMMAND_KEY] = [self.name.lower()] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_image(self.image_name, inner_contract_, time_on, time_out, is_tool_image=True)
+        return run_image(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)

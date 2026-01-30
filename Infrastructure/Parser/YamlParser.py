@@ -11,6 +11,7 @@ from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTempla
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
+from Infrastructure.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 from Infrastructure.DataTypes.Contracts.BenchmarkContract import SyntheticBenchmarkContract, CaseStudyBenchmarkContract
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
@@ -88,7 +89,7 @@ class YamlParser:
         else:
             raise YamlParserException(f"Invalid guard_type value: {value}")
     
-    def parse_tool_manager(self) -> ToolManager:
+    def parse_tool_manager(self, cli_args: CLIArgs) -> ToolManager:
         if 'tools' not in self.cfg:
             raise YamlParserException("Missing 'tools' section in YAML configuration")
         
@@ -104,7 +105,7 @@ class YamlParser:
             
             tools_to_build.append((name, branch, commit, self._parse_branch_or_release(release)))
         
-        return ToolManager(tools_to_build=tools_to_build, path_to_project=self.path_to_project)
+        return ToolManager(tools_to_build=tools_to_build, path_to_project=self.path_to_project, cli_args=cli_args)
 
     def parse_seeds(self) -> Optional[Dict[str, Tuple[int, int]]]:
         if 'seeds' not in self.cfg:
@@ -307,8 +308,8 @@ class YamlParser:
             return 1
         return self.cfg.get('repeats')
     
-    def parse_experiment(self) -> Dict[str, Any]:
-        tool_manager = self.parse_tool_manager()
+    def parse_experiment(self, cli_args: CLIArgs) -> Dict[str, Any]:
+        tool_manager = self.parse_tool_manager(cli_args=cli_args)
         benchmark_contract = self.parse_benchmark_contract()
         monitor_manager = self.parse_monitor_manager(tool_manager)
         oracle_manager = self.parse_oracle_manager(monitor_manager)
