@@ -3,6 +3,7 @@ CLI module for MonitoringFace benchmark framework
 Provides command-line interface for running experiments from YAML configuration files
 """
 import argparse
+import shutil
 import sys
 import os
 from datetime import datetime
@@ -12,10 +13,12 @@ from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.Parser.YamlParser import YamlParser, ExperimentSuiteParser, YamlParserException
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
-from Infrastructure.constants import LENGTH, Config, Measure
+from Infrastructure.constants import LENGTH
 
 
 class CLI:
+    """Command-line interface for MonitoringFace"""
+    
     def __init__(self, path_to_module: AnyStr):
         self.parser = self._create_parser()
 
@@ -38,14 +41,20 @@ class CLI:
         self.path_manager.add_path("path_to_results", self.result_base_folder)
 
         os.makedirs(self.result_base_folder, exist_ok=True)
+
         os.makedirs(self.build_folder, exist_ok=True)
         os.makedirs(self.experiment_folder, exist_ok=True)
     
     def _create_timestamped_result_folder(self, experiment_name: str) -> str:
+        """Create a timestamped result folder for the current run."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         result_folder = os.path.join(self.result_base_folder, f"{experiment_name}_{timestamp}")
         os.makedirs(result_folder, exist_ok=True)
         return result_folder
+
+    def _clean_all(self):
+        shutil.rmtree(self.result_base_folder, ignore_errors=True)
+        os.makedirs(self.result_base_folder, exist_ok=True)
 
     @staticmethod
     def _create_parser() -> argparse.ArgumentParser:
@@ -103,8 +112,59 @@ Examples:
             help='Disable the use of usr/bin/time measurement inside containers'
         )
 
+        parser.add_argument(
+            '--clean',
+            action='store_true',
+            help='Only retain the lastest result of an experiment'
+        )
+
+        parser.add_argument(
+            '--clean-all',
+            action='store_true',
+            help='Force the clean-up of the entire results folder'
+        )
+
         return parser
-    
+
+    def run(self, argv: List[str] = None):
+        args = self.parser.parse_args(argv)
+
+        cli_args = CLIArgs(
+            debug=args.debug,
+            verbose=args.verbose,
+            measure=(False if args.no_measure else True),
+            clean=args.clean,
+            clean_all=args.clean_all
+        )
+
+        config_name = args.config.removeprefix(self.benchmark_folder)
+        br = BenchmarkResolver(name=config_name, path_to_infra=self.infra_folder, path_to_archive=self.archive_folder)
+        location = br.resolve()
+        if location == Location.Unavailable:
+            raise ValueError(f"The configuration File {config_name} is unavailable local and remote")
+        elif location == Location.Remote:
+            br.get_remote_config(path_to_archive_benchmark=self.benchmark_folder, name=config_name)
+
+        is_suite = args.suite or self._is_suite_config(f"{self.benchmark_folder}/{config_name}")
+        os.makedirs(self.result_base_folder, exist_ok=True)
+
+        if is_suite:
+            if args.verbose:
+                print("Detected experiment suite configuration")
+            self.run_experiment_suite(
+                suite_name=config_name,
+                cli_args=cli_args,
+                dry_run=args.dry_run
+            )
+        else:
+            if args.verbose:
+                print("Detected single experiment configuration")
+            self.run_single_experiment(
+                config_name=config_name,
+                dry_run=args.dry_run,
+                cli_args=cli_args
+            )
+
     @staticmethod
     def _is_suite_config(config_path: str) -> bool:
         try:
@@ -115,20 +175,21 @@ Examples:
         except Exception():
             return False
     
-    def run_single_experiment(self, config_name: AnyStr, dry_run: bool = False, verbose: bool = False, debug: bool = False, result_folder: str = None) -> Any:
+    def run_single_experiment(self, config_name: AnyStr, cli_args: CLIArgs, dry_run: bool = False, result_folder: str = None, is_suite: bool = False) -> Any:
         yaml_file = f"{self.benchmark_folder}/{config_name}"
 
-        if verbose:
+        if cli_args.verbose:
             print(f"Loading experiment configuration from: {yaml_file}")
         
-        if debug:
+        if cli_args.debug:
             print(f"Debug mode enabled - scratch folder data will be preserved")
 
         try:
+            # Parse configuration
             parser = YamlParser(yaml_path=yaml_file, path_to_build=self.build_folder, path_to_experiments=self.experiment_folder)
-            experiment_config = parser.parse_experiment()
+            experiment_config = parser.parse_experiment(cli_args=cli_args)
             
-            if verbose:
+            if cli_args.verbose:
                 print(f"Experiment name: {experiment_config['benchmark_contract'].experiment_name}")
                 print(f"Experiment type: {experiment_config['experiment_type'].name}")
                 print(f"Tools to build: {', '.join(experiment_config['tools_to_build'])}")
@@ -147,19 +208,28 @@ Examples:
                 oracle=experiment_config['oracle'],
                 seeds=experiment_config['seeds'],
                 repeat_runs=experiment_config['repeat_experiments'],
-                debug_mode=debug
+                cli_args=cli_args
             )
-
+            
+            # Get monitors to run
             monitors = experiment_config['monitor_manager'].get_monitors(
                 experiment_config['tools_to_build']
             )
             
-            if verbose:
+            if cli_args.verbose:
                 print(f"Running experiment with {len(monitors)} monitor(s)...")
             
             # Run benchmark
             results = benchmark.run(monitors)
             experiment_name = os.path.splitext(os.path.basename(yaml_file))[0]
+
+            if not is_suite:
+                if cli_args.clean_all:
+                    self._clean_all()
+                elif cli_args.clean:
+                    for folder in os.listdir(self.result_base_folder):
+                        if folder.startswith(experiment_name):
+                            shutil.rmtree(os.path.join(self.result_base_folder, folder), ignore_errors=True)
 
             if result_folder is None:
                 result_folder = self._create_timestamped_result_folder(experiment_name)
@@ -168,7 +238,7 @@ Examples:
 
             print(f"✓ Experiment completed: {experiment_config['benchmark_contract'].experiment_name}")
             print(f"  Results saved to: {result_folder}")
-            if verbose:
+            if cli_args.verbose:
                 print(f"Results: {results}")
             
             return results
@@ -178,16 +248,16 @@ Examples:
             sys.exit(1)
         except Exception as e:
             print(f"✗ Error running experiment: {e}", file=sys.stderr)
-            if verbose:
+            if cli_args.verbose:
                 import traceback
                 traceback.print_exc()
             sys.exit(1)
     
-    def run_experiment_suite(self, suite_name: str, dry_run: bool = False, verbose: bool = False, debug: bool = False) -> List[Any]:
-        if verbose:
+    def run_experiment_suite(self, suite_name: str, cli_args: CLIArgs, dry_run: bool = False) -> List[Any]:
+        if cli_args.verbose:
             print(f"Loading experiment suite from: {suite_name}")
         
-        if debug:
+        if cli_args.debug:
             print(f"Debug mode enabled - scratch folder data will be preserved")
 
         try:
@@ -197,30 +267,44 @@ Examples:
             print(f"Found {len(experiment_paths)} enabled experiment(s) in suite")
             
             if dry_run:
+                # Validate all experiments
                 for i, exp_path in enumerate(experiment_paths, 1):
-                    if verbose:
+                    if cli_args.verbose:
                         print(f"\nValidating experiment {i}/{len(experiment_paths)}: {exp_path}")
-                    self.run_single_experiment(exp_path, dry_run=True, verbose=verbose, debug=debug)
+                    self.run_single_experiment(exp_path, dry_run=True, cli_args=cli_args)
                 print(f"\n✓ All {len(experiment_paths)} experiment(s) validated successfully")
                 return []
-
+            
+            # Create a single timestamped folder for the entire suite
             suite_name_clean = os.path.splitext(os.path.basename(suite_name))[0]
             suite_result_folder = self._create_timestamped_result_folder(suite_name_clean)
             print(f"Suite results will be saved to: {suite_result_folder}")
 
+            if cli_args.clean_all:
+                self._clean_all()
+            elif cli_args.clean:
+                for folder in os.listdir(self.result_base_folder):
+                    if folder.startswith(suite_name_clean):
+                        shutil.rmtree(os.path.join(self.result_base_folder, folder), ignore_errors=True)
+
+            # Run all experiments
             results = []
             for i, exp_path in enumerate(experiment_paths, 1):
                 print(f"\n{'='*LENGTH}")
                 print(f"Running experiment {i}/{len(experiment_paths)}: {os.path.basename(exp_path)}")
                 print(f"{'='*LENGTH}")
                 
+                # Create a subfolder for each experiment within the suite folder
                 exp_name = os.path.splitext(os.path.basename(exp_path))[0]
                 exp_result_folder = os.path.join(suite_result_folder, exp_name)
                 os.makedirs(exp_result_folder, exist_ok=True)
 
-                result = self.run_single_experiment(exp_path, dry_run=False, verbose=verbose, debug=debug, result_folder=exp_result_folder)
+                result = self.run_single_experiment(
+                    exp_path, cli_args=cli_args, dry_run=False,
+                    is_suite=True, result_folder=exp_result_folder
+                )
                 results.append(result)
-            
+
             print(f"\n{'='*LENGTH}")
             print(f"✓ All {len(experiment_paths)} experiment(s) completed successfully")
             print(f"{'='*LENGTH}")
@@ -232,46 +316,10 @@ Examples:
             sys.exit(1)
         except Exception as e:
             print(f"✗ Error running experiment suite: {e}", file=sys.stderr)
-            if verbose:
+            if cli_args.verbose:
                 import traceback
                 traceback.print_exc()
             sys.exit(1)
-    
-    def run(self, argv: List[str] = None):
-        args = self.parser.parse_args(argv)
-
-        Config.set_verbose(args.verbose)
-        if args.no_measure:
-            Measure.set_measure(False)
-
-        config_name = args.config.removeprefix(self.benchmark_folder)
-        br = BenchmarkResolver(name=config_name, path_to_infra=self.infra_folder, path_to_archive=self.archive_folder)
-        location = br.resolve()
-        if location == Location.Unavailable:
-            raise ValueError(f"The configuration File {config_name} is unavailable local and remote")
-        elif location == Location.Remote:
-            br.get_remote_config(path_to_archive_benchmark=self.benchmark_folder, name=config_name)
-
-        is_suite = args.suite or self._is_suite_config(f"{self.benchmark_folder}/{config_name}")
-        
-        if is_suite:
-            if args.verbose:
-                print("Detected experiment suite configuration")
-            self.run_experiment_suite(
-                suite_name=config_name,
-                dry_run=args.dry_run,
-                verbose=args.verbose,
-                debug=args.debug
-            )
-        else:
-            if args.verbose:
-                print("Detected single experiment configuration")
-            self.run_single_experiment(
-                config_name=config_name,
-                dry_run=args.dry_run,
-                verbose=args.verbose,
-                debug=args.debug
-            )
 
 
 def main(argv: List[str] = None, path_to_module: AnyStr = None):

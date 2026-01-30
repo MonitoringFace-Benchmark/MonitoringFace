@@ -2,12 +2,13 @@ import os
 
 from Infrastructure.Builders.BuilderUtilities import ImageBuildException
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import DirectToolImageManager, remote_content_handler, IndirectToolImageManager
+from Infrastructure.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader.Resolver import ToolResolver, Location
 from Infrastructure.printing import print_headline, print_footline
 
 
 class ToolManager:
-    def __init__(self, tools_to_build, path_to_project):
+    def __init__(self, tools_to_build, path_to_project, cli_args: CLIArgs):
         print_headline("(Starting) Building ToolManager")
         path_to_build = path_to_project + f"/Infrastructure/build"
         path_to_infra = path_to_project + "/Infrastructure"
@@ -45,12 +46,13 @@ class ToolManager:
                         raise ImageBuildException(f"Linked {linked} does not exists either Local or Remote")
                     elif new_location == Location.Remote:  # local need no further treatment
                         remote_content_handler(new_path_to_named_archive, path_to_infra, new_tl)
-                    self.images[(tool, branch, commit)] = IndirectToolImageManager(tool, linked, branch, commit, release,
-                                                                           path_to_build, path_to_archive,
-                                                                           path_to_infra, new_location)
+                    self.images[(tool, branch, commit)] = IndirectToolImageManager(
+                        tool, linked, branch, commit, release, path_to_build, path_to_archive,
+                        path_to_infra, new_location, cli_args)
                 else:
-                    self.images[(tool, branch, commit)] = DirectToolImageManager(tool, branch, release, commit, path_to_build,
-                                                                         path_to_archive, path_to_infra, location)
+                    self.images[(tool, branch, commit)] = DirectToolImageManager(
+                        tool, branch, release, commit, path_to_build,
+                        path_to_archive, path_to_infra, location, cli_args)
                 print(f"    -> (Success)")
             except ImageBuildException:
                 print(f"-> (Failure)")

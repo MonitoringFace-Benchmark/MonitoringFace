@@ -5,7 +5,7 @@ import docker
 from docker.errors import APIError, BuildError
 
 from Infrastructure.Monitors.MonitorExceptions import TimedOut
-from Infrastructure.constants import COMMAND_KEY, WORKDIR_KEY, VOLUMES_KEY, ENTRYPOINT_KEY, Config, LINE_BUFFER
+from Infrastructure.constants import COMMAND_KEY, WORKDIR_KEY, VOLUMES_KEY, ENTRYPOINT_KEY, LINE_BUFFER
 
 
 def to_prop_file(path, name, content: dict):
@@ -77,12 +77,12 @@ def image_building(image_name, build_dir, args=None):
         return False
 
 
-def run_image(image_name, generic_contract: Dict[AnyStr, Any], time_on=None, time_out=None, is_tool_image=False):
+def run_image(image_name, generic_contract: Dict[AnyStr, Any], verbose=False, time_on=None, time_out=None, is_tool_image=False):
     client = docker.from_env()
 
     command = generic_contract.get(COMMAND_KEY)
     command = list(filter(None, command)) if command is not None else None
-    if Config.is_verbose() and is_tool_image:
+    if verbose and is_tool_image:
         print(" ".join(command))
     volumes = generic_contract.get(VOLUMES_KEY)
     workdir = generic_contract.get(WORKDIR_KEY)

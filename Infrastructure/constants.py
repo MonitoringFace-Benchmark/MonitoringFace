@@ -44,27 +44,3 @@ LENGTH = 80
 HEADER_ROW = "=" * LENGTH
 
 LINE_BUFFER = 100
-
-
-class Config:
-    verbose = False
-
-    @classmethod
-    def set_verbose(cls, value: bool):
-        cls.verbose = value
-
-    @classmethod
-    def is_verbose(cls) -> bool:
-        return cls.verbose
-
-
-class Measure:
-    measure = True
-
-    @classmethod
-    def set_measure(cls, value: bool):
-        cls.measure = value
-
-    @classmethod
-    def is_measure(cls) -> bool:
-        return cls.measure
