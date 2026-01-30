@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 from typing import List, Any, AnyStr
 
+from Infrastructure.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.Parser.YamlParser import YamlParser, ExperimentSuiteParser, YamlParserException
