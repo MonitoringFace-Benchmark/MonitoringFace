@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 from typing import List, Dict, Tuple
 
@@ -13,21 +14,40 @@ class TraceConversionError(Exception):
 
 
 class AutoTraceConverter:
-    def __init__(self, path_manager: PathManager, trace_format: InputOutputFormats, target_format: InputOutputFormats):
-        self.trace_format = trace_format
+    def __init__(self, path_manager: PathManager, source_format: InputOutputFormats, target_format: InputOutputFormats):
+        self.source_format = source_format
         self.target_format = target_format
         self.path_manager = path_manager
-        self.converter = self.convert()
 
-    def convert(self) -> List[DataConverterTemplate]:
+    def _conversion_chain(self) -> List[DataConverterTemplate]:
         auto_conversion_mapping = AutoConversionMapping(self.path_manager)
         converter_chain = []
-        for converter_name, converter_class in auto_conversion_mapping.resolve_format(self.trace_format, self.target_format):
+        for converter_name, converter_class, source, target in auto_conversion_mapping.resolve_format(self.source_format, self.target_format):
             try:
-                converter_chain.append(converter_class(converter_name, self.path_manager.get_path("path_to_project")))
+                converter_chain.append((converter_class(converter_name, self.path_manager.get_path("path_to_project")), source, target))
             except Exception as e:
                 raise TraceConversionError(f"AutoTraceConverter: Failed to initialize converter: {e}")
         return converter_chain
+
+    def convert(
+            self, trace_input_path: str, input_file: str,
+            intermediate_working_space: str,
+            trace_output_path: str, output_file: str, params
+    ):
+        intermediate_infile = f"{input_file}.in"
+        intermediate_outfile = f"{output_file}.out"
+        intermediate_in = f"{intermediate_working_space}/{intermediate_infile}"
+        intermediate_out = f"{intermediate_working_space}/{intermediate_outfile}"
+
+        shutil.copy(f"{trace_input_path}/{input_file}", intermediate_in)
+        for converter, source, target in self._conversion_chain():
+            converter.convert(
+                intermediate_working_space, intermediate_infile,
+                intermediate_working_space, intermediate_outfile,
+                source, target, params
+            )
+            shutil.copy(intermediate_out, intermediate_in)
+        shutil.copy(intermediate_in, f"{trace_output_path}/{output_file}")
 
 
 class AutoConversionMapping:
@@ -50,9 +70,9 @@ class AutoConversionMapping:
     def resolve_format(self, from_format: InputOutputFormats, to_format: InputOutputFormats) -> List[Tuple[str, DataConverterTemplate]]:
         reachability_graph = AutoConversionReachabilityGraph(self.mappings)
         pipeline = []
-        for converter_name in reachability_graph.find_path(from_format, to_format):
+        for (converter_name, (source, target)) in reachability_graph.find_path(from_format, to_format):
             try:
-                pipeline.append((converter_name, _retrieve_module(converter_name)))
+                pipeline.append((converter_name, _retrieve_module(converter_name), source, target))
             except Exception as e:
                 raise TraceConversionError(f"AutoConversionMapping: Failed to load converter: {e}")
         return pipeline
@@ -89,6 +109,8 @@ class AutoConversionReachabilityGraph:
                 self.graph[source].add_edges(target, converters)
             else:
                 self.graph[source] = Vertex(source, (target, converters))
+            if target not in self.graph:
+                self.graph[target] = Vertex(target, (source, []))
 
     def find_path(self, source: InputOutputFormats, target: InputOutputFormats) -> List[str]:
         if source not in self.graph:
@@ -97,17 +119,18 @@ class AutoConversionReachabilityGraph:
             raise TraceConversionError(f"AutoConversionReachabilityGraph: Target Format {target} not in graph")
 
         def _dfs(graph, vertex, _target, _visited, _path) -> List[str]:
-            _visited.add(vertex.value)
+            src = vertex.value
+            _visited.add(src)
             for (neighbor_value, tool) in vertex.edges:
                 if neighbor_value == _target:
-                    _path.insert(0, tool)
+                    _path.insert(0, (tool, (src, target)))
                     return _path
                 if neighbor_value not in _visited:
                     if neighbor_value not in self.graph:
                         continue
                     result = _dfs(graph, graph.get(neighbor_value), _target, _visited, _path)
                     if result:
-                        _path.insert(0, tool)
+                        _path.insert(0, (tool, (src, neighbor_value)))
                         return _path
             raise TraceConversionError(f"AutoConversionReachabilityGraph: No path found from {source} to {target}")
         return _dfs(self.graph, self.graph[source], target, set(), [])
@@ -133,6 +156,11 @@ if __name__ == "__main__":
     pm = PathManager()
     pm.add_path("path_to_project", "/Users/krq770/PycharmProjects/MonitoringFace_curr")
     pm.add_path("path_to_infra", "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure")
-    atm = AutoTraceConverter(pm, InputOutputFormats.CSV, InputOutputFormats.MONPOLY)
-    atm.convert_setting()
+    mapping = {
+        (InputOutputFormats.OOO_CSV, InputOutputFormats.CSV): ["OrderRestorerConverter"],
+        (InputOutputFormats.CSV, InputOutputFormats.MONPOLY): ["MonpolyConverter"],
+    }
+    ag = AutoConversionReachabilityGraph(mapping)
+    x = ag.find_path(InputOutputFormats.OOO_CSV, InputOutputFormats.MONPOLY)
+    print(x)
 
