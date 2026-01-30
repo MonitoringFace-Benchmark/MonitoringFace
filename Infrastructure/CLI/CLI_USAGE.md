@@ -9,8 +9,9 @@ MonitoringFace provides a command-line interface (CLI) that allows users to conf
 ## Command-Line Options
 
 ```
-usage: MonitoringFace [-h] [--build-dir BUILD_DIR] [--exp-dir EXP_DIR] 
-                      [--dry-run] [--verbose] [--suite] [--debug] config
+usage: MonitoringFace [-h] [--dry-run] [--verbose] [--suite] [--debug]
+                      [--no-measure] [--cleanup | --cleanup-all] [--keep N]
+                      [config]
 
 positional arguments:
   config                Path to YAML configuration file (single experiment or suite)
@@ -21,6 +22,66 @@ optional arguments:
   --dry-run            Validate configuration without running experiments
   --verbose, -v        Enable verbose output
   --suite              Force treat config as experiment suite (auto-detected by default)
+  --no-measure         Disable the use of usr/bin/time measurement inside containers
+  --cleanup            Clean up old results, keeping only the latest for each experiment
+  --cleanup-all        Remove all results and experiment data (use with caution)
+  --keep N             Number of most recent results to keep per experiment (default: 1, only with --cleanup)
+```
+
+## Cleanup Commands
+
+As experiments run, results and data accumulate in `Infrastructure/results/` and `Infrastructure/experiments/`. The cleanup commands help manage this accumulated data:
+
+### Basic Cleanup
+
+Keep only the most recent result for each experiment:
+```bash
+python -m Infrastructure.main --cleanup
+```
+
+This will:
+- Scan all result folders in `Infrastructure/results/`
+- Group them by experiment name
+- Keep only the most recent timestamped folder for each experiment
+- Delete older result folders
+
+### Dry Run
+
+Preview what would be deleted without actually deleting:
+```bash
+python -m Infrastructure.main --cleanup --dry-run
+```
+
+### Keep Multiple Results
+
+Keep the N most recent results for each experiment:
+```bash
+python -m Infrastructure.main --cleanup --keep 3
+```
+
+This keeps the 3 most recent result folders for each experiment.
+
+### Verbose Output
+
+See detailed information about what's being kept and deleted:
+```bash
+python -m Infrastructure.main --cleanup --verbose
+```
+
+### Cleanup All
+
+Remove all results and experiment data:
+```bash
+python -m Infrastructure.main --cleanup-all
+```
+
+**Warning:** This requires confirmation and will delete:
+- All folders in `Infrastructure/results/`
+- All folders in `Infrastructure/experiments/`
+
+You can combine with `--dry-run` to preview:
+```bash
+python -m Infrastructure.main --cleanup-all --dry-run
 ```
 
 ## YAML Configuration Format

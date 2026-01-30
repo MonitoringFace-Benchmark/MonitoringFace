@@ -156,6 +156,22 @@ python -m Infrastructure.main path/my_experiment.yaml --debug
 python -m Infrastructure.main path/my_experiment.yaml --verbose --debug
 ```
 
+### 4. Cleanup Results
+Over time, experiment results accumulate. Use cleanup commands to manage storage:
+```bash
+# Clean up old results, keeping only the latest for each experiment
+python -m Infrastructure.main --cleanup
+
+# Preview what would be deleted without actually deleting
+python -m Infrastructure.main --cleanup --dry-run
+
+# Keep the 3 most recent results for each experiment
+python -m Infrastructure.main --cleanup --keep 3
+
+# Remove all results and experiment data (requires confirmation)
+python -m Infrastructure.main --cleanup-all
+```
+
 ## Configuration Options
 
 ### Benchmark Types

@@ -12,6 +12,7 @@ from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
 from Infrastructure.Parser.YamlParser import YamlParser, ExperimentSuiteParser, YamlParserException
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
 from Infrastructure.constants import LENGTH, Config, Measure
+from Infrastructure.CLI.cleanup import CleanupManager
 
 
 class CLI:
@@ -58,12 +59,25 @@ Examples:
   
   # Dry run to validate configuration without execution
   python -m Infrastructure.main experiments/my_experiment.yaml --dry-run
+  
+  # Cleanup old results (keeps latest result for each experiment)
+  python -m Infrastructure.main --cleanup
+  
+  # Cleanup with dry-run to see what would be deleted
+  python -m Infrastructure.main --cleanup --dry-run
+  
+  # Keep 3 most recent results per experiment
+  python -m Infrastructure.main --cleanup --keep 3
+  
+  # Remove all results and experiment data (requires confirmation)
+  python -m Infrastructure.main --cleanup-all
             """
         )
         
         parser.add_argument(
             'config',
             type=str,
+            nargs='?',
             help='Name of a YAML configuration file (single experiment or experiment suite)'
         )
         
@@ -96,6 +110,27 @@ Examples:
             '--no-measure',
             action='store_true',
             help='Disable the use of usr/bin/time measurement inside containers'
+        )
+
+        # Cleanup commands
+        cleanup_group = parser.add_mutually_exclusive_group()
+        cleanup_group.add_argument(
+            '--cleanup',
+            action='store_true',
+            help='Clean up old results, keeping only the latest for each experiment'
+        )
+        cleanup_group.add_argument(
+            '--cleanup-all',
+            action='store_true',
+            help='Remove all results and experiment data (use with caution)'
+        )
+        
+        parser.add_argument(
+            '--keep',
+            type=int,
+            default=1,
+            metavar='N',
+            help='Number of most recent results to keep per experiment (default: 1, only with --cleanup)'
         )
 
         return parser
@@ -251,6 +286,54 @@ Examples:
                 traceback.print_exc()
             sys.exit(1)
     
+    def run_cleanup(self, cleanup_all: bool = False, dry_run: bool = False, verbose: bool = False, keep_count: int = 1):
+        """
+        Run cleanup operations on results and experiment data
+        
+        Args:
+            cleanup_all: If True, remove all results and experiment data
+            dry_run: If True, only show what would be deleted
+            verbose: Enable verbose output
+            keep_count: Number of most recent results to keep per experiment
+        """
+        cleanup_manager = CleanupManager(
+            result_base_folder=self.result_base_folder,
+            experiment_folder=self.experiment_folder,
+            verbose=verbose
+        )
+        
+        if cleanup_all:
+            print("=" * 60)
+            print("CLEANUP ALL - Removing all results and experiment data")
+            print("=" * 60)
+            
+            if not dry_run:
+                response = input("\nWARNING: This will delete ALL results and experiment data. Continue? (yes/no): ")
+                if response.lower() != 'yes':
+                    print("Cleanup cancelled.")
+                    return
+            
+            # Clean up all results
+            result_stats = cleanup_manager.cleanup_all_results(dry_run=dry_run)
+            
+            # Clean up experiment data
+            exp_stats = cleanup_manager.cleanup_experiment_data(dry_run=dry_run)
+            
+            # Combine statistics
+            total_stats = {
+                'folders_deleted': result_stats.get('folders_deleted', 0) + exp_stats.get('folders_deleted', 0),
+                'total_size_freed': result_stats.get('total_size_freed', 0) + exp_stats.get('total_size_freed', 0)
+            }
+            
+            cleanup_manager.print_summary(total_stats, "All Results and Experiment Data" + (" [DRY-RUN]" if dry_run else ""))
+        else:
+            print("=" * 60)
+            print(f"CLEANUP - Keeping {keep_count} most recent result(s) per experiment")
+            print("=" * 60)
+            
+            stats = cleanup_manager.cleanup_old_results(dry_run=dry_run, keep_count=keep_count)
+            cleanup_manager.print_summary(stats, f"Old Results (keeping {keep_count})" + (" [DRY-RUN]" if dry_run else ""))
+    
     def run(self, argv: List[str] = None):
         """
         Main entry point for CLI
@@ -259,6 +342,20 @@ Examples:
             argv: Command-line arguments (defaults to sys.argv)
         """
         args = self.parser.parse_args(argv)
+
+        # Handle cleanup commands
+        if args.cleanup or args.cleanup_all:
+            self.run_cleanup(
+                cleanup_all=args.cleanup_all,
+                dry_run=args.dry_run,
+                verbose=args.verbose,
+                keep_count=args.keep
+            )
+            return
+
+        # Validate that config is provided for non-cleanup commands
+        if args.config is None:
+            self.parser.error("the following arguments are required: config (unless using --cleanup or --cleanup-all)")
 
         # Set global verbose flag
         Config.set_verbose(args.verbose)

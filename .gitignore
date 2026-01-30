@@ -1,3 +1,6 @@
 .DS_Store
 .env
 __pycache__
+Infrastructure/results/
+Infrastructure/experiments/
+Infrastructure/build/
