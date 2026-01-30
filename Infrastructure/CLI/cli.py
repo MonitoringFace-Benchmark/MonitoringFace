@@ -130,7 +130,7 @@ Examples:
             type=int,
             default=1,
             metavar='N',
-            help='Number of most recent results to keep per experiment (default: 1, only with --cleanup)'
+            help='Number of most recent results to keep per experiment (default: 1, minimum: 1, only with --cleanup)'
         )
 
         return parser
@@ -345,6 +345,14 @@ Examples:
 
         # Handle cleanup commands
         if args.cleanup or args.cleanup_all:
+            # Validate --keep argument
+            if args.keep < 1:
+                self.parser.error("--keep must be at least 1")
+            
+            # Warn if --keep is used with --cleanup-all
+            if args.cleanup_all and args.keep != 1:
+                print("Warning: --keep argument is ignored when using --cleanup-all")
+            
             self.run_cleanup(
                 cleanup_all=args.cleanup_all,
                 dry_run=args.dry_run,

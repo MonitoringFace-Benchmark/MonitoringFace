@@ -1,6 +1,6 @@
 """
 Cleanup module for MonitoringFace benchmark framework
-Provides functionality to clean up accumulated results and experimental data
+Provides functionality to clean up accumulated results and experiment data
 """
 import os
 import shutil
@@ -44,9 +44,11 @@ class CleanupManager:
                 timestamp = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S")
                 return experiment_name, timestamp
             except ValueError:
-                # If parsing fails, treat entire name as experiment name
-                return folder_name, datetime.min
-        return folder_name, datetime.min
+                # If parsing fails, use current time as fallback to avoid grouping issues
+                if self.verbose:
+                    print(f"Warning: Could not parse timestamp from folder name: {folder_name}")
+                return folder_name, datetime.now()
+        return folder_name, datetime.now()
     
     def get_result_folders_by_experiment(self) -> Dict[str, List[Tuple[str, datetime]]]:
         """
@@ -86,9 +88,10 @@ class CleanupManager:
         experiments = self.get_result_folders_by_experiment()
         stats = {
             'experiments_found': len(experiments),
-            'folders_to_delete': 0,
+            'folders_deleted': 0,
             'folders_kept': 0,
-            'total_size_freed': 0
+            'total_size_freed': 0,
+            'errors': 0
         }
         
         if not experiments:
@@ -110,7 +113,7 @@ class CleanupManager:
             folders_to_delete = folders[keep_count:]
             
             stats['folders_kept'] += len(folders_to_keep)
-            stats['folders_to_delete'] += len(folders_to_delete)
+            stats['folders_deleted'] += len(folders_to_delete)
             
             if self.verbose:
                 print(f"    Keeping {keep_count} most recent:")
@@ -128,8 +131,14 @@ class CleanupManager:
                 if dry_run:
                     print(f"      [DRY-RUN] Would delete: {os.path.basename(folder_path)} ({timestamp.strftime('%Y-%m-%d %H:%M:%S')}, {size_mb:.2f} MB)")
                 else:
-                    print(f"      ✗ Deleting: {os.path.basename(folder_path)} ({timestamp.strftime('%Y-%m-%d %H:%M:%S')}, {size_mb:.2f} MB)")
-                    shutil.rmtree(folder_path)
+                    try:
+                        print(f"      ✗ Deleting: {os.path.basename(folder_path)} ({timestamp.strftime('%Y-%m-%d %H:%M:%S')}, {size_mb:.2f} MB)")
+                        shutil.rmtree(folder_path)
+                    except Exception as e:
+                        print(f"      ⚠ Error deleting {os.path.basename(folder_path)}: {e}")
+                        stats['errors'] += 1
+                        stats['folders_deleted'] -= 1
+                        stats['total_size_freed'] -= folder_size
         
         return stats
     
@@ -145,7 +154,8 @@ class CleanupManager:
         """
         stats = {
             'folders_deleted': 0,
-            'total_size_freed': 0
+            'total_size_freed': 0,
+            'errors': 0
         }
         
         if not os.path.exists(self.result_base_folder):
@@ -173,8 +183,14 @@ class CleanupManager:
             if dry_run:
                 print(f"  [DRY-RUN] Would delete: {os.path.basename(folder_path)} ({size_mb:.2f} MB)")
             else:
-                print(f"  ✗ Deleting: {os.path.basename(folder_path)} ({size_mb:.2f} MB)")
-                shutil.rmtree(folder_path)
+                try:
+                    print(f"  ✗ Deleting: {os.path.basename(folder_path)} ({size_mb:.2f} MB)")
+                    shutil.rmtree(folder_path)
+                except Exception as e:
+                    print(f"  ⚠ Error deleting {os.path.basename(folder_path)}: {e}")
+                    stats['errors'] += 1
+                    stats['folders_deleted'] -= 1
+                    stats['total_size_freed'] -= folder_size
         
         return stats
     
@@ -190,7 +206,8 @@ class CleanupManager:
         """
         stats = {
             'folders_deleted': 0,
-            'total_size_freed': 0
+            'total_size_freed': 0,
+            'errors': 0
         }
         
         if not os.path.exists(self.experiment_folder):
@@ -218,8 +235,14 @@ class CleanupManager:
             if dry_run:
                 print(f"  [DRY-RUN] Would delete: {os.path.basename(folder_path)} ({size_mb:.2f} MB)")
             else:
-                print(f"  ✗ Deleting: {os.path.basename(folder_path)} ({size_mb:.2f} MB)")
-                shutil.rmtree(folder_path)
+                try:
+                    print(f"  ✗ Deleting: {os.path.basename(folder_path)} ({size_mb:.2f} MB)")
+                    shutil.rmtree(folder_path)
+                except Exception as e:
+                    print(f"  ⚠ Error deleting {os.path.basename(folder_path)}: {e}")
+                    stats['errors'] += 1
+                    stats['folders_deleted'] -= 1
+                    stats['total_size_freed'] -= folder_size
         
         return stats
     
@@ -266,5 +289,8 @@ class CleanupManager:
                     print(f"  {key.replace('_', ' ').title()}: {size_mb:.2f} MB")
             else:
                 print(f"  {key.replace('_', ' ').title()}: {value}")
+        
+        if stats.get('errors', 0) > 0:
+            print(f"\n  ⚠ Warning: {stats['errors']} folder(s) could not be deleted")
         
         print(f"{'='*60}\n")
