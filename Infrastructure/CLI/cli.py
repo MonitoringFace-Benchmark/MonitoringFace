@@ -3,6 +3,7 @@ CLI module for MonitoringFace benchmark framework
 Provides command-line interface for running experiments from YAML configuration files
 """
 import argparse
+import shutil
 import sys
 import os
 from datetime import datetime
@@ -41,6 +42,10 @@ class CLI:
         result_folder = os.path.join(self.result_base_folder, f"{experiment_name}_{timestamp}")
         os.makedirs(result_folder, exist_ok=True)
         return result_folder
+
+    def _clean_all(self):
+        shutil.rmtree(self.result_base_folder, ignore_errors=True)
+        os.makedirs(self.result_base_folder, exist_ok=True)
 
     @staticmethod
     def _create_parser() -> argparse.ArgumentParser:
@@ -133,6 +138,7 @@ Examples:
             br.get_remote_config(path_to_archive_benchmark=self.benchmark_folder, name=config_name)
 
         is_suite = args.suite or self._is_suite_config(f"{self.benchmark_folder}/{config_name}")
+        os.makedirs(self.result_base_folder, exist_ok=True)
 
         if is_suite:
             if args.verbose:
@@ -161,7 +167,7 @@ Examples:
         except Exception():
             return False
     
-    def run_single_experiment(self, config_name: AnyStr, cli_args: CLIArgs, dry_run: bool = False, result_folder: str = None) -> Any:
+    def run_single_experiment(self, config_name: AnyStr, cli_args: CLIArgs, dry_run: bool = False, result_folder: str = None, is_suite: bool = False) -> Any:
         yaml_file = f"{self.benchmark_folder}/{config_name}"
 
         if cli_args.verbose:
@@ -209,7 +215,14 @@ Examples:
             results = benchmark.run(monitors)
             experiment_name = os.path.splitext(os.path.basename(yaml_file))[0]
 
-            # Use provided result_folder or create a new timestamped one
+            if not is_suite:
+                if cli_args.clean_all:
+                    self._clean_all()
+                elif cli_args.clean:
+                    for folder in os.listdir(self.result_base_folder):
+                        if folder.startswith(experiment_name):
+                            shutil.rmtree(os.path.join(self.result_base_folder, folder), ignore_errors=True)
+
             if result_folder is None:
                 result_folder = self._create_timestamped_result_folder(experiment_name)
 
@@ -259,6 +272,13 @@ Examples:
             suite_result_folder = self._create_timestamped_result_folder(suite_name_clean)
             print(f"Suite results will be saved to: {suite_result_folder}")
 
+            if cli_args.clean_all:
+                self._clean_all()
+            elif cli_args.clean:
+                for folder in os.listdir(self.result_base_folder):
+                    if folder.startswith(suite_name_clean):
+                        shutil.rmtree(os.path.join(self.result_base_folder, folder), ignore_errors=True)
+
             # Run all experiments
             results = []
             for i, exp_path in enumerate(experiment_paths, 1):
@@ -271,9 +291,12 @@ Examples:
                 exp_result_folder = os.path.join(suite_result_folder, exp_name)
                 os.makedirs(exp_result_folder, exist_ok=True)
 
-                result = self.run_single_experiment(exp_path, cli_args=cli_args, dry_run=False, result_folder=exp_result_folder)
+                result = self.run_single_experiment(
+                    exp_path, cli_args=cli_args, dry_run=False,
+                    is_suite=True, result_folder=exp_result_folder
+                )
                 results.append(result)
-            
+
             print(f"\n{'='*LENGTH}")
             print(f"✓ All {len(experiment_paths)} experiment(s) completed successfully")
             print(f"{'='*LENGTH}")

@@ -266,7 +266,7 @@ Solution: Check that paths in suite files are correct (relative or absolute)
 Enable verbose output to see detailed execution information:
 
 ```bash
-python -m Infrastructure.main my_experiment.yaml --verbose
+python -m Infrastructure.main my_experiment.yaml --debug
 ```
 
 ### Validate Before Running
