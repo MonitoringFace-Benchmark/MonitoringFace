@@ -88,7 +88,7 @@ def ooo_events_mode(events: List, watermarks: List, seed: int) -> List:
     return interleave_with_watermarks(events, random_subset(watermarks, seed))
 
 
-def oootps_mode(events: List, watermarks: List, seed: int) -> List:
+def ooo_tps_mode(events: List, watermarks: List, seed: int) -> List:
     groups = group_by_tp(events)
     random.Random(seed).shuffle(groups)
     events = [event for group in groups for event in group]
@@ -130,36 +130,48 @@ class OutOfOrderConverter(DataConverterTemplate):
     def __init__(self, name, path_to_project):
         pass
 
+    def auto_convert(self, path_to_folder: str, input_file: str, path_to_output_folder: str, output_file: str,
+                     source: InputOutputFormats, target: InputOutputFormats, cmd_params: List[str], general_params: dict):
+        ooo_convert_inner(input_file=f"{path_to_folder}/{input_file}", output_file=f"{path_to_output_folder}/{output_file}", params=general_params)
+
     def convert(self, path_to_folder: AnyStr, data_file: AnyStr, tool: AnyStr, name: AnyStr, dest: AnyStr, params):
-        mode = str_to_mode(params["mode"])
-        seed = params.get("seed", DEFAULT_SEED)
-        max_distance = params.get("max_distance", MAX_DISTANCE)
-        percentage_delayed = params.get("percentage_delayed", PERCENTAGE_DELAYED)
-
-        with open(f"{path_to_folder}/{data_file}", "r") as f:
-            lines = [line.rstrip('\n') for line in f.readlines()]
-
-        events, watermarks = [], []
-        for line in lines:
-            if line.startswith(">W"):
-                watermarks.append(line)
-            else:
-                events.append(line)
-
-        if mode == Modes.Reverse:
-            result = reversed(events)
-        elif mode == Modes.Delayed:
-            result = delayed_mode(events, watermarks, seed, max_distance, percentage_delayed)
-        elif mode == Modes.OutOfOrderTimePoints:
-            result = oootps_mode(events, watermarks, seed)
-        elif mode == Modes.OutOfOrderEvents:
-            result = ooo_events_mode(events, watermarks, seed)
-        else:
-            result = lines
-
-        with open(f"{dest}/{name}.{tool}", "w") as f:
-            f.write("\n".join(result))
+        ooo_convert_inner(input_file=f"{path_to_folder}/{data_file}", output_file=f"{dest}/{name}.{tool}", params=params)
 
     @staticmethod
     def conversion_scheme() -> List[Tuple[InputOutputFormats, InputOutputFormats]]:
         return [(InputOutputFormats.CSV, InputOutputFormats.OOO_CSV)]
+
+
+def ooo_convert_inner(input_file, output_file, params):
+    mode, seed, max_distance, percentage_delayed = retrieve_settings(params)
+    with open(input_file, "r") as f:
+        lines = [line.rstrip('\n') for line in f.readlines()]
+
+    events, watermarks = [], []
+    for line in lines:
+        if line.startswith(">W"):
+            watermarks.append(line)
+        else:
+            events.append(line)
+
+    if mode == Modes.Reverse:
+        result = reversed(events)
+    elif mode == Modes.Delayed:
+        result = delayed_mode(events, watermarks, seed, max_distance, percentage_delayed)
+    elif mode == Modes.OutOfOrderTimePoints:
+        result = ooo_tps_mode(events, watermarks, seed)
+    elif mode == Modes.OutOfOrderEvents:
+        result = ooo_events_mode(events, watermarks, seed)
+    else:
+        result = lines
+
+    with open(output_file, "w") as f:
+        f.write("\n".join(result))
+
+
+def retrieve_settings(params) -> Tuple[str, int, int, float]:
+    mode = params.get("mode", "delayed")
+    seed = params.get("seed", DEFAULT_SEED)
+    max_distance = params.get("max_distance", MAX_DISTANCE)
+    percentage_delayed = params.get("percentage_delayed", PERCENTAGE_DELAYED)
+    return mode, seed, max_distance, percentage_delayed

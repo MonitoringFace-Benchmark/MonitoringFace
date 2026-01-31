@@ -34,20 +34,29 @@ class AutoTraceConverter:
             intermediate_working_space: str,
             trace_output_path: str, output_file: str, params
     ):
+        input_path_file = f"{trace_input_path}/{input_file}"
+        output_path_file = f"{trace_output_path}/{output_file}"
+        if self.source_format == self.target_format:
+            shutil.copy(input_path_file, output_path_file)
+            return
+
         intermediate_infile = f"{input_file}.in"
         intermediate_outfile = f"{output_file}.out"
         intermediate_in = f"{intermediate_working_space}/{intermediate_infile}"
         intermediate_out = f"{intermediate_working_space}/{intermediate_outfile}"
 
-        shutil.copy(f"{trace_input_path}/{input_file}", intermediate_in)
+        shutil.copy(input_path_file, intermediate_in)
         for converter, source, target in self._conversion_chain():
-            converter.convert(
-                intermediate_working_space, intermediate_infile,
-                intermediate_working_space, intermediate_outfile,
-                source, target, params
-            )
-            shutil.copy(intermediate_out, intermediate_in)
-        shutil.copy(intermediate_in, f"{trace_output_path}/{output_file}")
+            try:
+                converter.auto_convert(
+                    intermediate_working_space, intermediate_infile,
+                    intermediate_working_space, intermediate_outfile,
+                    source, target, params
+                )
+                shutil.copy(intermediate_out, intermediate_in)
+            except Exception as e:
+                raise TraceConversionError(f"AutoTraceConverter: Conversion failed in {converter.__class__.__name__} from {source} to {target}: {e}")
+        shutil.copy(intermediate_in, output_path_file)
 
 
 class AutoConversionMapping:
