@@ -6,6 +6,7 @@ from typing import AnyStr, List, Optional
 from Infrastructure.Analysis.ResultAggregator import ResultAggregator
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilderException import BenchmarkCreationFailed
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import CaseStudyGenerator
+from Infrastructure.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import construct_case_study, CaseStudyMapper
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import construct_synthetic_experiment_sig, construct_synthetic_experiment_pattern, TimeGuarded
@@ -19,7 +20,7 @@ from Infrastructure.DataTypes.Types.custome_type import ExperimentType
 from Infrastructure.Monitors.AbstractMonitorTemplate import run_monitor
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
-from Infrastructure.constants import FINGERPRINT_DATA, FINGERPRINT_EXPERIMENT, LENGTH, Measure
+from Infrastructure.constants import FINGERPRINT_DATA, FINGERPRINT_EXPERIMENT, LENGTH
 from Infrastructure.printing import print_headline, print_footline, normal_line
 
 
@@ -34,18 +35,22 @@ class BenchmarkBuilder:
     def __init__(
             self, contract, path_manager: PathManager, data_setup,
             gen_mode: ExperimentType, time_guard: TimeGuarded,
-            tools_to_build, repeat_runs, oracle=None, seeds=None, short_cut=True, debug_mode=False
+            tools_to_build, repeat_runs, cli_args: CLIArgs,
+            oracle=None, seeds=None, short_cut=True,
     ):
         print_headline("(Starting) Init Benchmark")
         self.contract = contract
         self.seeds = seeds
         self.short_cut = short_cut
-        self.debug_mode = debug_mode
+        self.cli_args = cli_args
         self.repeat_runs = repeat_runs
 
         self.path_manager = path_manager
         path_to_project = self.path_manager.get_path("path_to_project")
-        named_experiment_path = path_to_project + "/" + self.contract.experiment_name
+        path_to_infrastructure = path_to_project + "/Infrastructure"
+        self.path_manager.add_path("path_to_infrastructure", path_to_infrastructure)
+        named_experiment_path = path_to_infrastructure + "/experiments/" + self.contract.experiment_name
+        self.path_manager.add_path("path_to_experiment", f"{path_to_infrastructure}/experiments")
         self.path_manager.add_path("path_to_named_experiment", named_experiment_path)
         self.path_manager.add_path("path_to_debug", named_experiment_path + "/debug")
 
@@ -179,7 +184,6 @@ class BenchmarkBuilder:
         if self.gen_mode == ExperimentType.CaseStudy:
             path_to_folder = f"{path_to_named_experiment}/data"
             sfh = ScratchFolderHandler(path_to_folder)
-            # honor repeat_runs for case-study experiments as well
             case_study_mapper = self.data_setup["case_study_mapper"]
             for (num, (data, formula, sig)) in case_study_mapper.iterate_settings():
                 setting_id = f"{num} -> Data: {data}, Formula: {formula}, Signature: {sig}"
@@ -195,7 +199,7 @@ class BenchmarkBuilder:
                                 result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
                                 oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
                                 data_file=data, signature_file=sig, formula_file=formula,
-                                sfh=sfh, debug_mode=self.debug_mode, debug_path=path_to_debug,
+                                sfh=sfh, cli_args=self.cli_args, path_manager=self.path_manager,
                                 case_study_mapper=case_study_mapper
                             )
                         else:
@@ -230,7 +234,7 @@ class BenchmarkBuilder:
                                     result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
                                     oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
                                     data_file=data_file, signature_file=signature_file, formula_file=formula_file,
-                                    sfh=sfh, debug_mode=self.debug_mode, debug_path=path_to_debug
+                                    sfh=sfh, cli_args=self.cli_args, path_manager=self.path_manager
                                 )
                                 if res == RunToolResult.TIMEOUT:
                                     time_out_dict.add(tool.tool.name)
@@ -241,21 +245,22 @@ class BenchmarkBuilder:
         return result_aggregator
 
 
-def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file, sfh=None, debug_mode=False, debug_path=None, case_study_mapper=None) -> RunToolResult:
+def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder, data_file, signature_file, formula_file, cli_args: CLIArgs, path_manager: PathManager, sfh=None, case_study_mapper=None) -> RunToolResult:
+    debug_path = path_manager.get_path("path_to_debug")
     try:
         prep, compiled, runtime, prop = run_monitor(
             tool, time_guard, path_to_folder, data_file,
-            signature_file, formula_file, oracle, case_study_mapper
+            signature_file, formula_file, path_manager, oracle, case_study_mapper
         )
 
-        if debug_mode and sfh is not None and debug_path is not None:
+        if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
 
         stats = StatsHandler(path_to_folder).get_stats()
         if stats is not None:
             wall_time, max_mem, cpu = stats
         else:
-            if Measure.is_measure():
+            if cli_args.measure:
                 wall_time, max_mem, cpu = "", "", ""
             else:
                 wall_time, max_mem, cpu = None, None, None
@@ -266,26 +271,26 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
         return RunToolResult.OK
     except TimedOut as e:
         print(f"Monitor {tool.name} timed out: {e}")
-        if debug_mode and sfh is not None and debug_path is not None:
+        if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
         timeout_value = time_guard.upper_bound if time_guard else None
         result_aggregator.add_timeout(tool.name, setting_id, timeout_value)
         return RunToolResult.TIMEOUT
     except ToolException as e:
         print(f"ToolException for monitor {tool.name}: {e}")
-        if debug_mode and sfh is not None and debug_path is not None:
+        if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
         result_aggregator.add_tool_error(tool.name, setting_id, str(e))
         return RunToolResult.TOOL_ERROR
     except ResultErrorException as e:
         print(f"ResultErrorException for monitor {tool.name}: {e.args[1]}")
-        if debug_mode and sfh is not None and debug_path is not None:
+        if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
         stats = StatsHandler(path_to_folder).get_stats()
         if stats is not None:
             wall_time, max_mem, cpu = stats
         else:
-            if Measure.is_measure():
+            if cli_args.measure:
                 wall_time, max_mem, cpu = "", "", ""
             else:
                 wall_time, max_mem, cpu = None, None, None
@@ -296,7 +301,7 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
         )
         return RunToolResult.VALIDATION_ERROR
     except Exception as e:
-        if debug_mode and sfh is not None and debug_path is not None:
+        if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
         result_aggregator.add_tool_error(tool.name, setting_id, str(e))
         return RunToolResult.TOOL_ERROR

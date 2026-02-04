@@ -12,7 +12,7 @@ class DataConverterTemplate(ABC):
     @abstractmethod
     def auto_convert(
             self, path_to_folder: str, input_file: str, path_to_output_folder: str, output_file: str,
-            source: InputOutputFormats, target: InputOutputFormats, cmd_params: List[str], general_params: Dict[str, Any]
+            source: InputOutputFormats, target: InputOutputFormats, params: Dict[str, Any]
     ):
         raise NotImplemented()
 

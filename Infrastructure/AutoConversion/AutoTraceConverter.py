@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 from typing import List, Dict, Tuple
@@ -29,19 +30,29 @@ class AutoTraceConverter:
                 raise TraceConversionError(f"AutoTraceConverter: Failed to initialize converter: {e}")
         return converter_chain
 
-    def convert(
-            self, trace_input_path: str, input_file: str,
-            intermediate_working_space: str,
-            trace_output_path: str, output_file: str, params
-    ):
+    @staticmethod
+    def reachable(path_manager, source, target) -> bool:
+        try:
+            AutoConversionMapping(path_manager).resolve_format(source, target)
+            return True
+        except Exception():
+            return False
+
+    def convert(self, input_file: str, output_file: str, params) -> str:
+        trace_input_path = self.path_manager.get_path("trace_input_path")
+        intermediate_working_space = self.path_manager.get_path("intermediate_working_space")
+        trace_output_path = self.path_manager.get_path("trace_output_path")
+
         input_path_file = f"{trace_input_path}/{input_file}"
-        output_path_file = f"{trace_output_path}/{output_file}"
+        output_file_name = os.path.basename(output_file)
+        output_path_file = f"{trace_output_path}/{output_file_name}"
         if self.source_format == self.target_format:
             shutil.copy(input_path_file, output_path_file)
-            return
+            return output_path_file
 
-        intermediate_infile = f"{input_file}.in"
-        intermediate_outfile = f"{output_file}.out"
+        input_file_name = os.path.basename(input_file)
+        intermediate_infile = f"{input_file_name}.in"
+        intermediate_outfile = f"{output_file_name}.out"
         intermediate_in = f"{intermediate_working_space}/{intermediate_infile}"
         intermediate_out = f"{intermediate_working_space}/{intermediate_outfile}"
 
@@ -57,6 +68,7 @@ class AutoTraceConverter:
             except Exception as e:
                 raise TraceConversionError(f"AutoTraceConverter: Conversion failed in {converter.__class__.__name__} from {source} to {target}: {e}")
         shutil.copy(intermediate_in, output_path_file)
+        return f"scratch/{output_file_name}"
 
 
 class AutoConversionMapping:
@@ -66,7 +78,7 @@ class AutoConversionMapping:
         self._build_mapping()
 
     def _build_mapping(self):
-        infra_path = self.path_manager.get_path("path_to_infra")
+        infra_path = self.path_manager.get_path("path_to_infrastructure")
         if infra_path is None:
             raise ValueError(f"AutoConversionMapping: path_to_infra not found in PathManager")
         for (name_conv, _) in _discover_trace_converters(infra_path):
@@ -165,11 +177,11 @@ if __name__ == "__main__":
     pm = PathManager()
     pm.add_path("path_to_project", "/Users/krq770/PycharmProjects/MonitoringFace_curr")
     pm.add_path("path_to_infra", "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure")
-    mapping = {
+    mapping_ = {
         (InputOutputFormats.OOO_CSV, InputOutputFormats.CSV): ["OrderRestorerConverter"],
         (InputOutputFormats.CSV, InputOutputFormats.MONPOLY): ["MonpolyConverter"],
     }
-    ag = AutoConversionReachabilityGraph(mapping)
+    ag = AutoConversionReachabilityGraph(mapping_)
     x = ag.find_path(InputOutputFormats.OOO_CSV, InputOutputFormats.MONPOLY)
     print(x)
 

@@ -12,3 +12,6 @@ class PathManager:
         if path_id in self.paths:
             return self.paths[path_id]
         raise ValueError("PathManager: Path ID not found: " + path_id)
+
+    def get_optional_path(self, path_id: str) -> Optional[str]:
+        return self.paths.get(path_id, None)

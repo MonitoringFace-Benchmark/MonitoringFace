@@ -1,9 +1,9 @@
 import subprocess
-from typing import AnyStr, List, Tuple
+from typing import AnyStr, List, Tuple, Dict, Any
 
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.DataConverterTemplate import DataConverterTemplate
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import Processor, ImageManager
-from Infrastructure.InputOutputFormats import InputOutputFormats
+from Infrastructure.InputOutputFormats import InputOutputFormats, inout_format_to_str
 from Infrastructure.Monitors.MonitorExceptions import ReplayerException
 
 
@@ -14,15 +14,23 @@ class ReplayerConverter(DataConverterTemplate):
     def auto_convert(
         self, path_to_folder: str, input_file: str,
         path_to_output_folder: str, output_file: str,
-        source, target, cmd_params: List[AnyStr], general_params: dict
+        source: InputOutputFormats, target: InputOutputFormats, params: Dict[str, Any]
     ):
+        if "cmd_params" in params:
+            cmd_params = params["cmd_params"]
+        else:
+            cmd_params = ["-a", "0"]
+
+        cast_source = inout_format_to_str(source)
+        cast_target = inout_format_to_str(target)
         command = ["docker", "run", "--rm", "--entrypoint", "java", "-iv", f"{path_to_folder}:/work",
                    f"{self.image.image_name.lower()}", "-cp", "classes:libs/*",
-                   "org.entry.Dispatcher", "Replayer", "-i", f"{source}", "-f", f"{target}"] + cmd_params
+                   "org.entry.Dispatcher", "Replayer", "-i", f"{cast_source}", "-f", f"{cast_target}"] + cmd_params
 
         with open(f"{path_to_folder}/{input_file}", 'r') as input_file:
             result = subprocess.run(command, stdin=input_file, capture_output=True, text=True)
             if result.returncode == 0:
+                print(f"{path_to_output_folder}/{output_file}")
                 with open(f"{path_to_output_folder}/{output_file}", "w") as f:
                     for line in filter(lambda x: not x.startswith(">W"), result.stdout.splitlines()):
                         f.write(line + "\n")

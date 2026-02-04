@@ -3,22 +3,39 @@ import re
 
 from typing import Dict, AnyStr, Any, Tuple
 
+from Infrastructure.AutoConversion.AutoTraceConverter import AutoTraceConverter
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.OutOfOrderConverter.OutOfOrderConverter import OutOfOrderConverter
-from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import \
-    ReplayerConverter
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, VariableOrder, DefaultVariableOrder
+from Infrastructure.InputOutputFormats import InputOutputFormats
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 
 
 class TimelyMon(AbstractMonitorTemplate):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
-        self.replayer = ReplayerConverter("gen_data", self.params["path_to_project"])
 
-    def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
+    def pre_processing(
+            self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
+            source: InputOutputFormats, target: InputOutputFormats, path_manager: PathManager
+    ):
+        # tool can have multiple supported input formats, check all possible conversions and choose the shortest
+        # todo move all folder paths into path_manager in framework step calling preprocessing
+        self.params["signature"] = signature_file
+        self.params["data"] = AutoTraceConverter(path_manager, source, target).convert(
+            input_file=data_file, output_file=data_file, params=self.params
+        )
+        self.params["folder"] = path_to_folder
+
+        # auto policy conversion todo
+        self.params["formula"] = formula_file
+        return
+
+
+
         self.params["folder"] = path_to_folder
         self.params["signature"] = signature_file
         self.params["formula"] = formula_file

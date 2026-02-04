@@ -2,9 +2,12 @@ import time
 from abc import ABC, abstractmethod
 from typing import Dict, AnyStr, Any, Tuple
 
+from Infrastructure.AutoConversion.AutoTraceConverter import AutoTraceConverter
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering
+from Infrastructure.InputOutputFormats import InputOutputFormats
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
 from Infrastructure.printing import print_headline, print_footline
 
@@ -29,7 +32,10 @@ class AbstractMonitorTemplate(ABC):
         @param path_to_formula:   path to the formula 
     """
     @abstractmethod
-    def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
+    def pre_processing(
+            self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
+            source: InputOutputFormats, target: InputOutputFormats, path_manager: PathManager
+    ):
         # each tool will be initialized with a working directory in which the user can create files for
         # processing or passing around
         pass
@@ -60,11 +66,35 @@ class AbstractMonitorTemplate(ABC):
 
 def run_monitor(mon: AbstractMonitorTemplate, guarded,
                 path_to_folder: AnyStr, data_file: AnyStr,
-                signature_file: AnyStr, formula_file: AnyStr, oracle=None, case_study_mapper=None) -> Tuple[float, float, float, float]:
+                signature_file: AnyStr, formula_file: AnyStr,
+                path_manager: PathManager,
+                oracle=None, case_study_mapper=None) -> Tuple[float, float, float, float]:
     print_headline(f"Run {mon.name}")
 
+    # source format is passed by the framework
+    # target is determined by the monitor, here
+    path_manager.add_path("trace_input_path", f"{path_to_folder}")
+    path_manager.add_path("intermediate_working_space", f"{path_to_folder}/scratch")
+    path_manager.add_path("trace_output_path", f"{path_to_folder}/scratch")
+
+    # todo get from outside
+    # todo introduce sources
+    trace_source_format = InputOutputFormats.MONPOLY
+    trace_target_format = InputOutputFormats.CSV
+
+    trace_auto_convertible = AutoTraceConverter.reachable(path_manager, trace_source_format, trace_target_format)
+
     start = time.perf_counter()
-    mon.pre_processing(path_to_folder, data_file, signature_file, formula_file)
+    if trace_auto_convertible:
+        print("Auto conversion")
+        mon.params["signature"] = signature_file
+        mon.params["folder"] = path_to_folder
+        mon.params["data"] = AutoTraceConverter(path_manager, trace_source_format, trace_target_format).convert(
+            input_file=data_file, output_file=data_file, params=mon.params
+        )
+        mon.params["formula"] = formula_file
+    else:
+        mon.pre_processing(path_to_folder, data_file, signature_file, formula_file, trace_source_format, trace_target_format, path_manager)
     end = time.perf_counter()
     preprocessing_elapsed = end - start
 

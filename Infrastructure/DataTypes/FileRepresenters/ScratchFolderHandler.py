@@ -34,7 +34,6 @@ class ScratchFolderHandler:
         print(f"Debug information are available at:\n{debug_folder}")
         os.makedirs(debug_folder, exist_ok=True)
 
-        # Copy all files from scratch to debug folder
         for f in os.listdir(self.folder):
             src = os.path.join(self.folder, f)
             dst = os.path.join(debug_folder, f)
