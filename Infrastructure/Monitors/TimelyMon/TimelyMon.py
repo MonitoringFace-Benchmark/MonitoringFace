@@ -10,7 +10,7 @@ from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, VariableOrder, DefaultVariableOrder
-from Infrastructure.InputOutputFormats import InputOutputFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 
 
@@ -20,7 +20,7 @@ class TimelyMon(AbstractMonitorTemplate):
 
     def pre_processing(
             self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
-            source: InputOutputFormats, target: InputOutputFormats, path_manager: PathManager
+            source: InputOutputTraceFormats, target: InputOutputTraceFormats, path_manager: PathManager
     ):
         # tool can have multiple supported input formats, check all possible conversions and choose the shortest
         # todo move all folder paths into path_manager in framework step calling preprocessing

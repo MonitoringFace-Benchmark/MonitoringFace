@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import AnyStr, Dict, Any, Tuple, List
 
-from Infrastructure.InputOutputFormats import InputOutputFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 
 
 class DataGeneratorTemplate(ABC):
@@ -15,5 +15,5 @@ class DataGeneratorTemplate(ABC):
 
     @staticmethod
     @abstractmethod
-    def output_formats() -> List[InputOutputFormats]:
+    def output_formats() -> List[InputOutputTraceFormats]:
         pass

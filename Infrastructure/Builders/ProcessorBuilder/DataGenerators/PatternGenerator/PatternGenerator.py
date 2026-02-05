@@ -3,7 +3,7 @@ from typing import AnyStr, List
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternContract import pattern_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
-from Infrastructure.InputOutputFormats import InputOutputFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY
 
 
@@ -43,8 +43,8 @@ class PatternGenerator(DataGeneratorTemplate):
         return True
 
     @staticmethod
-    def output_formats() -> List[InputOutputFormats]:
-        return [InputOutputFormats.CSV]
+    def output_formats() -> List[InputOutputTraceFormats]:
+        return [InputOutputTraceFormats.CSV]
 
 
 def parse_tp(line):

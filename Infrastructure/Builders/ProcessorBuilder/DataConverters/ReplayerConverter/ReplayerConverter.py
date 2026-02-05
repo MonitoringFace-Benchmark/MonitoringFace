@@ -3,7 +3,7 @@ from typing import AnyStr, List, Tuple, Dict, Any
 
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.DataConverterTemplate import DataConverterTemplate
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import Processor, ImageManager
-from Infrastructure.InputOutputFormats import InputOutputFormats, inout_format_to_str
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats, inout_format_to_str
 from Infrastructure.Monitors.MonitorExceptions import ReplayerException
 
 
@@ -14,7 +14,7 @@ class ReplayerConverter(DataConverterTemplate):
     def auto_convert(
         self, path_to_folder: str, input_file: str,
         path_to_output_folder: str, output_file: str,
-        source: InputOutputFormats, target: InputOutputFormats, params: Dict[str, Any]
+        source: InputOutputTraceFormats, target: InputOutputTraceFormats, params: Dict[str, Any]
     ):
         if "cmd_params" in params:
             cmd_params = params["cmd_params"]
@@ -60,22 +60,22 @@ class ReplayerConverter(DataConverterTemplate):
                 raise ReplayerException("Replayer Failed")
 
     @staticmethod
-    def conversion_scheme() -> List[Tuple[InputOutputFormats, InputOutputFormats]]:
+    def conversion_scheme() -> List[Tuple[InputOutputTraceFormats, InputOutputTraceFormats]]:
         return [
-            (InputOutputFormats.MONPOLY, InputOutputFormats.CSV),
-            (InputOutputFormats.MONPOLY, InputOutputFormats.CSV_LINEAR),
-            (InputOutputFormats.MONPOLY, InputOutputFormats.DEJAVU),
-            (InputOutputFormats.MONPOLY, InputOutputFormats.DEJAVU_ENCODED),
-            (InputOutputFormats.MONPOLY, InputOutputFormats.DEJAVU_LINEAR),
+            (InputOutputTraceFormats.MONPOLY, InputOutputTraceFormats.CSV),
+            (InputOutputTraceFormats.MONPOLY, InputOutputTraceFormats.CSV_LINEAR),
+            (InputOutputTraceFormats.MONPOLY, InputOutputTraceFormats.DEJAVU),
+            (InputOutputTraceFormats.MONPOLY, InputOutputTraceFormats.DEJAVU_ENCODED),
+            (InputOutputTraceFormats.MONPOLY, InputOutputTraceFormats.DEJAVU_LINEAR),
 
-            (InputOutputFormats.CSV, InputOutputFormats.MONPOLY),
-            (InputOutputFormats.CSV, InputOutputFormats.MONPOLY_LINEAR),
-            (InputOutputFormats.CSV, InputOutputFormats.DEJAVU),
-            (InputOutputFormats.CSV, InputOutputFormats.DEJAVU_ENCODED),
-            (InputOutputFormats.CSV, InputOutputFormats.DEJAVU_LINEAR),
+            (InputOutputTraceFormats.CSV, InputOutputTraceFormats.MONPOLY),
+            (InputOutputTraceFormats.CSV, InputOutputTraceFormats.MONPOLY_LINEAR),
+            (InputOutputTraceFormats.CSV, InputOutputTraceFormats.DEJAVU),
+            (InputOutputTraceFormats.CSV, InputOutputTraceFormats.DEJAVU_ENCODED),
+            (InputOutputTraceFormats.CSV, InputOutputTraceFormats.DEJAVU_LINEAR),
 
-            (InputOutputFormats.DEJAVU, InputOutputFormats.MONPOLY),
-            (InputOutputFormats.DEJAVU, InputOutputFormats.MONPOLY_LINEAR),
-            (InputOutputFormats.DEJAVU, InputOutputFormats.CSV),
-            (InputOutputFormats.DEJAVU, InputOutputFormats.CSV_LINEAR),
+            (InputOutputTraceFormats.DEJAVU, InputOutputTraceFormats.MONPOLY),
+            (InputOutputTraceFormats.DEJAVU, InputOutputTraceFormats.MONPOLY_LINEAR),
+            (InputOutputTraceFormats.DEJAVU, InputOutputTraceFormats.CSV),
+            (InputOutputTraceFormats.DEJAVU, InputOutputTraceFormats.CSV_LINEAR),
         ]

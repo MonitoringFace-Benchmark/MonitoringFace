@@ -4,7 +4,7 @@ from typing import AnyStr, List, Tuple
 import re
 
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.DataConverterTemplate import DataConverterTemplate
-from Infrastructure.InputOutputFormats import InputOutputFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 
 DEFAULT_SEED = 42
 MAX_DISTANCE = 5
@@ -131,15 +131,15 @@ class OutOfOrderConverter(DataConverterTemplate):
         pass
 
     def auto_convert(self, path_to_folder: str, input_file: str, path_to_output_folder: str, output_file: str,
-                     source: InputOutputFormats, target: InputOutputFormats, cmd_params: List[str], general_params: dict):
+                     source: InputOutputTraceFormats, target: InputOutputTraceFormats, cmd_params: List[str], general_params: dict):
         ooo_convert_inner(input_file=f"{path_to_folder}/{input_file}", output_file=f"{path_to_output_folder}/{output_file}", params=general_params)
 
     def convert(self, path_to_folder: AnyStr, data_file: AnyStr, tool: AnyStr, name: AnyStr, dest: AnyStr, params):
         ooo_convert_inner(input_file=f"{path_to_folder}/{data_file}", output_file=f"{dest}/{name}.{tool}", params=params)
 
     @staticmethod
-    def conversion_scheme() -> List[Tuple[InputOutputFormats, InputOutputFormats]]:
-        return [(InputOutputFormats.CSV, InputOutputFormats.OOO_CSV)]
+    def conversion_scheme() -> List[Tuple[InputOutputTraceFormats, InputOutputTraceFormats]]:
+        return [(InputOutputTraceFormats.CSV, InputOutputTraceFormats.OOO_CSV)]
 
 
 def ooo_convert_inner(input_file, output_file, params):

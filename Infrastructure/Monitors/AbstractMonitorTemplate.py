@@ -7,7 +7,7 @@ from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolIma
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering
-from Infrastructure.InputOutputFormats import InputOutputFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
 from Infrastructure.printing import print_headline, print_footline
 
@@ -34,7 +34,7 @@ class AbstractMonitorTemplate(ABC):
     @abstractmethod
     def pre_processing(
             self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
-            source: InputOutputFormats, target: InputOutputFormats, path_manager: PathManager
+            source: InputOutputTraceFormats, target: InputOutputTraceFormats, path_manager: PathManager
     ):
         # each tool will be initialized with a working directory in which the user can create files for
         # processing or passing around
@@ -79,8 +79,8 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
 
     # todo get from outside
     # todo introduce sources
-    trace_source_format = InputOutputFormats.MONPOLY
-    trace_target_format = InputOutputFormats.CSV
+    trace_source_format = InputOutputTraceFormats.MONPOLY
+    trace_target_format = InputOutputTraceFormats.CSV
 
     trace_auto_convertible = AutoTraceConverter.reachable(path_manager, trace_source_format, trace_target_format)
 

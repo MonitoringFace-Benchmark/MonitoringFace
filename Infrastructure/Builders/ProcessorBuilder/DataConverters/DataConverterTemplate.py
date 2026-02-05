@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import AnyStr, List, Tuple, Dict, Any
 
-from Infrastructure.InputOutputFormats import InputOutputFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 
 
 class DataConverterTemplate(ABC):
@@ -12,11 +12,11 @@ class DataConverterTemplate(ABC):
     @abstractmethod
     def auto_convert(
             self, path_to_folder: str, input_file: str, path_to_output_folder: str, output_file: str,
-            source: InputOutputFormats, target: InputOutputFormats, params: Dict[str, Any]
+            source: InputOutputTraceFormats, target: InputOutputTraceFormats, params: Dict[str, Any]
     ):
         raise NotImplemented()
 
     @staticmethod
     @abstractmethod
-    def conversion_scheme() -> List[Tuple[InputOutputFormats, InputOutputFormats]]:
+    def conversion_scheme() -> List[Tuple[InputOutputTraceFormats, InputOutputTraceFormats]]:
         pass
