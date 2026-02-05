@@ -5,20 +5,13 @@ import docker
 from docker.errors import APIError, BuildError
 
 from Infrastructure.Monitors.MonitorExceptions import TimedOut
-from Infrastructure.constants import COMMAND_KEY, WORKDIR_KEY, VOLUMES_KEY, ENTRYPOINT_KEY, LINE_BUFFER
+from Infrastructure.constants import COMMAND_KEY, WORKDIR_KEY, VOLUMES_KEY, ENTRYPOINT_KEY
 
 
 def to_prop_file(path, name, content: dict):
     with open(path + f"{name}", mode='w') as f:
         for (k, v) in content.items():
             f.write(f"{k}={v}\n")
-
-
-def clean_lines_up(number_of_lines):
-    cursor = '\x1b[{0}A'.format(number_of_lines)
-    print(cursor, end="")
-    clean_to_end = '\033[J'
-    print(clean_to_end, end="")
 
 
 def image_exists(name):
@@ -49,7 +42,6 @@ def image_building(image_name, build_dir, args=None):
 
         error_in_build = False
 
-        i = 0
         for chunk in build_output:
             if 'stream' in chunk:
                 print(chunk['stream'], end='')
@@ -59,10 +51,6 @@ def image_building(image_name, build_dir, args=None):
             elif 'status' in chunk:
                 msg = chunk.get('progress', chunk['status'])
                 print(msg)
-            i += 1
-            if i >= LINE_BUFFER: # todo make optional
-                clean_lines_up(i)
-                i = 0
 
         if error_in_build:
             raise ImageBuildException(f" Failed to built image: {image_name}")
@@ -116,33 +104,54 @@ def run_image(image_name, generic_contract: Dict[AnyStr, Any], verbose=False, ti
             while container.status != "exited":
                 container.reload()
                 if time.time() - start_time > time_out:
-                    container.kill()
-                    container.remove(force=True)
+                    try:
+                        container.kill()
+                    except docker.errors.APIError:
+                        pass  # Container may have already exited
+                    try:
+                        container.remove(force=True)
+                    except docker.errors.APIError:
+                        pass  # Container may have already been removed
                     raise TimedOut()
                 time.sleep(0.1)
 
             if time_on is not None and (time.time() - start_time < time_on):
-                container.remove(force=True)
+                try:
+                    container.remove(force=True)
+                except docker.errors.APIError:
+                    pass
                 raise TimedOut()
 
             result = container.wait()
             logs = container.logs(stdout=True, stderr=True).decode("utf-8", errors="ignore")
             exit_code = result.get("StatusCode", 1)
-            container.remove(force=True)
+            try:
+                container.remove(force=True)
+            except docker.errors.APIError:
+                pass
             return logs, exit_code
     except docker.errors.ContainerError as e:
         if container:
-            container.remove(force=True)
+            try:
+                container.remove(force=True)
+            except docker.errors.APIError:
+                pass
         stdout = e.stderr.decode("utf-8") if isinstance(e.stderr, bytes) else str(e.stderr)
         return_code = e.exit_status
     except docker.errors.APIError as e:
         if container:
-            container.remove(force=True)
+            try:
+                container.remove(force=True)
+            except docker.errors.APIError:
+                pass
         stdout = f"Docker API error: {e}"
         return_code = 125
     except docker.errors.ImageNotFound:
         if container:
-            container.remove(force=True)
+            try:
+                container.remove(force=True)
+            except docker.errors.APIError:
+                pass
         stdout = "Error: Image not found"
         return_code = 127
     return stdout, return_code

@@ -42,5 +42,3 @@ BENCHMARK_BUILDING_OFFSET = (" " * 8)
 # Pretty Printing
 LENGTH = 80
 HEADER_ROW = "=" * LENGTH
-
-LINE_BUFFER = 100
