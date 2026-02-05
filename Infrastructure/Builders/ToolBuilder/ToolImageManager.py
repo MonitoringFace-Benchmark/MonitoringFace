@@ -96,7 +96,10 @@ class IndirectToolImageManager(AbstractToolImageManager):
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
 
         if measure and self.cli_args.measure:
-            inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.binary_name] + parameters
+            tool_cmd = " ".join([self.binary_name] + parameters)
+            inner_contract_[COMMAND_KEY] = ["/bin/sh", "-c",
+                                            f"mkdir -p /data/scratch && /usr/bin/time -v -o /tmp/stats.txt {tool_cmd}; "
+                                            f"e=$?; cp /tmp/stats.txt /data/scratch/stats.txt 2>/dev/null; exit $e"]
         else:
             inner_contract_[COMMAND_KEY] = [self.binary_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
@@ -160,7 +163,10 @@ class DirectToolImageManager(AbstractToolImageManager):
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
         if measure and self.cli_args.measure:
-            inner_contract_[COMMAND_KEY] = ["/usr/bin/time", "-v", "-o", "scratch/stats.txt"] + [self.name.lower()] + parameters
+            tool_cmd = " ".join([self.name.lower()] + parameters)
+            inner_contract_[COMMAND_KEY] = ["/bin/sh", "-c",
+                                            f"mkdir -p /data/scratch && /usr/bin/time -v -o /tmp/stats.txt {tool_cmd}; "
+                                            f"e=$?; cp /tmp/stats.txt /data/scratch/stats.txt 2>/dev/null; exit $e"]
         else:
             inner_contract_[COMMAND_KEY] = [self.name.lower()] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
