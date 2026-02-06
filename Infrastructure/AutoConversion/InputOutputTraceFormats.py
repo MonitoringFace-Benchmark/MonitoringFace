@@ -8,7 +8,7 @@ class InputOutputTraceFormats(Enum):
     MONPOLY_LINEAR = "monpoly-linear"
     MONPOLY = "monpoly"
     DEJAVU = "dejavu"
-    DEJAVU_ENCODED = "dejavu_encoded"
+    DEJAVU_ENCODED = "dejavu-encoded"
     DEJAVU_LINEAR = "dejavu-linear"
 
 

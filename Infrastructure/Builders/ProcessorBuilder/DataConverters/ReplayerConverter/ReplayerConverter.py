@@ -16,11 +16,7 @@ class ReplayerConverter(DataConverterTemplate):
         path_to_output_folder: str, output_file: str,
         source: InputOutputTraceFormats, target: InputOutputTraceFormats, params: Dict[str, Any]
     ):
-        if "cmd_params" in params:
-            cmd_params = params["cmd_params"]
-        else:
-            cmd_params = ["-a", "0"]
-
+        cmd_params = params["cmd_params"] if "cmd_params" in params else cmd_params = ["-a", "0"]
         cast_source = inout_format_to_str(source)
         cast_target = inout_format_to_str(target)
         command = ["docker", "run", "--rm", "--entrypoint", "java", "-iv", f"{path_to_folder}:/work",
@@ -30,7 +26,6 @@ class ReplayerConverter(DataConverterTemplate):
         with open(f"{path_to_folder}/{input_file}", 'r') as input_file:
             result = subprocess.run(command, stdin=input_file, capture_output=True, text=True)
             if result.returncode == 0:
-                print(f"{path_to_output_folder}/{output_file}")
                 with open(f"{path_to_output_folder}/{output_file}", "w") as f:
                     for line in filter(lambda x: not x.startswith(">W"), result.stdout.splitlines()):
                         f.write(line + "\n")
