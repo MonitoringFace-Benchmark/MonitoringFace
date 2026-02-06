@@ -2,7 +2,6 @@ import os
 import shutil
 from typing import List
 
-
 from Infrastructure.AutoConversion.AutoConversionMapping import AutoConversionMapping
 from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.PolicyConverterTemplate import PolicyConverterTemplate
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
@@ -65,7 +64,6 @@ class AutoPolicyConverter:
                 )
                 shutil.copy(intermediate_out, intermediate_in)
             except Exception as e:
-                raise PolicyConversionError(
-                    f"AutoTraceConverter: Conversion failed in {converter.__class__.__name__} from {source} to {target}: {e}")
+                raise PolicyConversionError(f"AutoTraceConverter: Conversion failed in {converter.__class__.__name__} from {source} to {target}: {e}")
         shutil.copy(intermediate_in, output_path_file)
         return f"scratch/{output_file_name}"

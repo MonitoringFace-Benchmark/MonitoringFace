@@ -1,77 +1,39 @@
-from typing import Dict, AnyStr, Any, Tuple
+from typing import Dict, AnyStr, Any, Tuple, List, Optional
 
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.Monitors.MonitorExceptions import ToolException
-from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.QTLTranslator.QTLTranslator import QTLTranslator
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
-from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import ReplayerConverter
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
-from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, DefaultVariableOrder
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
-import os
 
 
 class DejaVu(AbstractMonitorTemplate):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
-        self.replayer = ReplayerConverter(self.params["replayer"], self.params["path_to_project"])
-        self.translator = QTLTranslator(self.params["translator"], self.params["path_to_project"])
 
-    def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
-        self.params["folder"] = path_to_folder
-
-        if "preprocessing" in self.params:
-            if not self.params["preprocessing"]:
-                self.params["data"] = data_file
-                self.params["formula"] = formula_file
-                return
-
-        trimmed_data_file = os.path.basename(data_file)
-        self.replayer.convert(
-            path_to_folder,
-            data_file,
-            "dejavu-encoded",
-            trimmed_data_file,
-            dest=f"{path_to_folder}/scratch",
-            params=["-a", "0", "-d", "e"]
-        )
-
-        trimmed_formula_file = os.path.basename(formula_file)
-        self.translator.convert(
-            path_to_folder,
-            formula_file,
-            "qtl",
-            trimmed_formula_file,
-            dest=f"{path_to_folder}/scratch",
-            params=["-n", "-e", "e"]
-        )
-
-        self.params["data"] = f"scratch/{trimmed_data_file}.dejavu-encoded"
-        self.params["formula"] = f"scratch/{trimmed_formula_file}.qtl"
+    def pre_processing(
+            self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
+            trace_source: InputOutputTraceFormats, trace_target: InputOutputTraceFormats,
+            policy_source: InputOutputPolicyFormats, policy_target: InputOutputPolicyFormats, path_manager: PathManager
+    ):
+        raise NotImplementedError("DejaVu does not support non-automatic pre-processing")
 
     def compile(self):
-        name = self.image.name
-        self.image.name = ""
         cmd = ["build", str(self.params["formula"])]
-        out, code = self.image.run(self.params["folder"], cmd, measure=False)
-        self.image.name = name
+        out, code = self.image.run(self.params["folder"], cmd, measure=False, name="")
         if code != 0:
             raise ToolException(f"DejaVu compilation failed with code {code} and output: {out}")
 
-    def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
+    def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = ["run", str(self.params["formula"]), str(self.params["data"])]
-        name = self.image.name
-        self.image.name = ""
-        out, code = self.image.run(self.params["folder"], cmd, time_on, time_out, measure=False)
-        self.image.name = name
-        return out, code
-
-    def variable_order(self) -> VariableOrdering:
-        return DefaultVariableOrder()
+        return cmd, ""
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        prop_list = PropositionList(self.variable_order())
-
+        prop_list = PropositionList(DefaultVariableOrder())
         if stdout_input == "":
             return prop_list
 
@@ -83,3 +45,11 @@ class DejaVu(AbstractMonitorTemplate):
             except ValueError:
                 pass
         return prop_list
+
+    @staticmethod
+    def supported_policy_formats() -> List[InputOutputPolicyFormats]:
+        return [InputOutputPolicyFormats.QTL]
+
+    @staticmethod
+    def supported_trace_formats() -> List[InputOutputTraceFormats]:
+        return [InputOutputTraceFormats.DEJAVU, InputOutputTraceFormats.DEJAVU_LINEAR, InputOutputTraceFormats.DEJAVU_ENCODED]

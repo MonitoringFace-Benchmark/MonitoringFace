@@ -215,7 +215,7 @@ def guarded_synthetic_experiment_inner(
         if guard_type == TimeGuardingTool.Monitor:
             guard.pre_processing(num_path, f"data_{num_name}.csv", "signature.sig", "formula.mfotl")
             try:
-                err, code = guard.run_offline(time_on, time_out)
+                err, code = guard.run_offline_command(time_on, time_out)
                 if code != 0:
                     if code == 124:
                         raise TimedOut()

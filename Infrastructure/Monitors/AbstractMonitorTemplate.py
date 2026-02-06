@@ -1,8 +1,10 @@
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, AnyStr, Any, Tuple
+from typing import Dict, AnyStr, Any, Tuple, List, Optional
 
+from Infrastructure.AutoConversion.AutoPolicyConverter import AutoPolicyConverter
 from Infrastructure.AutoConversion.AutoTraceConverter import AutoTraceConverter
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
@@ -19,7 +21,7 @@ class AbstractMonitorTemplate(ABC):
         self.name = name
 
     """
-        run the monitor
+        compile the monitor
     """
     def compile(self):
         # build tool that requires compilation
@@ -34,25 +36,16 @@ class AbstractMonitorTemplate(ABC):
     @abstractmethod
     def pre_processing(
             self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
-            source: InputOutputTraceFormats, target: InputOutputTraceFormats, path_manager: PathManager
+            trace_source: InputOutputTraceFormats, trace_target: InputOutputTraceFormats,
+            policy_source: InputOutputPolicyFormats, policy_target: InputOutputPolicyFormats, path_manager: PathManager
     ):
-        # each tool will be initialized with a working directory in which the user can create files for
-        # processing or passing around
         pass
 
     """
-        run the monitor
+        construct the command to run the monitor on an offline trace
     """
     @abstractmethod
-    def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
-        # run tool and store results either as the value or file
-        pass
-
-    """
-        retrieve the variable order for a given specification
-    """
-    @abstractmethod
-    def variable_order(self) -> VariableOrdering:
+    def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
         pass
 
     """
@@ -60,7 +53,16 @@ class AbstractMonitorTemplate(ABC):
     """
     @abstractmethod
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        # process the string or file
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def supported_policy_formats() -> List[InputOutputPolicyFormats]:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def supported_trace_formats() -> List[InputOutputTraceFormats]:
         pass
 
 
@@ -81,18 +83,24 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
     # todo introduce sources
     trace_source_format = InputOutputTraceFormats.MONPOLY
     trace_target_format = InputOutputTraceFormats.CSV
+    policy_source_format = InputOutputPolicyFormats.MFOTL
+    policy_target_format = InputOutputPolicyFormats.MFOTL
 
     trace_auto_convertible = AutoTraceConverter.reachable(path_manager, trace_source_format, trace_target_format)
+    policy_auto_convertible = AutoTraceConverter.reachable(path_manager, policy_source_format, policy_target_format)
 
     start = time.perf_counter()
-    if trace_auto_convertible:
+    if trace_auto_convertible and policy_auto_convertible:
         print("Auto conversion")
         mon.params["signature"] = signature_file
         mon.params["folder"] = path_to_folder
+
         mon.params["data"] = AutoTraceConverter(path_manager, trace_source_format, trace_target_format).convert(
             input_file=data_file, output_file=data_file, params=mon.params
         )
-        mon.params["formula"] = formula_file
+        mon.params["formula"] = AutoPolicyConverter(path_manager, policy_source_format, policy_target_format).convert(
+            input_file=formula_file, output_file=formula_file, params=mon.params
+        )
     else:
         mon.pre_processing(path_to_folder, data_file, signature_file, formula_file, trace_source_format, trace_target_format, path_manager)
     end = time.perf_counter()
@@ -105,7 +113,8 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
 
     start = time.perf_counter()
     timeout_value = guarded.upper_bound if guarded else None
-    out, code = mon.run_offline(time_on=None, time_out=timeout_value)
+    cmd, name = mon.run_offline_command()
+    out, code = mon.image.run(parameters=cmd, path_to_data=path_to_folder, time_on=None, timeout=timeout_value, name=name)
     end = time.perf_counter()
     run_offline_elapsed = end - start
 

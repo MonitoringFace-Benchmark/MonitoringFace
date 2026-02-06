@@ -1,17 +1,16 @@
 import os.path
 import re
+from typing import Dict, AnyStr, Any, Tuple, List, Optional
 
-from typing import Dict, AnyStr, Any, Tuple
-
-from Infrastructure.AutoConversion.AutoTraceConverter import AutoTraceConverter
-from Infrastructure.Builders.ProcessorBuilder.DataConverters.OutOfOrderConverter.OutOfOrderConverter import OutOfOrderConverter
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
-from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, VariableOrder, DefaultVariableOrder
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.Monitors.SharedFunctions import parse_variable_order_timely
 
 
 class TimelyMon(AbstractMonitorTemplate):
@@ -20,55 +19,16 @@ class TimelyMon(AbstractMonitorTemplate):
 
     def pre_processing(
             self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
-            source: InputOutputTraceFormats, target: InputOutputTraceFormats, path_manager: PathManager
+            trace_source: InputOutputTraceFormats, trace_target: InputOutputTraceFormats,
+            policy_source: InputOutputPolicyFormats, policy_target: InputOutputPolicyFormats, path_manager: PathManager
     ):
-        # tool can have multiple supported input formats, check all possible conversions and choose the shortest
-        # todo move all folder paths into path_manager in framework step calling preprocessing
-        self.params["signature"] = signature_file
-        self.params["data"] = AutoTraceConverter(path_manager, source, target).convert(
-            input_file=data_file, output_file=data_file, params=self.params
-        )
-        self.params["folder"] = path_to_folder
+        raise NotImplementedError("TimelyMon does not support non-automatic pre-processing")
 
-        # auto policy conversion todo
-        self.params["formula"] = formula_file
-        return
-
-
-
-        self.params["folder"] = path_to_folder
-        self.params["signature"] = signature_file
-        self.params["formula"] = formula_file
-
-        if "preprocessing" in self.params:
-            if not self.params["preprocessing"]:
-                self.replayer.convert(
-                    path_to_folder=path_to_folder,
-                    data_file=data_file,
-                    tool="csv",
-                    name=os.path.basename(data_file),
-                    source="monpoly",
-                    dest=f"{path_to_folder}/scratch",
-                    params=["-a", "0"]
-                )
-                self.params["data"] = f"scratch/{data_file}.csv"
-                return
-
-        reordering = "mode" in self.params
-        trimmed_data_file = os.path.basename(data_file)
-        if reordering:
-            OutOfOrderConverter(None, None).convert(
-                path_to_folder, data_file, self.name.lower(),
-                os.path.basename(data_file), dest=f"{path_to_folder}/scratch", params=self.params
-            )
-
-        self.params["data"] = f"scratch/{trimmed_data_file}.{self.name.lower()}" if reordering else data_file
-
-    def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
+    def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = [self.params["formula"], self.params["data"]]
-        
+
         if not self.params.get("ignore_signature", False):
-           cmd += ["--sig-file", self.params["signature"]]
+            cmd += ["--sig-file", self.params["signature"]]
 
         if "worker" in self.params:
             cmd += ["-w", str(self.params["worker"])]
@@ -95,24 +55,12 @@ class TimelyMon(AbstractMonitorTemplate):
 
         if "relational_clean_up" in self.params:
             cmd += ["--relational-clean-up", str(self.params["relational_clean_up"])]
-
-        return self.image.run(self.params["folder"], cmd, time_on, time_out)
-
-    def variable_order(self) -> VariableOrdering:
-        def parse_variable_order(text):
-            match = re.search(r"Order of free variables:\s*\((.*?)\)", text)
-            result = match.group(1).split(", ") if match and match.group(1) else []
-            return [v.strip() for v in result]
-
-        cmd = [self.params["formula"], "--check"]
-        logs, code = self.image.run(self.params["folder"], cmd, measure=False)
-        if code == 0:
-            return VariableOrder(parse_variable_order(logs))
-        else:
-            return DefaultVariableOrder()
+        return cmd, None
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        variable_order = self.variable_order()
+        cmd = [self.params["formula"], "--check"]
+        logs, code = self.image.run(self.params["folder"], cmd, measure=False)
+        variable_order = VariableOrder(parse_variable_order_timely(logs)) if code == 0 else DefaultVariableOrder()
         if self.params["output_mode"] == 0:
             res_file_path = self.params["folder"] + "/" + self.params["output_file"]
             if os.path.exists(res_file_path):
@@ -122,6 +70,14 @@ class TimelyMon(AbstractMonitorTemplate):
                 return OooVerdicts(variable_order=variable_order)
         else:
             return parse_output_structure(stdout_input, variable_order)
+
+    @staticmethod
+    def supported_policy_formats() -> List[InputOutputPolicyFormats]:
+        return [InputOutputPolicyFormats.MFOTL, InputOutputPolicyFormats.NEGATED_MFOTL]
+
+    @staticmethod
+    def supported_trace_formats() -> List[InputOutputTraceFormats]:
+        return [InputOutputTraceFormats.CSV, InputOutputTraceFormats.OOO_CSV]
 
 
 def parse_output_structure(input_val: AnyStr, variable_ordering) -> AbstractOutputStructure:
@@ -140,6 +96,6 @@ def parse_output_structure(input_val: AnyStr, variable_ordering) -> AbstractOutp
         try:
             ts, tp, tuples = parse_pattern(line)
             verdicts.insert(tuples, tp, ts)
-        except Exception:
+        except Exception():
             pass
     return verdicts
