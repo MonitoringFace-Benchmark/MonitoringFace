@@ -38,21 +38,34 @@ class AutoPolicyConverter:
             return False
 
     def convert(self, input_file: str, output_file: str, params) -> str:
-        pass
+        policy_input_path = self.path_manager.get_path("trace_input_path")
+        intermediate_working_space = self.path_manager.get_path("intermediate_working_space")
+        policy_output_path = self.path_manager.get_path("trace_output_path")
 
+        input_path_file = f"{policy_input_path}/{input_file}"
+        output_file_name = os.path.basename(output_file)
+        output_path_file = f"{policy_output_path}/{output_file_name}"
+        if self.source_format == self.target_format:
+            shutil.copy(input_path_file, output_path_file)
+            return output_path_file
 
-if __name__ == "__main__":
-    from Infrastructure.DataTypes.PathManager.PathManager import PathManager
-    pm = PathManager()
-    pm.add_path("path_to_project", "/Users/krq770/PycharmProjects/MonitoringFace_curr")
-    pm.add_path("path_to_infrastructure", "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure")
+        input_file_name = os.path.basename(input_file)
+        intermediate_infile = f"{input_file_name}.in"
+        intermediate_outfile = f"{output_file_name}.out"
+        intermediate_in = f"{intermediate_working_space}/{intermediate_infile}"
+        intermediate_out = f"{intermediate_working_space}/{intermediate_outfile}"
 
-    #x = _discover_trace_converters("/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure")
-    #mapping_ = {
-    #    (InputOutputTraceFormats.OOO_CSV, InputOutputTraceFormats.CSV): ["OrderRestorerConverter"],
-    #    (InputOutputTraceFormats.CSV, InputOutputTraceFormats.MONPOLY): ["MonpolyConverter"],
-    #}
-    #ag = AutoConversionReachabilityGraph(mapping_)
-    #x = ag.find_path(InputOutputTraceFormats.OOO_CSV, InputOutputTraceFormats.MONPOLY)
-    x = AutoConversionMapping(pm)
-    print(x.mappings)
+        shutil.copy(input_path_file, intermediate_in)
+        for converter, source, target in self._conversion_chain():
+            try:
+                converter.auto_convert(
+                    intermediate_working_space, intermediate_infile,
+                    intermediate_working_space, intermediate_outfile,
+                    source, target, params
+                )
+                shutil.copy(intermediate_out, intermediate_in)
+            except Exception as e:
+                raise PolicyConversionError(
+                    f"AutoTraceConverter: Conversion failed in {converter.__class__.__name__} from {source} to {target}: {e}")
+        shutil.copy(intermediate_in, output_path_file)
+        return f"scratch/{output_file_name}"
