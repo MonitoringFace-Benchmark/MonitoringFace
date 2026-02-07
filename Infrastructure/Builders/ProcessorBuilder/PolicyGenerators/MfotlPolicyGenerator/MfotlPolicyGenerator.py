@@ -1,6 +1,7 @@
 from dataclasses import fields
-from typing import AnyStr
+from typing import AnyStr, List
 
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import MfotlPolicyContract
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import policy_contract_to_commands
@@ -26,6 +27,10 @@ class MfotlPolicyGenerator(PolicyGeneratorTemplate):
             raise GeneratorException()
         else:
             return parse_gen_output(out), code
+
+    @staticmethod
+    def output_formats() -> List[InputOutputPolicyFormats]:
+        return [InputOutputPolicyFormats.MFOTL]
 
 
 def parse_gen_output(st: AnyStr):

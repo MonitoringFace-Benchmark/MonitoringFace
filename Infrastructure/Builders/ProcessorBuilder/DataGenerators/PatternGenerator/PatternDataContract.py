@@ -5,9 +5,9 @@ from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
 
 @dataclass
-class PatternContract(AbstractContract):
+class PatternDataContract(AbstractContract):
     def default_contract(self):
-        return PatternContract(
+        return PatternDataContract(
             trace_length=1000, seed=None, event_rate=1000, index_rate=None, time_stamp=None, linear=1, interval=None,
             star=None, triangle=None, pattern=None, violations=1.0, zipf="x=1.5+3,z=2", prob_a=0.2,  prob_b=0.3, prob_c=0.5,
             watermarks=None
@@ -44,7 +44,7 @@ class PatternContract(AbstractContract):
     prob_c: float = 0.5
 
 
-def patterns_to_commands(contract: PatternContract) -> list[str]:
+def patterns_to_commands(contract: PatternDataContract) -> list[str]:
     args = []
     if contract.seed is not None:
         args.extend(["-seed", str(contract.seed)])
@@ -73,7 +73,7 @@ def patterns_to_commands(contract: PatternContract) -> list[str]:
 
 
 def pattern_contract_to_commands(contract_params: Dict[str, Any]) -> list[str]:
-    valid_fields = {f.name for f in fields(PatternContract)}
-    contract = PatternContract(**{k: v for k, v in contract_params.items() if k in valid_fields})
+    valid_fields = {f.name for f in fields(PatternDataContract)}
+    contract = PatternDataContract(**{k: v for k, v in contract_params.items() if k in valid_fields})
     return patterns_to_commands(contract)
 

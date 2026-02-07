@@ -1,6 +1,6 @@
-import sys
-from typing import AnyStr, Tuple
+from typing import AnyStr, Tuple, List
 
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.GenFmaGenerator.GenFmaContract import GenFmaContract
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
@@ -22,6 +22,10 @@ class GenFmaGenerator(PolicyGeneratorTemplate):
             raise GeneratorException()
         else:
             return parse_gen_output(policy_contract.seed, out), code
+
+    @staticmethod
+    def output_formats() -> List[InputOutputPolicyFormats]:
+        return [InputOutputPolicyFormats.MFOTL]
 
 
 def parse_gen_output(seed, out: AnyStr) -> Tuple[int, str, str]:

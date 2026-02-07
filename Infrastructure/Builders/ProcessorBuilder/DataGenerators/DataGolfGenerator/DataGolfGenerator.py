@@ -79,7 +79,7 @@ class DataGolfGenerator(DataGeneratorTemplate):
 
     @staticmethod
     def output_formats():
-        return [InputOutputTraceFormats.MONPOLY]
+        return [InputOutputTraceFormats.CSV] # todo consider to return monpoly format
 
 
 def stdout_to_csv(in_str: AnyStr):
