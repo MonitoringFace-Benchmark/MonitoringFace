@@ -8,6 +8,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrd
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
 
 
 class EnfGuard(AbstractMonitorTemplate):
@@ -22,9 +23,9 @@ class EnfGuard(AbstractMonitorTemplate):
 
     def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = [
-            "-sig", str(self.params["signature"]),
-            "-formula", str(self.params["formula"]),
-            "-log", str(self.params["data"])
+            "-sig", str(self.params[SIGNATURE_KEY]),
+            "-formula", str(self.params[POLICY_KEY]),
+            "-log", str(self.params[TRACE_KEY])
         ]
 
         if self.params.get("monitoring", False):

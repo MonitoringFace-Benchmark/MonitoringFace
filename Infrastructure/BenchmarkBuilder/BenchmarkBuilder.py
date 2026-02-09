@@ -249,8 +249,9 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
     debug_path = path_manager.get_path("path_to_debug")
     try:
         prep, compiled, runtime, prop = run_monitor(
-            tool, time_guard, path_to_folder, data_file,
-            signature_file, formula_file, path_manager, oracle, case_study_mapper
+            mon=tool, guarded=time_guard, path_to_folder=path_to_folder, data_file=data_file, signature_file=signature_file,
+            policy_file=formula_file, path_manager=path_manager, cli_args=cli_args, oracle=oracle, case_study_mapper=case_study_mapper,
+            trace_source_format=None, policy_source_format=None
         )
 
         if cli_args.debug and sfh is not None:

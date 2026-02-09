@@ -6,10 +6,12 @@ from Infrastructure.AutoConversion.AutoPolicyConverter import AutoPolicyConverte
 from Infrastructure.AutoConversion.AutoTraceConverter import AutoTraceConverter
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
+from Infrastructure.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
+from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLICY_KEY
 from Infrastructure.printing import print_headline, print_footline
 
 
@@ -64,11 +66,9 @@ class AbstractMonitorTemplate(ABC):
         pass
 
 
-def run_monitor(mon: AbstractMonitorTemplate, guarded,
-                path_to_folder: AnyStr, data_file: AnyStr,
-                signature_file: AnyStr, formula_file: AnyStr,
+def run_monitor(mon: AbstractMonitorTemplate, guarded, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
                 path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
-                oracle=None, case_study_mapper=None) -> Tuple[float, float, float, float]:
+                cli_args: CLIArgs, oracle=None, case_study_mapper=None) -> Tuple[float, float, float, float]:
     print_headline(f"Run {mon.name}")
     path_manager.add_path("trace_input_path", f"{path_to_folder}")
     path_manager.add_path("intermediate_working_space", f"{path_to_folder}/scratch")
@@ -99,19 +99,25 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
 
     start = time.perf_counter()
     if trace_auto_convertible and policy_auto_convertible:
-        print("Auto conversion")
-        mon.params["signature"] = signature_file
-        mon.params["folder"] = path_to_folder
+        print("Automatic conversion")
 
-        mon.params["data"] = AutoTraceConverter(path_manager, trace_source_format, trace_target_format).convert(
+        if cli_args.verbose:
+            print("Trace conversion from {} to {}".format(trace_source_format, trace_target_format))
+            print("Policy conversion from {} to {}".format(policy_source_format, policy_target_format))
+
+        mon.params[SIGNATURE_KEY] = signature_file
+        mon.params[FOLDER_KEY] = path_to_folder
+
+        mon.params[TRACE_KEY] = AutoTraceConverter(path_manager, trace_source_format, trace_target_format).convert(
             input_file=data_file, output_file=data_file, params=mon.params
         )
-        mon.params["formula"] = AutoPolicyConverter(path_manager, policy_source_format, policy_target_format).convert(
-            input_file=formula_file, output_file=formula_file, params=mon.params
+        mon.params[POLICY_KEY] = AutoPolicyConverter(path_manager, policy_source_format, policy_target_format).convert(
+            input_file=policy_file, output_file=policy_file, params=mon.params
         )
     else:
+        print("Preprocessing")
         mon.pre_processing(
-            path_to_folder, data_file, signature_file, formula_file, trace_source_format, policy_source_format, path_manager
+            path_to_folder, data_file, signature_file, policy_file, trace_source_format, policy_source_format, path_manager
         )
     end = time.perf_counter()
     preprocessing_elapsed = end - start
@@ -143,7 +149,7 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
 
     if oracle is not None:
         try:
-            verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, formula_file, case_study_mapper=case_study_mapper)
+            verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, policy_file, case_study_mapper=case_study_mapper)
         except Exception as e:
             print(f"Oracle verification failed with exception: {e}")
             raise ResultErrorException((preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed), str(e))

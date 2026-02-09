@@ -11,6 +11,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrd
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 from Infrastructure.Monitors.SharedFunctions import parse_variable_order_timely
+from Infrastructure.constants import POLICY_KEY, TRACE_KEY, SIGNATURE_KEY
 
 
 class TimelyMon(AbstractMonitorTemplate):
@@ -24,10 +25,10 @@ class TimelyMon(AbstractMonitorTemplate):
         raise NotImplementedError("TimelyMon does not support non-automatic pre-processing")
 
     def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
-        cmd = [self.params["formula"], self.params["data"]]
+        cmd = [self.params[POLICY_KEY], self.params[TRACE_KEY]]
 
         if not self.params.get("ignore_signature", False):
-            cmd += ["--sig-file", self.params["signature"]]
+            cmd += ["--sig-file", self.params[SIGNATURE_KEY]]
 
         if "worker" in self.params:
             cmd += ["-w", str(self.params["worker"])]

@@ -9,6 +9,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.constants import POLICY_KEY, FOLDER_KEY, TRACE_KEY
 
 
 class DejaVu(AbstractMonitorTemplate):
@@ -22,13 +23,13 @@ class DejaVu(AbstractMonitorTemplate):
         raise NotImplementedError("DejaVu does not support non-automatic pre-processing")
 
     def compile(self):
-        cmd = ["build", str(self.params["formula"])]
-        out, code = self.image.run(self.params["folder"], cmd, measure=False, name="")
+        cmd = ["build", str(self.params[POLICY_KEY])]
+        out, code = self.image.run(self.params[FOLDER_KEY], cmd, measure=False, name="")
         if code != 0:
             raise ToolException(f"DejaVu compilation failed with code {code} and output: {out}")
 
     def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
-        cmd = ["run", str(self.params["formula"]), str(self.params["data"])]
+        cmd = ["run", str(self.params[POLICY_KEY]), str(self.params[TRACE_KEY])]
         return cmd, ""
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:

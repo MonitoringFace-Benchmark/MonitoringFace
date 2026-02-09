@@ -9,6 +9,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts 
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 from Infrastructure.Monitors.SharedFunctions import parse_variable_order_monpoly, parse_pattern
+from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
 
 
 class VeriMon(AbstractMonitorTemplate):
@@ -23,9 +24,9 @@ class VeriMon(AbstractMonitorTemplate):
 
     def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = [
-            "-sig", str(self.params["signature"]),
-            "-formula", str(self.params["formula"]),
-            "-log", str(self.params["data"])
+            "-sig", str(self.params[SIGNATURE_KEY]),
+            "-formula", str(self.params[POLICY_KEY]),
+            "-log", str(self.params[TRACE_KEY])
         ]
 
         cmd += ["-verified"]

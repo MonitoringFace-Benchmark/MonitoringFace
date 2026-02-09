@@ -9,6 +9,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts 
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 from Infrastructure.Monitors.SharedFunctions import parse_pattern, parse_variable_order_monpoly
+from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
 
 
 class MonPoly(AbstractMonitorTemplate):
@@ -23,9 +24,9 @@ class MonPoly(AbstractMonitorTemplate):
 
     def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = [
-            "-sig", str(self.params["signature"]),
-            "-formula", str(self.params["formula"]),
-            "-log", str(self.params["data"])
+            "-sig", str(self.params[SIGNATURE_KEY]),
+            "-formula", str(self.params[POLICY_KEY]),
+            "-log", str(self.params[TRACE_KEY])
         ]
 
         if "negate" in self.params:

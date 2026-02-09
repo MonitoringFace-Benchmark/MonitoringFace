@@ -7,6 +7,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.constants import FOLDER_KEY, POLICY_KEY, TRACE_KEY
 
 
 class TeSSLa(AbstractMonitorTemplate):
@@ -17,12 +18,12 @@ class TeSSLa(AbstractMonitorTemplate):
             self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
             trace_source: InputOutputTraceFormats, policy_source: InputOutputPolicyFormats, path_manager: PathManager
     ):
-        self.params["folder"] = path_to_folder
-        self.params["formula"] = formula_file.removeprefix("data/")
-        self.params["data"] = data_file.removeprefix("data/")
+        self.params[FOLDER_KEY] = path_to_folder
+        self.params[POLICY_KEY] = formula_file.removeprefix("data/")
+        self.params[TRACE_KEY] = data_file.removeprefix("data/")
 
     def run_offline_command(self, time_on=None, time_out=None) -> Tuple[List[str], Optional[str]]:
-        cmd = [self.params["formula"], self.params["data"]]
+        cmd = [self.params[POLICY_KEY], self.params[TRACE_KEY]]
         return cmd, "interpreter"
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:

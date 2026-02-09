@@ -31,6 +31,11 @@ REPO_KEY = "repo"
 VERSION_KEY = "version"
 BRANCH_KEY = "branch"
 
+SIGNATURE_KEY = "signature"
+FOLDER_KEY = "folder"
+POLICY_KEY = "policy"
+TRACE_KEY = "trace"
+
 
 FINGERPRINT_DATA = "fingerprint_data"
 FINGERPRINT_EXPERIMENT = "fingerprint_experiment"

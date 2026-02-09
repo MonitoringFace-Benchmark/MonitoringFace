@@ -10,6 +10,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Propositi
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
 from Infrastructure.DataTypes.Verification.PDTParser import str_to_proposition_tree
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
 
 
 class WhyMon(AbstractMonitorTemplate):
@@ -25,9 +26,9 @@ class WhyMon(AbstractMonitorTemplate):
 
     def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = [
-            "-sig", str(self.params["signature"]),
-            "-formula", str(self.params["formula"]),
-            "-log", str(self.params["data"])
+            "-sig", str(self.params[SIGNATURE_KEY]),
+            "-formula", str(self.params[POLICY_KEY]),
+            "-log", str(self.params[TRACE_KEY])
         ]
 
         if "mode" in self.params:
