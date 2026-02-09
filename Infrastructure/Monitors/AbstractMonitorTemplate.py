@@ -21,12 +21,44 @@ class AbstractMonitorTemplate(ABC):
         self.params = params
         self.name = name
 
-    """
-        compile the monitor
-    """
-    def compile(self):
-        # build tool that requires compilation
-        pass
+    def auto_preprocessing(
+            self, path_to_folder: str, trace_source_format: InputOutputTraceFormats,
+            policy_source_format: InputOutputPolicyFormats, data_file: str, signature_file: str, policy_file: str,
+            path_manager: PathManager, verbose=False
+    ) -> float:
+        path_manager.add_path("trace_input_path", f"{path_to_folder}")
+        path_manager.add_path("intermediate_working_space", f"{path_to_folder}/scratch")
+        path_manager.add_path("trace_output_path", f"{path_to_folder}/scratch")
+
+        trace_target_format, conversion_distance = find_trace_path(self, path_manager, trace_source_format)
+        policy_target_format, conversion_distance = find_policy_path(self, path_manager, policy_source_format)
+
+        trace_auto_convertible = True if trace_target_format is not None else False
+        policy_auto_convertible = True if policy_target_format is not None else False
+
+        start = time.perf_counter()
+        if trace_auto_convertible and policy_auto_convertible:
+            print("Automatic conversion")
+            if verbose:
+                print("Trace conversion from {} to {}".format(trace_source_format, trace_target_format))
+                print("Policy conversion from {} to {}".format(policy_source_format, policy_target_format))
+
+            self.params[SIGNATURE_KEY] = signature_file
+            self.params[FOLDER_KEY] = path_to_folder
+            self.params[TRACE_KEY] = AutoTraceConverter(path_manager, trace_source_format, trace_target_format).convert(
+                input_file=data_file, output_file=data_file, params=self.params
+            )
+            self.params[POLICY_KEY] = AutoPolicyConverter(path_manager, policy_source_format, policy_target_format).convert(
+                input_file=policy_file, output_file=policy_file, params=self.params
+            )
+        else:
+            print("Preprocessing")
+            self.pre_processing(
+                path_to_folder, data_file, signature_file, policy_file, trace_source_format, policy_source_format,
+                path_manager
+            )
+        end = time.perf_counter()
+        return end - start
 
     """
         transform csv into the tool format, e.g. sorted
@@ -39,6 +71,13 @@ class AbstractMonitorTemplate(ABC):
             self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
             trace_source: InputOutputTraceFormats, policy_source: InputOutputPolicyFormats, path_manager: PathManager
     ):
+        pass
+
+    """
+        compile the monitor
+    """
+    def compile(self):
+        # build tool that requires compilation
         pass
 
     """
@@ -70,57 +109,11 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded, path_to_folder: AnyStr, d
                 path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
                 cli_args: CLIArgs, oracle=None, case_study_mapper=None) -> Tuple[float, float, float, float]:
     print_headline(f"Run {mon.name}")
-    path_manager.add_path("trace_input_path", f"{path_to_folder}")
-    path_manager.add_path("intermediate_working_space", f"{path_to_folder}/scratch")
-    path_manager.add_path("trace_output_path", f"{path_to_folder}/scratch")
 
-    trace_target_format = None
-    conversion_distance = None
-    for trace_format in mon.supported_trace_formats():
-        res = AutoTraceConverter.reachable(path_manager, trace_source_format, trace_format)
-        if res is not None:
-            _, target, dist = res
-            if conversion_distance is None or dist < conversion_distance:
-                trace_target_format = target
-                conversion_distance = dist
-
-    policy_target_format = None
-    conversion_distance = None
-    for policy_format in mon.supported_policy_formats():
-        res = AutoPolicyConverter.reachable(path_manager, policy_source_format, policy_format)
-        if res is not None:
-            _, target, dist = res
-            if conversion_distance is None or dist < conversion_distance:
-                policy_target_format = target
-                conversion_distance = dist
-
-    trace_auto_convertible = True if trace_target_format is not None else False
-    policy_auto_convertible = True if policy_target_format is not None else False
-
-    start = time.perf_counter()
-    if trace_auto_convertible and policy_auto_convertible:
-        print("Automatic conversion")
-
-        if cli_args.verbose:
-            print("Trace conversion from {} to {}".format(trace_source_format, trace_target_format))
-            print("Policy conversion from {} to {}".format(policy_source_format, policy_target_format))
-
-        mon.params[SIGNATURE_KEY] = signature_file
-        mon.params[FOLDER_KEY] = path_to_folder
-
-        mon.params[TRACE_KEY] = AutoTraceConverter(path_manager, trace_source_format, trace_target_format).convert(
-            input_file=data_file, output_file=data_file, params=mon.params
-        )
-        mon.params[POLICY_KEY] = AutoPolicyConverter(path_manager, policy_source_format, policy_target_format).convert(
-            input_file=policy_file, output_file=policy_file, params=mon.params
-        )
-    else:
-        print("Preprocessing")
-        mon.pre_processing(
-            path_to_folder, data_file, signature_file, policy_file, trace_source_format, policy_source_format, path_manager
-        )
-    end = time.perf_counter()
-    preprocessing_elapsed = end - start
+    preprocessing_elapsed = mon.auto_preprocessing(
+        path_to_folder, trace_source_format, policy_source_format, data_file, signature_file, policy_file, path_manager,
+        verbose=cli_args.verbose
+    )
 
     start_compile = time.perf_counter()
     mon.compile()
@@ -159,3 +152,29 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded, path_to_folder: AnyStr, d
 
     print_footline()
     return preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed
+
+
+def find_trace_path(mon: AbstractMonitorTemplate, path_manager: PathManager, trace_source_format: InputOutputTraceFormats) -> Tuple[Optional[InputOutputTraceFormats], Optional[int]]:
+    trace_target_format = None
+    conversion_distance = None
+    for trace_format in mon.supported_trace_formats():
+        res = AutoTraceConverter.reachable(path_manager, trace_source_format, trace_format)
+        if res is not None:
+            _, target, dist = res
+            if conversion_distance is None or dist < conversion_distance:
+                trace_target_format = target
+                conversion_distance = dist
+    return trace_target_format, conversion_distance
+
+
+def find_policy_path(mon: AbstractMonitorTemplate, path_manager: PathManager, policy_source_format: InputOutputPolicyFormats) -> Tuple[Optional[InputOutputPolicyFormats], Optional[int]]:
+    policy_target_format = None
+    conversion_distance = None
+    for policy_format in mon.supported_policy_formats():
+        res = AutoPolicyConverter.reachable(path_manager, policy_source_format, policy_format)
+        if res is not None:
+            _, target, dist = res
+            if conversion_distance is None or dist < conversion_distance:
+                policy_target_format = target
+                conversion_distance = dist
+    return policy_target_format, conversion_distance

@@ -3,7 +3,7 @@ from typing import AnyStr, List, Tuple, Dict, Any
 
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.DataConverterTemplate import DataConverterTemplate
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import Processor, ImageManager
-from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats, inout_format_to_str
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats, trace_inout_format_to_str
 from Infrastructure.Monitors.MonitorExceptions import ReplayerException
 
 
@@ -17,8 +17,8 @@ class ReplayerConverter(DataConverterTemplate):
         source: InputOutputTraceFormats, target: InputOutputTraceFormats, params: Dict[str, Any]
     ):
         cmd_params = params["cmd_params"] if "cmd_params" in params else ["-a", "0"]
-        cast_source = inout_format_to_str(source)
-        cast_target = inout_format_to_str(target)
+        cast_source = trace_inout_format_to_str(source)
+        cast_target = trace_inout_format_to_str(target)
         command = ["docker", "run", "--rm", "--entrypoint", "java", "-iv", f"{path_to_folder}:/work",
                    f"{self.image.image_name.lower()}", "-cp", "classes:libs/*",
                    "org.entry.Dispatcher", "Replayer", "-i", f"{cast_source}", "-f", f"{cast_target}"] + cmd_params

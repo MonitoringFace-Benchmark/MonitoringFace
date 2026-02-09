@@ -36,6 +36,10 @@ FOLDER_KEY = "folder"
 POLICY_KEY = "policy"
 TRACE_KEY = "trace"
 
+VALUE_KEY = "value"
+TYPE_KEY = "type"
+PATH_KEY = "path"
+
 
 FINGERPRINT_DATA = "fingerprint_data"
 FINGERPRINT_EXPERIMENT = "fingerprint_experiment"
