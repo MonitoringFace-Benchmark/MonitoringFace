@@ -7,7 +7,7 @@ from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.R
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PropositionTree
-from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, DefaultVariableOrder
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
 from Infrastructure.DataTypes.Verification.PDTParser import str_to_proposition_tree
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 
@@ -19,8 +19,7 @@ class WhyMon(AbstractMonitorTemplate):
 
     def pre_processing(
             self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
-            trace_source: InputOutputTraceFormats, trace_target: InputOutputTraceFormats,
-            policy_source: InputOutputPolicyFormats, policy_target: InputOutputPolicyFormats, path_manager: PathManager
+            trace_source: InputOutputTraceFormats, policy_source: InputOutputPolicyFormats, path_manager: PathManager
     ):
         raise NotImplementedError("WhyMon does not support non-automatic pre-processing")
 

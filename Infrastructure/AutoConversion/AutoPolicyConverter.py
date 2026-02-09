@@ -1,6 +1,6 @@
 import os
 import shutil
-from typing import List
+from typing import List, Optional
 
 from Infrastructure.AutoConversion.AutoConversionMapping import AutoConversionMapping
 from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.PolicyConverterTemplate import PolicyConverterTemplate
@@ -29,12 +29,12 @@ class AutoPolicyConverter:
         return converter_chain
 
     @staticmethod
-    def reachable(path_manager, source, target) -> bool:
+    def reachable(path_manager, source, target) -> Optional[InputOutputPolicyFormats, InputOutputPolicyFormats, int]:
         try:
-            AutoConversionMapping(path_manager, "PolicyConverters").resolve_format(source, target)
-            return True
+            res = AutoConversionMapping(path_manager, "PolicyConverters").resolve_format(source, target)
+            return source, target, len(res)
         except Exception():
-            return False
+            return None
 
     def convert(self, input_file: str, output_file: str, params) -> str:
         policy_input_path = self.path_manager.get_path("trace_input_path")

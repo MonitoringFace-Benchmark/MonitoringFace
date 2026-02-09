@@ -35,8 +35,7 @@ class AbstractMonitorTemplate(ABC):
     @abstractmethod
     def pre_processing(
             self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
-            trace_source: InputOutputTraceFormats, trace_target: InputOutputTraceFormats,
-            policy_source: InputOutputPolicyFormats, policy_target: InputOutputPolicyFormats, path_manager: PathManager
+            trace_source: InputOutputTraceFormats, policy_source: InputOutputPolicyFormats, path_manager: PathManager
     ):
         pass
 
@@ -68,25 +67,35 @@ class AbstractMonitorTemplate(ABC):
 def run_monitor(mon: AbstractMonitorTemplate, guarded,
                 path_to_folder: AnyStr, data_file: AnyStr,
                 signature_file: AnyStr, formula_file: AnyStr,
-                path_manager: PathManager,
+                path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
                 oracle=None, case_study_mapper=None) -> Tuple[float, float, float, float]:
     print_headline(f"Run {mon.name}")
-
-    # source format is passed by the framework
-    # target is determined by the monitor, here
     path_manager.add_path("trace_input_path", f"{path_to_folder}")
     path_manager.add_path("intermediate_working_space", f"{path_to_folder}/scratch")
     path_manager.add_path("trace_output_path", f"{path_to_folder}/scratch")
 
-    # todo get from outside
-    # todo introduce sources
-    trace_source_format = InputOutputTraceFormats.MONPOLY
-    trace_target_format = InputOutputTraceFormats.CSV
-    policy_source_format = InputOutputPolicyFormats.MFOTL
-    policy_target_format = InputOutputPolicyFormats.MFOTL
+    trace_target_format = None
+    conversion_distance = None
+    for trace_format in mon.supported_trace_formats():
+        res = AutoTraceConverter.reachable(path_manager, trace_source_format, trace_format)
+        if res is not None:
+            _, target, dist = res
+            if conversion_distance is None or dist < conversion_distance:
+                trace_target_format = target
+                conversion_distance = dist
 
-    trace_auto_convertible = AutoTraceConverter.reachable(path_manager, trace_source_format, trace_target_format)
-    policy_auto_convertible = AutoTraceConverter.reachable(path_manager, policy_source_format, policy_target_format)
+    policy_target_format = None
+    conversion_distance = None
+    for policy_format in mon.supported_policy_formats():
+        res = AutoPolicyConverter.reachable(path_manager, policy_source_format, policy_format)
+        if res is not None:
+            _, target, dist = res
+            if conversion_distance is None or dist < conversion_distance:
+                policy_target_format = target
+                conversion_distance = dist
+
+    trace_auto_convertible = True if trace_target_format is not None else False
+    policy_auto_convertible = True if policy_target_format is not None else False
 
     start = time.perf_counter()
     if trace_auto_convertible and policy_auto_convertible:
@@ -101,7 +110,9 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded,
             input_file=formula_file, output_file=formula_file, params=mon.params
         )
     else:
-        mon.pre_processing(path_to_folder, data_file, signature_file, formula_file, trace_source_format, trace_target_format, path_manager)
+        mon.pre_processing(
+            path_to_folder, data_file, signature_file, formula_file, trace_source_format, policy_source_format, path_manager
+        )
     end = time.perf_counter()
     preprocessing_elapsed = end - start
 

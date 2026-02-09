@@ -7,6 +7,7 @@ from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.Oracles.OracleExceptions import RunOracleException
 from Infrastructure.constants import BENCHMARK_BUILDING_OFFSET
 
+
 @dataclasses.dataclass
 class CaseStudyContract:
     path: str

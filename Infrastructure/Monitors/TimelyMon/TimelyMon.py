@@ -19,8 +19,7 @@ class TimelyMon(AbstractMonitorTemplate):
 
     def pre_processing(
             self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
-            trace_source: InputOutputTraceFormats, trace_target: InputOutputTraceFormats,
-            policy_source: InputOutputPolicyFormats, policy_target: InputOutputPolicyFormats, path_manager: PathManager
+            trace_source: InputOutputTraceFormats, policy_source: InputOutputPolicyFormats, path_manager: PathManager
     ):
         raise NotImplementedError("TimelyMon does not support non-automatic pre-processing")
 
