@@ -1,6 +1,6 @@
 import copy
 import os
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
@@ -51,7 +51,6 @@ class SyntheticCoordinator(Coordinator):
                 os.makedirs(fvs_path, exist_ok=True)
 
                 for num_set in self.experiment.num_setting:
-
                     num_path = f"{fvs_path}/num_{num_set}"
                     self.data_setup[PATH_KEY] = num_path
                     os.makedirs(num_path, exist_ok=True)
@@ -59,47 +58,57 @@ class SyntheticCoordinator(Coordinator):
                     if self.oracle is not None or self.data_setup.get(ORACLE_KEY):
                         os.makedirs(f"{num_path}/result", exist_ok=True)
 
-                    # todo seed handling better access and support fine grained settings
-                    if self.seeds:
-                        gen_seed, policy_seed = self.seeds[str([num_ops, num_fv, num_set])]
-                        if policy_seed:
-                            self.policy_setup[SEEDS_KEY] = policy_seed
-                        if gen_seed:
-                            self.data_setup[SEEDS_KEY] = gen_seed
-                    # todo unify seed handling and support fine grained settings
-                    if self.seeds:
-                        gen_seed, _ = self.seeds[str([num_ops, num_set])]
-                        if gen_seed:
-                            self.data_setup[SEEDS_KEY] = gen_seed
-
                     print(f"    Build {num_path}")
                     trace_format = self.data_source.output_format()
                     policy_format = self.policy_source.output_format()
                     constraint = self.constraints.construction_constraint()
-                    if constraint is not None and (constraint.lower_bound is not None or constraint.upper_bound is not None):
-                        data_file, policy_file, sig_file, result_file = guarded_synthetic_experiment(
-                            num_path=num_path, num_ops=num_ops, num_fv=num_fv, policy_setup=self.policy_setup,
-                            policy_source=self.policy_source, data_setup=self.data_setup, data_source=self.data_source,
-                            num_data_set_sizes=self.experiment.num_data_set_sizes, oracle=self.oracle,
-                            constraints=constraint, path_manager=self.path_manager
-                        )
-                    else:
-                        data_file, policy_file, sig_file, result_file = guarded_synthetic_experiment(
-                            num_path=num_path, num_ops=num_ops, num_fv=num_fv, policy_setup=self.policy_setup,
-                            policy_source=self.policy_source, data_setup=self.data_setup, data_source=self.data_source,
-                            num_data_set_sizes=self.experiment.num_data_set_sizes, oracle=self.oracle,
-                            constraints=None, path_manager=self.path_manager
-                        )
-                    self.instructions.append((index, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
-                    index += 1
+
+                    for data_set_size in self.experiment.num_data_set_sizes:
+                        if self.seeds:
+                            gen_seed, policy_seed = retrieve_setting_seeds(key_list=[
+                                [num_ops, num_fv, num_set, data_set_size],
+                                [num_ops, num_fv, num_set],
+                                [num_ops, num_set, data_set_size]
+                            ], seed_dict=self.seeds)
+
+                            if gen_seed:
+                                self.data_setup[SEEDS_KEY] = gen_seed
+                            if policy_seed:
+                                self.policy_setup[SEEDS_KEY] = policy_seed
+
+                        if constraint is not None and (constraint.lower_bound is not None or constraint.upper_bound is not None):
+                            data_file, policy_file, sig_file, result_file = guarded_synthetic_experiment(
+                                num_path=num_path, num_ops=num_ops, num_fv=num_fv, policy_setup=self.policy_setup,
+                                policy_source=self.policy_source, data_setup=self.data_setup, data_source=self.data_source,
+                                data_set_size=data_set_size, oracle=self.oracle,
+                                constraints=constraint, path_manager=self.path_manager
+                            )
+                        else:
+                            data_file, policy_file, sig_file, result_file = guarded_synthetic_experiment(
+                                num_path=num_path, num_ops=num_ops, num_fv=num_fv, policy_setup=self.policy_setup,
+                                policy_source=self.policy_source, data_setup=self.data_setup, data_source=self.data_source,
+                                data_set_size=data_set_size, oracle=self.oracle,
+                                constraints=None, path_manager=self.path_manager
+                            )
+                        self.instructions.append((index, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
+                        index += 1
 
     def iterate_settings(self) -> List[Tuple[int, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
         return self.instructions
 
 
+def retrieve_setting_seeds(key_list: List[List[int]], seed_dict: Dict) -> Tuple[Optional[int], Optional[int]]:
+    sorted_keys = sorted(key_list, key=len, reverse=True)
+    for key in sorted_keys:
+        str_key = str(key)
+        if str_key in seed_dict:
+            return seed_dict[str_key]
+    return None, None
+
+
 def guarded_synthetic_experiment(
     num_path: str, num_ops: int, num_fv: int, policy_setup, policy_source, data_setup, data_source,
-    num_data_set_sizes: List[int], oracle: Optional[AbstractOracleTemplate], constraints: Optional[ConstructionConstraints],
+    data_set_size: int, oracle: Optional[AbstractOracleTemplate], constraints: Optional[ConstructionConstraints],
     path_manager: PathManager
 ):
     lower_time_bound = None if constraints is None else constraints.lower_bound
@@ -119,7 +128,7 @@ def guarded_synthetic_experiment(
 
         time_out_in_for_loop, data_file, result_file = synthetic_trace_creation(
             num_path=num_path, signature_file=sig_file, policy_file=policy_file, data_source=data_source, data_setup=data_setup,
-            policy_format=policy_source.output_format(), num_data_set_sizes=num_data_set_sizes, oracle=oracle, path_manager=path_manager,
+            policy_format=policy_source.output_format(), num_len=data_set_size, oracle=oracle, path_manager=path_manager,
             time_on=lower_time_bound, time_out=upper_time_bound, guard_type=guard_type, guard=guard
         )
 
@@ -159,74 +168,70 @@ def synthetic_policy_creation(
 
 def synthetic_trace_creation(
         num_path: str, signature_file: Optional[str], policy_file: str, data_source, data_setup,
-        policy_format: InputOutputPolicyFormats, num_data_set_sizes: List[int],
+        policy_format: InputOutputPolicyFormats, num_len: int,
         oracle: Optional[AbstractOracleTemplate], path_manager: PathManager,
         time_on: Optional[int], time_out: Optional[int], guard_type: TimeGuardingTool,
         guard: Optional[AbstractMonitorTemplate]
 ):
-    time_out_in_for_loop = False
     data_file = None
     result_file = None
 
-    for (num_len, num_name) in num_data_set_sizes:
-        data_setup[TRACE_LENGTH_KEY] = num_len
-        sh = SeedHandler(num_path)
-        if guard_type is not None and guard_type == TimeGuardingTool.Generator:
-            try:
-                seed, result_csv = data_source.run_generator(data_setup, time_on, time_out)
-                sh.add_seed_generator(seed)
-            except TimedOut:
-                time_out_in_for_loop = True
-                break
-        else:
-            seed, result_csv = data_source.run_generator(data_setup)
+    data_setup[TRACE_LENGTH_KEY] = num_len
+    sh = SeedHandler(num_path)
+    if guard_type is not None and guard_type == TimeGuardingTool.Generator:
+        try:
+            seed, result_csv = data_source.run_generator(data_setup, time_on, time_out)
             sh.add_seed_generator(seed)
+        except TimedOut:
+            return True, data_file, result_file
+    else:
+        seed, result_csv = data_source.run_generator(data_setup)
+        sh.add_seed_generator(seed)
 
-        trace_format = data_source.output_format()
-        trace_ending = trace_inout_format_to_str(trace_format)
-        to_file(num_path, result_csv, f"data_{num_name}", trace_ending)
-        data_file = f"data_{num_name}.{trace_ending}"
+    trace_format = data_source.output_format()
+    trace_ending = trace_inout_format_to_str(trace_format)
+    to_file(num_path, result_csv, f"data_{num_len}", trace_ending)
+    data_file = f"data_{num_len}.{trace_ending}"
 
-        if oracle is not None:
-            oracle.pre_process_data(
-                path_to_folder=num_path, data_file=data_file, policy_file=policy_file, signature_file=signature_file,
-                trace_source_format=trace_format, policy_source_format=policy_format, path_manager=path_manager
-            )
-            if guard_type is not None and guard_type == TimeGuardingTool.Oracle:
-                try:
-                    out, code = oracle.compute_result(time_on, time_out)
-                    if code != 0:
-                        if code == 124:
-                            raise TimedOut()
-                        else:
-                            raise RunOracleException(out)
-                except TimedOut:
-                    time_out_in_for_loop = True
-                    break
-            else:
-                out, code = oracle.compute_result()
-                if code != 0:
-                    raise RunOracleException(out)
-            result_file = f"{num_path}/result/result_{num_name}.res"
-            oracle.post_process_data(out, result_file)
-
-        if guard_type is not None and guard_type == TimeGuardingTool.Monitor and guard is not None:
-            guard.preprocessing(
-                path_to_folder=num_path, data_file=data_file, policy_file=policy_file, signature_file=signature_file,
-                trace_source_format=trace_format, policy_source_format=policy_format, path_manager=path_manager,
-                verbose=False
-            )
+    if oracle is not None:
+        oracle.pre_process_data(
+            path_to_folder=num_path, data_file=data_file, policy_file=policy_file, signature_file=signature_file,
+            trace_source_format=trace_format, policy_source_format=policy_format, path_manager=path_manager
+        )
+        if guard_type is not None and guard_type == TimeGuardingTool.Oracle:
             try:
-                cmd, name = guard.run_offline_command()
-                out, code = guard.image.run(parameters=cmd, path_to_data=num_path, time_on=time_on, timeout=time_out, name=name)
+                out, code = oracle.compute_result(time_on, time_out)
                 if code != 0:
                     if code == 124:
                         raise TimedOut()
-                    elif code == 137:
-                        raise ToolException("OOM Killer activated")
                     else:
-                        raise ToolException(code)
+                        raise RunOracleException(out)
             except TimedOut:
-                time_out_in_for_loop = True
-                break
-    return time_out_in_for_loop, data_file, result_file
+                return True, data_file, result_file
+        else:
+            out, code = oracle.compute_result()
+            if code != 0:
+                raise RunOracleException(out)
+        result_file = f"{num_path}/result/result_{num_len}.res"
+        oracle.post_process_data(out, result_file)
+
+    if guard_type is not None and guard_type == TimeGuardingTool.Monitor and guard is not None:
+        guard.preprocessing(
+            path_to_folder=num_path, data_file=data_file, policy_file=policy_file, signature_file=signature_file,
+            trace_source_format=trace_format, policy_source_format=policy_format, path_manager=path_manager,
+            verbose=False
+        )
+        try:
+            cmd, name = guard.run_offline_command()
+            out, code = guard.image.run(parameters=cmd, path_to_data=num_path, time_on=time_on, timeout=time_out, name=name)
+            if code != 0:
+                if code == 124:
+                    raise TimedOut()
+                elif code == 137:
+                    raise ToolException("OOM Killer activated")
+                else:
+                    raise ToolException(code)
+        except TimedOut:
+            return True, data_file, result_file
+
+    return False, data_file, result_file
