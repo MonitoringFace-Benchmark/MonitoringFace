@@ -57,7 +57,7 @@ class VeriMon(AbstractMonitorTemplate):
         return cmd, None
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        cmd = ["-sig", str(self.params["signature"]), "-formula", str(self.params["formula"]), "-check"]
+        cmd = ["-sig", str(self.params[SIGNATURE_KEY]), "-formula", str(self.params[POLICY_KEY]), "-check"]
         logs, code = self.image.run(self.params["folder"], cmd, measure=False)
         variable_order = VariableOrder(parse_variable_order_monpoly(logs)) if code == 0 else DefaultVariableOrder()
         verdicts = Verdicts(variable_order=variable_order)

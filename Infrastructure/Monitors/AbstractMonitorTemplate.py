@@ -21,7 +21,7 @@ class AbstractMonitorTemplate(ABC):
         self.params = params
         self.name = name
 
-    def auto_preprocessing(
+    def preprocessing(
             self, path_to_folder: str, trace_source_format: InputOutputTraceFormats,
             policy_source_format: InputOutputPolicyFormats, data_file: str, signature_file: str, policy_file: str,
             path_manager: PathManager, verbose=False
@@ -110,9 +110,9 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded, path_to_folder: AnyStr, d
                 cli_args: CLIArgs, oracle=None, case_study_mapper=None) -> Tuple[float, float, float, float]:
     print_headline(f"Run {mon.name}")
 
-    preprocessing_elapsed = mon.auto_preprocessing(
-        path_to_folder, trace_source_format, policy_source_format, data_file, signature_file, policy_file, path_manager,
-        verbose=cli_args.verbose
+    preprocessing_elapsed = mon.preprocessing(
+        path_to_folder, trace_source_format, policy_source_format,
+        data_file, signature_file, policy_file, path_manager, verbose=cli_args.verbose
     )
 
     start_compile = time.perf_counter()

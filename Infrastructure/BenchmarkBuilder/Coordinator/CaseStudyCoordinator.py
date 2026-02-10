@@ -1,34 +1,15 @@
 import os
-from abc import abstractmethod, ABC
-from enum import Enum
-from typing import Optional
+from typing import Optional, List, Tuple
 
-from Infrastructure.AutoConversion.InputOutputPolicyFormats import str_to_policy_inout_format
-from Infrastructure.AutoConversion.InputOutputTraceFormats import str_to_trace_inout_format
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import str_to_policy_inout_format, InputOutputPolicyFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import str_to_trace_inout_format, InputOutputTraceFormats
+from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import CaseStudyGenerator
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
-from Infrastructure.Monitors.AbstractMonitorTemplate import direct_run
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
-from Infrastructure.constants import TRACE_KEY, POLICY_KEY, VALUE_KEY, PATH_KEY, BENCHMARK_BUILDING_OFFSET, \
-    SIGNATURE_KEY
+from Infrastructure.constants import TRACE_KEY, POLICY_KEY, VALUE_KEY, PATH_KEY, BENCHMARK_BUILDING_OFFSET, SIGNATURE_KEY
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, TimeGuardingTool
-
-
-class SeedType(Enum):
-    RANDOM = 1
-    FIXED = 2
-    DETERMINISTIC = 3
-
-
-class Coordinator(ABC):
-    @abstractmethod
-    def build(self):
-        pass
-
-    @abstractmethod
-    def run(self):
-        pass
 
 
 class TimedOut(Exception):
@@ -60,7 +41,7 @@ class CaseStudyCoordinator(Coordinator):
                 raise Exception(f"Mandatory field {field} missing from instructions")
 
         instructions = []
-        for line in raw_instructions[1:]:
+        for (i, line) in enumerate(raw_instructions[1:]):
             inner_res = dict()
             for (pos, raw_value) in enumerate(line.strip().split(",")):
                 raw_value = raw_value.strip()
@@ -94,9 +75,9 @@ class CaseStudyCoordinator(Coordinator):
 
         named_path_to_data = f"{path_to_named_experiment}/data"
         sfh = ScratchFolderHandler(named_path_to_data)
-        if self.oracle is not None:
-            result_folder = f"{named_path_to_data}/result"
-            os.makedirs(result_folder, exist_ok=True)
+
+        result_folder = f"{named_path_to_data}/result"
+        os.makedirs(result_folder, exist_ok=True)
 
         construction_constraint = self.guarded.construction_constraint()
         run_time_out = construction_constraint.upper_bound
@@ -109,12 +90,13 @@ class CaseStudyCoordinator(Coordinator):
 
             (data_file, data_type) = setting[TRACE_KEY]
             (policy_file, policy_type) = setting[POLICY_KEY]
-            sig = setting[SIGNATURE_KEY]
+            sig = setting.get(SIGNATURE_KEY, None)
 
             if self.oracle is not None:
                 try:
-                    # todo redefine call to oracle pipeline, reroute preprocessing
-                    self.oracle.pre_process_data(named_path_to_data, data_file=data_file, formula_file=policy_file, signature_file=sig)
+                    self.oracle.pre_process_data(
+                        named_path_to_data, data_type, policy_type, data_file, sig, policy_file, self.path_manager
+                    )
                     out, code = self.oracle.compute_result(time_on=None, time_out=run_time_out)
                     if code != 0:
                         raise RunOracleException(out)
@@ -125,14 +107,26 @@ class CaseStudyCoordinator(Coordinator):
             if construction_constraint is not None and construction_constraint.guard_type == TimeGuardingTool.Monitor:
                 try:
                     mon = construction_constraint.guard
-                    mon.auto_preprocessing(named_path_to_data, data_type, policy_type, data_file, sig, policy_file, self.path_manager, verbose=False)
+                    mon.preprocessing(
+                        named_path_to_data, data_type, policy_type, data_file, sig, policy_file,
+                        self.path_manager, verbose=False
+                    )
                     cmd, name = mon.run_offline_command()
-                    out, code = mon.image.run(parameters=cmd, path_to_data=sfh.folder, time_on=None, timeout=run_time_out, name=name)
+                    out, code = mon.image.run(
+                        parameters=cmd, path_to_data=sfh.folder, time_on=None, timeout=run_time_out, name=name
+                    )
                 except TimedOut:
                     raise TimedOut(f"Monitor {self.oracle} timed out ({run_time_out} seconds)")
             sfh.clean_up_folder()
         print(f"{BENCHMARK_BUILDING_OFFSET} Finished: Verifying with Oracle\n")
         sfh.remove_folder()
 
-    def run(self):
-        pass
+    def iterate_settings(self) -> List[Tuple[int, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
+        res = []
+        for (i, setting) in enumerate(self.instructions):
+            (data_file, data_type) = setting[TRACE_KEY]
+            (policy_file, policy_type) = setting[POLICY_KEY]
+            sig = setting.get(SIGNATURE_KEY, None)
+            result = self.results.get(i, None)
+            res.append((i, data_file, data_type, policy_file, policy_type, sig, result))
+        return res

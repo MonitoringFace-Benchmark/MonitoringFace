@@ -6,10 +6,10 @@ from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPo
 
 class PolicyGeneratorTemplate(ABC):
     @abstractmethod
-    def generate_policy(self, policy_contract: Dict[AnyStr, Any], time_on=None, time_out=None) -> Tuple[Tuple[int, AnyStr, AnyStr], int]:
+    def generate_policy(self, policy_contract: Dict[AnyStr, Any], time_on=None, time_out=None) -> Tuple[int, AnyStr, AnyStr]:
         pass
 
     @staticmethod
     @abstractmethod
-    def output_formats() -> List[InputOutputPolicyFormats]:
+    def output_format() -> InputOutputPolicyFormats:
         pass

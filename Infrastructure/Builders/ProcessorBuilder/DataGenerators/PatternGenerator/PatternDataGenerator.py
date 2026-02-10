@@ -4,6 +4,7 @@ from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTempla
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternGenerator.PatternDataContract import pattern_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.Monitors.MonitorExceptions import GeneratorException
 from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY
 
 
@@ -23,6 +24,9 @@ class PatternDataGenerator(DataGeneratorTemplate):
         seed_raw = contract_inner["seed"]
         seed = seed_raw if seed_raw else DEFAULT_SEED
         out, code = self.image.run(inner_contract, time_on=time_on, time_out=time_out)
+
+        if code != 0:
+            raise GeneratorException(f"Pattern generator failed (exit_code={code}). Output:\n{out}")
         if contract_inner.get("watermarks"):
             out = out.strip()
             segment_tp = None
@@ -37,14 +41,14 @@ class PatternDataGenerator(DataGeneratorTemplate):
                     segment_tp = parse_tp(line)
                     segments.append(line)
             out = "\n".join(segments)
-        return seed, out, code
+        return seed, out
 
     def check_policy(self, path_inner: AnyStr, signature, formula) -> bool:
         return True
 
     @staticmethod
-    def output_formats() -> List[InputOutputTraceFormats]:
-        return [InputOutputTraceFormats.CSV]
+    def output_format() -> List[InputOutputTraceFormats]:
+        return InputOutputTraceFormats.CSV
 
 
 def parse_tp(line):

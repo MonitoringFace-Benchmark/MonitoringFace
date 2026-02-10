@@ -6,7 +6,7 @@ from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.GenFmaGenerator.G
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 from Infrastructure.DataTypes.Types.custome_type import Processor
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException
-from Infrastructure.constants import COMMAND_KEY
+from Infrastructure.constants import COMMAND_KEY, FREE_VARIABLES_KEY
 
 
 class GenFmaGenerator(PolicyGeneratorTemplate):
@@ -14,6 +14,7 @@ class GenFmaGenerator(PolicyGeneratorTemplate):
         self.image = ImageManager(name, Processor.PolicyGenerators, path_to_build)
 
     def generate_policy(self, policy_contract_params, time_on=None, time_out=None):
+        policy_contract_params["free_vars"] = policy_contract_params[FREE_VARIABLES_KEY]
         policy_contract = GenFmaContract().instantiate_contract(policy_contract_params)
         inner_dict = dict()
         inner_dict[COMMAND_KEY] = policy_contract_to_commands(policy_contract)
@@ -21,11 +22,11 @@ class GenFmaGenerator(PolicyGeneratorTemplate):
         if code != 0:
             raise GeneratorException()
         else:
-            return parse_gen_output(policy_contract.seed, out), code
+            return parse_gen_output(policy_contract.seed, out)
 
     @staticmethod
-    def output_formats() -> List[InputOutputPolicyFormats]:
-        return [InputOutputPolicyFormats.MFOTL]
+    def output_format() -> InputOutputPolicyFormats:
+        return InputOutputPolicyFormats.MFOTL
 
 
 def parse_gen_output(seed, out: AnyStr) -> Tuple[int, str, str]:
@@ -35,7 +36,7 @@ def parse_gen_output(seed, out: AnyStr) -> Tuple[int, str, str]:
     sig_part, formula_part = sig_and_formula.split("MFOTL FORMULA:")
     sig = sig_part.strip()
     formula = formula_part.strip()
-    return seed, sig, formula
+    return seed, formula, sig
 
 
 def policy_contract_to_commands(f_contract: GenFmaContract) -> list:

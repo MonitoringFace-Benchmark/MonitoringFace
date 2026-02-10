@@ -53,7 +53,7 @@ class DataGolfGenerator(DataGeneratorTemplate):
                 raise ValueError("missing 'Trace:' marker in datagolf output")
 
             csv = stdout_to_csv(remove_prefix.split("Trace:")[0].rstrip())
-            return seed, csv, code
+            return seed, csv
         except Exception as e:
             cmd = inner_contract.get(COMMAND_KEY) if 'inner_contract' in locals() else None
             msg = (
@@ -78,8 +78,8 @@ class DataGolfGenerator(DataGeneratorTemplate):
             return out.__eq__(DATAGOLF_POLICY_CHECK)
 
     @staticmethod
-    def output_formats():
-        return [InputOutputTraceFormats.CSV] # todo consider to return monpoly format
+    def output_format():
+        return InputOutputTraceFormats.CSV
 
 
 def stdout_to_csv(in_str: AnyStr):

@@ -6,7 +6,7 @@ from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTra
 
 class DataGeneratorTemplate(ABC):
     @abstractmethod
-    def run_generator(self, contract_inner: Dict[AnyStr, Any], time_on=None, time_out=None) -> Tuple[int, AnyStr, int]:
+    def run_generator(self, contract_inner: Dict[AnyStr, Any], time_on=None, time_out=None) -> Tuple[int, AnyStr]:
         pass
 
     @abstractmethod
@@ -15,5 +15,5 @@ class DataGeneratorTemplate(ABC):
 
     @staticmethod
     @abstractmethod
-    def output_formats() -> List[InputOutputTraceFormats]:
+    def output_format() -> InputOutputTraceFormats:
         pass

@@ -4,11 +4,17 @@ import re
 from pathlib import Path
 from typing import AnyStr, Optional, Tuple
 
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Compare.Comparing import comparing
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.Monitors.SharedFunctions import parse_variable_order_monpoly
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
+from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, FOLDER_KEY
 
 
 class VeriMonOracle(AbstractOracleTemplate):
@@ -18,17 +24,23 @@ class VeriMonOracle(AbstractOracleTemplate):
         self.verimon.name = "VeriMon"
         self.parameters = parameters
 
-    def pre_process_data(self, path_to_folder_inner: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
-        self.verimon.pre_processing(path_to_folder_inner, data_file, signature_file, formula_file)
+    def pre_process_data(
+            self, path_to_folder: str, trace_source_format: InputOutputTraceFormats,
+            policy_source_format: InputOutputPolicyFormats, data_file: str, signature_file: str, policy_file: str,
+            path_manager: PathManager
+    ):
+        self.verimon.preprocessing(
+            path_to_folder, trace_source_format, policy_source_format, data_file, signature_file, policy_file, path_manager
+        )
 
     def compute_result(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
         cmd = [
-            "-sig", str(self.verimon.logic.params["signature"]),
-            "-formula", str(self.verimon.logic.params["formula"]),
-            "-log", str(self.verimon.logic.params["data"]),
+            "-sig", str(self.verimon.params["signature"]),
+            "-formula", str(self.verimon.params["formula"]),
+            "-log", str(self.verimon.params["data"]),
             "-verified"
         ]
-        return self.verimon.logic.image.run(self.verimon.logic.params["folder"], cmd, time_on, time_out)
+        return self.verimon.image.run(self.verimon.params["folder"], cmd, time_on, time_out)
 
     def post_process_data(self, std_out_str, output_file_name):
         with open(output_file_name, "w") as file:
@@ -47,10 +59,12 @@ class VeriMonOracle(AbstractOracleTemplate):
             data_file_size = case_study_mapper.result_id((data_file, formula_file, sig_file))
         else:
             data_file_size = extract_data_number(data_file)
-        self.verimon.logic.params["folder"] = path_to_result_folder
-        self.verimon.logic.params["signature"] = sig_file
-        self.verimon.logic.params["formula"] = formula_file
-        variable_order = self.verimon.variable_order()
+        self.verimon.params[FOLDER_KEY] = path_to_result_folder
+        self.verimon.params[SIGNATURE_KEY] = sig_file
+        self.verimon.params[POLICY_KEY] = formula_file
+        cmd = ["-sig", str(self.verimon.params[SIGNATURE_KEY]), "-formula", str(self.verimon.params[POLICY_KEY]), "-check"]
+        logs, code = self.verimon.image.run(self.verimon.params[FOLDER_KEY], cmd, measure=False)
+        variable_order = VariableOrder(parse_variable_order_monpoly(logs)) if code == 0 else DefaultVariableOrder()
 
         result_file = path_to_result_folder + f"/result/result_{data_file_size}.res"
         if os.path.exists(result_file):

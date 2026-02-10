@@ -5,6 +5,7 @@ from typing import AnyStr, List, Optional
 
 from Infrastructure.Analysis.ResultAggregator import ResultAggregator
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilderException import BenchmarkCreationFailed
+from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import CaseStudyGenerator
 from Infrastructure.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract
@@ -178,8 +179,11 @@ class BenchmarkBuilder:
         path_to_debug = self.path_manager.get_path("path_to_debug")
         path_to_named_experiment = self.path_manager.get_path("path_to_named_experiment")
         if os.path.exists(path_to_debug):
-            sfh_debug = ScratchFolderHandler(path_to_debug)
-            sfh_debug.remove_folder()
+            ScratchFolderHandler(path_to_debug).remove_folder()
+
+        coordinator: Coordinator = None
+        for (index, data_file, data_type, policy_file, policy_type, signature, result) in coordinator.iterate_settings():
+            pass
 
         if self.gen_mode == ExperimentType.CaseStudy:
             path_to_folder = f"{path_to_named_experiment}/data"

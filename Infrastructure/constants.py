@@ -40,6 +40,17 @@ VALUE_KEY = "value"
 TYPE_KEY = "type"
 PATH_KEY = "path"
 
+SEEDS_KEY = "seed"
+SIZE_KEY = "size"
+FREE_VARIABLES_KEY = "free_variables"
+
+TRACE_LENGTH_KEY = "trace_length"
+
+SIGNATURE_FILE = "signature"
+SIGNATURE_FILE_ENDING = "sig"
+
+POLICY_FILE = "policy"
+POLICY_FILE_ENDING = "policy"
 
 FINGERPRINT_DATA = "fingerprint_data"
 FINGERPRINT_EXPERIMENT = "fingerprint_experiment"

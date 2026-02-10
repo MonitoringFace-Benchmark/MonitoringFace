@@ -9,7 +9,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts 
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 from Infrastructure.Monitors.SharedFunctions import parse_pattern, parse_variable_order_monpoly
-from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
+from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY, FOLDER_KEY
 
 
 class MonPoly(AbstractMonitorTemplate):
@@ -53,8 +53,8 @@ class MonPoly(AbstractMonitorTemplate):
         return cmd, None
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        cmd = ["-sig", str(self.params["signature"]), "-formula", str(self.params["formula"]), "-check"]
-        logs, code = self.image.run(self.params["folder"], cmd, measure=False)
+        cmd = ["-sig", str(self.params[SIGNATURE_KEY]), "-formula", str(self.params[POLICY_KEY]), "-check"]
+        logs, code = self.image.run(self.params[FOLDER_KEY], cmd, measure=False)
         variable_order = VariableOrder(parse_variable_order_monpoly(logs)) if code == 0 else DefaultVariableOrder()
         verdicts = Verdicts(variable_order=variable_order)
 

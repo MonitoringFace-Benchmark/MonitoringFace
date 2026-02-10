@@ -7,7 +7,7 @@ from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenera
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import policy_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException
-from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY
+from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY, FREE_VARIABLES_KEY
 
 
 class MfotlPolicyGenerator(PolicyGeneratorTemplate):
@@ -16,6 +16,7 @@ class MfotlPolicyGenerator(PolicyGeneratorTemplate):
 
     def generate_policy(self, policy_contract_params, time_on=None, time_out=None):
         valid_fields = {f.name for f in fields(MfotlPolicyContract)}
+        policy_contract_params["max_arity"] = policy_contract_params[FREE_VARIABLES_KEY]
         policy_contract = (MfotlPolicyContract()
                            .instantiate_contract({k: v for k, v in policy_contract_params.items() if k in valid_fields}))
 
@@ -26,11 +27,11 @@ class MfotlPolicyGenerator(PolicyGeneratorTemplate):
         if code != 0:
             raise GeneratorException()
         else:
-            return parse_gen_output(out), code
+            return parse_gen_output(out)
 
     @staticmethod
-    def output_formats() -> List[InputOutputPolicyFormats]:
-        return [InputOutputPolicyFormats.MFOTL]
+    def output_formats() -> InputOutputPolicyFormats:
+        return InputOutputPolicyFormats.MFOTL
 
 
 def parse_gen_output(st: AnyStr):
@@ -40,4 +41,4 @@ def parse_gen_output(st: AnyStr):
     res, lines = lines.split("MFOTL Formula:")
     sig = res.strip()
     formula = lines.strip()
-    return seed, sig, formula
+    return seed, formula, sig

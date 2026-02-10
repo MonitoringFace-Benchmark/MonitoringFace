@@ -63,38 +63,6 @@ def construct_synthetic_experiment_pattern(
                                                      experiment.num_data_set_sizes, oracle, time_guard)
 
 
-def guarded_synthetic_experiment_pattern(
-        num_path, data_source, data_setup,
-        num_data_set_sizes, oracle, time_guard
-):
-    time_on = time_guard.lower_bound
-    time_out = time_guard.upper_bound
-
-    guard_type = time_guard.guard_type
-    guard = time_guard.guard
-
-    num_data_set_sizes = [(l, str(l)) for l in num_data_set_sizes]
-    i = 1
-
-    while True:
-        sfh = ScratchFolderHandler(num_path)
-
-        time_out_in_for_loop = guarded_synthetic_experiment_inner(
-            num_path, data_source, data_setup, num_data_set_sizes, oracle, time_on, time_out, guard_type, guard
-        )
-
-        print(f"        Attempting policy {i}")
-        i += 1
-
-        if not time_out_in_for_loop:
-            sfh.remove_folder()
-            break
-        else:
-            # reduce the size to make it pass
-            num_data_set_sizes = [(math.ceil(l * 0.85), ls) for (l, ls) in num_data_set_sizes]
-            sfh.clean_up_folder()
-
-
 def construct_synthetic_experiment_sig(
         experiment: SyntheticExperiment, path_to_folder: AnyStr, data_setup_, data_source,
         policy_setup_, policy_source,
@@ -134,6 +102,38 @@ def construct_synthetic_experiment_sig(
                     guarded_synthetic_experiment_sig(num_path, num_ops, num_fv, policy_setup, policy_source,
                                                      data_source, data_setup, experiment.num_data_set_sizes.copy(),
                                                      oracle, time_guard)
+
+
+def guarded_synthetic_experiment_pattern(
+        num_path, data_source, data_setup,
+        num_data_set_sizes, oracle, time_guard
+):
+    time_on = time_guard.lower_bound
+    time_out = time_guard.upper_bound
+
+    guard_type = time_guard.guard_type
+    guard = time_guard.guard
+
+    num_data_set_sizes = [(l, str(l)) for l in num_data_set_sizes]
+    i = 1
+
+    while True:
+        sfh = ScratchFolderHandler(num_path)
+
+        time_out_in_for_loop = guarded_synthetic_experiment_inner(
+            num_path, data_source, data_setup, num_data_set_sizes, oracle, time_on, time_out, guard_type, guard
+        )
+
+        print(f"        Attempting policy {i}")
+        i += 1
+
+        if not time_out_in_for_loop:
+            sfh.remove_folder()
+            break
+        else:
+            # reduce the size to make it pass
+            num_data_set_sizes = [(math.ceil(l * 0.85), ls) for (l, ls) in num_data_set_sizes]
+            sfh.clean_up_folder()
 
 
 def guarded_synthetic_experiment_sig(
