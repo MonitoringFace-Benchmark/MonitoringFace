@@ -24,3 +24,14 @@ class FingerPrintHandler:
         with open(file, "w") as f:
             for k, v in self.in_dict.items():
                 f.write(f"{k}={v}\n")
+
+    @staticmethod
+    def compare(fp1, fp2):
+        keys1 = set(fp1.in_dict.keys())
+        keys2 = set(fp2.in_dict.keys())
+        if keys1 != keys2:
+            return False
+        for k in keys1:
+            if fp1.in_dict[k] != fp2.in_dict[k]:
+                return False
+        return True

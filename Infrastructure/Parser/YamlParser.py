@@ -14,8 +14,8 @@ from Infrastructure.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 from Infrastructure.DataTypes.Contracts.BenchmarkContract import SyntheticBenchmarkContract, CaseStudyBenchmarkContract
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
-from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuarded, TimeGuardingTool
-from Infrastructure.DataTypes.Types.custome_type import ExperimentType, BranchOrRelease
+from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuardingTool
+from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
 from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Oracles.OracleManager import OracleManager
 
@@ -60,18 +60,6 @@ class YamlParser:
             return BranchOrRelease.Release
         else:
             raise YamlParserException(f"Invalid branch_or_release value: {value}. Must be 'branch' or 'release'")
-    
-    @staticmethod
-    def _parse_experiment_type(value: str) -> ExperimentType:
-        value_lower = value.lower()
-        if value_lower == "pattern":
-            return ExperimentType.Pattern
-        elif value_lower == "signature":
-            return ExperimentType.Signature
-        elif value_lower == "casestudy":
-            return ExperimentType.CaseStudy
-        else:
-            raise YamlParserException(f"Invalid experiment_type value: {value}")
     
     @staticmethod
     def _parse_time_guarding_tool(value: str) -> TimeGuardingTool:
@@ -294,10 +282,6 @@ class YamlParser:
         if oracle_dict.get('enabled', False):
             return oracle_dict.get('name')
         return None
-    
-    def get_experiment_type(self) -> ExperimentType:
-        exp_type_str = self.cfg.get('experiment_type', 'Signature')
-        return self._parse_experiment_type(exp_type_str)
 
     def get_repeat_experiments(self) -> int:
         if 'repeats' not in self.cfg:
@@ -312,11 +296,9 @@ class YamlParser:
         time_guarded = self.parse_time_guarded(monitor_manager)
         tools_to_build = self.get_tools_to_build()
         oracle_name = self.get_oracle_config()
-        experiment_type = self.get_experiment_type()
         repeats = self.get_repeat_experiments()
         oracle_tuple = (oracle_manager, oracle_name) if oracle_manager and oracle_name else None
 
-        is_case_study = experiment_type == ExperimentType.CaseStudy
         return {
             'tool_manager': tool_manager,
             'benchmark_contract': benchmark_contract,
@@ -324,7 +306,6 @@ class YamlParser:
             'oracle_manager': oracle_manager,
             'time_guarded': time_guarded,
             'tools_to_build': tools_to_build,
-            'experiment_type': experiment_type,
             'oracle': oracle_tuple,
             'repeat_experiments': repeats,
             'data_setup': None if is_case_study else self.parse_data_generator_setup(),
@@ -432,9 +413,3 @@ def _folder_name_from_contract(folder_file_tuples, contract_name) -> Optional[st
 def _retrieve_contract(category: str, folder_name: str, contract_class_name: str):
     module = importlib.import_module(f"Infrastructure.Builders.ProcessorBuilder.{category}.{folder_name}.{contract_class_name}")
     return getattr(module, contract_class_name)
-
-
-if __name__ == '__main__':
-    path_to_infra = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure"
-    print(_discover_contract_names(path_to_infra, "DataGenerators"))
-    #_discover_processor(path_to_infra, "DataGenerators")

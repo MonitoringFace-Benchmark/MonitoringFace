@@ -9,11 +9,13 @@ from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, ConstructionConstraints, TimeGuardingTool
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
+from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import ORACLE_KEY, SEEDS_KEY, PATH_KEY, SIZE_KEY, FREE_VARIABLES_KEY, PLACEHOLDER_EVENT, \
-    SIGNATURE_FILE, SIGNATURE_FILE_ENDING, POLICY_FILE, POLICY_FILE_ENDING, TRACE_LENGTH_KEY, SIGNATURE_KEY
+    SIGNATURE_FILE, SIGNATURE_FILE_ENDING, POLICY_FILE, POLICY_FILE_ENDING, TRACE_LENGTH_KEY, SIGNATURE_KEY, \
+    FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA
 from Infrastructure.DataTypes.FileRepresenters.SeedHandler import SeedHandler
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
 from Infrastructure.Monitors.MonitorExceptions import ToolException
@@ -39,6 +41,17 @@ class SyntheticCoordinator(Coordinator):
         self.seeds = seeds
 
         self.instructions = []
+
+    def finger_print(self) -> Dict[str, str]:
+        new_data_setup_fingerprint = data_class_to_finger_print(self.data_setup)
+        new_experiment_fingerprint = data_class_to_finger_print(self.experiment)
+        return {FINGERPRINT_EXPERIMENT: new_experiment_fingerprint, FINGERPRINT_DATA: new_data_setup_fingerprint}
+
+    def time_out(self) -> Optional[int]:
+        constraint = self.constraints.runtime_constraint()
+        if constraint is not None:
+            return constraint.upper_bound
+        return None
 
     def build(self):
         index = 0
@@ -90,10 +103,10 @@ class SyntheticCoordinator(Coordinator):
                                 data_set_size=data_set_size, oracle=self.oracle,
                                 constraints=None, path_manager=self.path_manager
                             )
-                        self.instructions.append((index, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
+                        self.instructions.append((index, num_path, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
                         index += 1
 
-    def iterate_settings(self) -> List[Tuple[int, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
+    def iterate_settings(self) -> List[Tuple[int, str, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
         return self.instructions
 
 

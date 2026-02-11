@@ -1,14 +1,16 @@
 import os
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import str_to_policy_inout_format, InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import str_to_trace_inout_format, InputOutputTraceFormats
 from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import CaseStudyGenerator
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
+from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
-from Infrastructure.constants import TRACE_KEY, POLICY_KEY, VALUE_KEY, PATH_KEY, BENCHMARK_BUILDING_OFFSET, SIGNATURE_KEY
+from Infrastructure.constants import TRACE_KEY, POLICY_KEY, VALUE_KEY, PATH_KEY, BENCHMARK_BUILDING_OFFSET, \
+    SIGNATURE_KEY, FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, TimeGuardingTool
 
 
@@ -21,15 +23,26 @@ class RunOracleException(Exception):
 
 
 class CaseStudyCoordinator(Coordinator):
-    def __init__(self, generator: CaseStudyGenerator, data_setup, path_manager: PathManager, guarded: TimeConstraints,
+    def __init__(self, generator: CaseStudyGenerator, data_setup, path_manager: PathManager, constraints: TimeConstraints,
                  oracle: Optional[AbstractOracleTemplate] = None):
         self.generator = generator
         self.data_setup = data_setup
         self.oracle = oracle
-        self.guarded = guarded
+        self.constraints = constraints
         self.path_manager = path_manager
         self.results = {}
         self.header, self.instructions = self._init_instr()
+
+    def finger_print(self) -> Dict[str, str]:
+        new_data_setup_fingerprint = data_class_to_finger_print(self.data_setup)
+        new_experiment_fingerprint = self.generator.name
+        return {FINGERPRINT_EXPERIMENT: new_experiment_fingerprint, FINGERPRINT_DATA: new_data_setup_fingerprint}
+
+    def time_out(self) -> Optional[int]:
+        constraint = self.constraints.runtime_constraint()
+        if constraint is not None:
+            return constraint.upper_bound
+        return None
 
     def _init_instr(self):
         with open(self.path_manager.get_path("instructions"), "r") as f:
@@ -70,16 +83,17 @@ class CaseStudyCoordinator(Coordinator):
         self.generator.run_generator(self.data_setup)
         print(f"{BENCHMARK_BUILDING_OFFSET} Finished: Unpacking Data\n")
 
-        if self.oracle is None and self.guarded.construction_constraint() is None:
+        if self.oracle is None and self.constraints.construction_constraint() is None:
             return
 
         named_path_to_data = f"{path_to_named_experiment}/data"
+        self.path_manager.add_path("named_path_to_data", named_path_to_data)
         sfh = ScratchFolderHandler(named_path_to_data)
 
         result_folder = f"{named_path_to_data}/result"
         os.makedirs(result_folder, exist_ok=True)
 
-        construction_constraint = self.guarded.construction_constraint()
+        construction_constraint = self.constraints.construction_constraint()
         run_time_out = construction_constraint.upper_bound
         if run_time_out is None:
             print("Warning: No upper bound for construction time provided, oracle verification or time guard may run indefinitely!")
@@ -123,10 +137,11 @@ class CaseStudyCoordinator(Coordinator):
 
     def iterate_settings(self) -> List[Tuple[int, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
         res = []
+        path_to_data = self.path_manager.get_path("named_path_to_data")
         for (i, setting) in enumerate(self.instructions):
             (data_file, data_type) = setting[TRACE_KEY]
             (policy_file, policy_type) = setting[POLICY_KEY]
             sig = setting.get(SIGNATURE_KEY, None)
             result = self.results.get(i, None)
-            res.append((i, data_file, data_type, policy_file, policy_type, sig, result))
+            res.append((i, path_to_data, data_file, data_type, policy_file, policy_type, sig, result))
         return res

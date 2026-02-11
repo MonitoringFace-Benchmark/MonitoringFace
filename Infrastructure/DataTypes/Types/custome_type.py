@@ -2,12 +2,6 @@ from enum import Enum
 from typing import AnyStr
 
 
-class ExperimentType(Enum):
-    Pattern = 1
-    Signature = 2
-    CaseStudy = 3
-
-
 class BranchOrRelease(Enum):
     Release = 0
     Branch = 1

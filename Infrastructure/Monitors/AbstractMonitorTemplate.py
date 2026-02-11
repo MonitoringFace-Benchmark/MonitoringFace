@@ -105,9 +105,9 @@ class AbstractMonitorTemplate(ABC):
         pass
 
 
-def run_monitor(mon: AbstractMonitorTemplate, guarded, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
+def run_monitor(mon: AbstractMonitorTemplate, timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
                 path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
-                cli_args: CLIArgs, oracle=None, case_study_mapper=None) -> Tuple[float, float, float, float]:
+                result_file, cli_args: CLIArgs, oracle=None) -> Tuple[float, float, float, float]:
     print_headline(f"Run {mon.name}")
 
     preprocessing_elapsed = mon.preprocessing(
@@ -121,7 +121,6 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded, path_to_folder: AnyStr, d
     compile_elapsed = end_compile - start_compile
 
     start = time.perf_counter()
-    timeout_value = guarded.upper_bound if guarded else None
     cmd, name = mon.run_offline_command()
     out, code = mon.image.run(parameters=cmd, path_to_data=path_to_folder, time_on=None, timeout=timeout_value, name=name)
     end = time.perf_counter()
@@ -142,7 +141,7 @@ def run_monitor(mon: AbstractMonitorTemplate, guarded, path_to_folder: AnyStr, d
 
     if oracle is not None:
         try:
-            verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, policy_file, case_study_mapper=case_study_mapper)
+            verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, policy_file, )
         except Exception as e:
             print(f"Oracle verification failed with exception: {e}")
             raise ResultErrorException((preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed), str(e))
