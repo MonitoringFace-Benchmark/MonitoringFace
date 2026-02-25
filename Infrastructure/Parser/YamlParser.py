@@ -12,9 +12,10 @@ from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTe
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
 from Infrastructure.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
-from Infrastructure.DataTypes.Contracts.BenchmarkContract import SyntheticBenchmarkContract, CaseStudyBenchmarkContract
+from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import CaseStudySetupContract
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
-from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuardingTool
+from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuardingTool, TimeConstraints, \
+    ConstructionConstraints, RunTimeConstraints
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
 from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Oracles.OracleManager import OracleManager
@@ -108,21 +109,24 @@ class YamlParser:
         else:
             raise YamlParserException(f"Invalid DataGenerator {name} not in {available}")
 
-    def parse_data_generator_setup(self) -> AbstractContract:
+    def parse_data_setup(self) -> AbstractContract:
         if 'data_setup' not in self.cfg:
             raise YamlParserException("Missing 'data_setup' section in YAML configuration")
         
         data_setup = self.cfg.data_setup
         data_contract_name = data_setup.get('type')
-
-        folder_files = _discover_contract_names(self.path_to_project + "/Infrastructure", "DataGenerators")
-        if _contract_names(folder_files, data_contract_name):
-            folder = _folder_name_from_contract(folder_files, data_contract_name)
-            config = OmegaConf.to_container(data_setup.get(data_contract_name, {}), resolve=True)
-            contract = _retrieve_contract("DataGenerators", folder, data_contract_name)
-            return contract(**config)
+        if data_contract_name.lower() == "casestudy":
+            case_study_name = data_setup.get('name')
+            return CaseStudySetupContract(name=case_study_name)
         else:
-            raise YamlParserException(f"Invalid data_setup type: {data_contract_name}")
+            folder_files = _discover_contract_names(self.path_to_project + "/Infrastructure", "DataGenerators")
+            if _contract_names(folder_files, data_contract_name):
+                folder = _folder_name_from_contract(folder_files, data_contract_name)
+                config = OmegaConf.to_container(data_setup.get(data_contract_name, {}), resolve=True)
+                contract = _retrieve_contract("DataGenerators", folder, data_contract_name)
+                return contract(**config)
+            else:
+                raise YamlParserException(f"Invalid data_setup type: {data_contract_name}")
 
     @staticmethod
     def _parse_policy_generators(path_to_module, name: str) -> PolicyGeneratorTemplate:
@@ -151,49 +155,7 @@ class YamlParser:
             return contract().instantiate_contract(config)
         else:
             raise YamlParserException(f"Invalid Policy Generator Contract: {data_contract_name}")
-    
-    def parse_benchmark_contract(self) -> Union[SyntheticBenchmarkContract, CaseStudyBenchmarkContract]:
-        experiment_name = self.cfg.get('experiment_name', 'unnamed_experiment')
-        benchmark_type = self.cfg.get('benchmark_type', 'synthetic')
-        
-        if benchmark_type == 'case_study':
-            case_study_config = self.cfg.get('case_study_config', {})
-            case_study_name = case_study_config.get('case_study_name')
-            
-            if not case_study_name:
-                raise YamlParserException("Missing 'case_study_name' in case_study_config")
-            
-            return CaseStudyBenchmarkContract(experiment_name=experiment_name, case_study_name=case_study_name)
-        elif benchmark_type == 'synthetic':
-            if 'synthetic_config' not in self.cfg:
-                raise YamlParserException("Missing 'synthetic_config' for synthetic benchmark")
-            
-            synthetic_config = self.cfg.synthetic_config
-            
-            experiment_config = synthetic_config.get('experiment', {})
-            experiment_dict = OmegaConf.to_container(experiment_config, resolve=True)
-            experiment = SyntheticExperiment(
-                num_operators=experiment_dict.get('num_operators', [5]),
-                num_fvs=experiment_dict.get('num_fvs', [2]),
-                num_setting=experiment_dict.get('num_setting', [0]),
-                num_data_set_sizes=experiment_dict.get('num_data_set_sizes', [50])
-            )
 
-            # todo the discovery of data_source and policy_source could be improved
-            data_source = self._parse_data_generators(self.path_to_project, synthetic_config.get('data_source', 'SignatureGenerator'))
-            policy_source = self._parse_policy_generators(self.path_to_project, synthetic_config.get('policy_source', 'MfotlPolicyGenerator'))
-            policy_setup = self.parse_policy_setup()
-            
-            return SyntheticBenchmarkContract(
-                experiment_name=experiment_name,
-                data_source=data_source,
-                policy_source=policy_source,
-                policy_setup=policy_setup,
-                experiment=experiment
-            )
-        else:
-            raise YamlParserException(f"Invalid benchmark_type: {benchmark_type}. Must be 'synthetic' or 'case_study'")
-    
     def parse_monitor_manager(self, tool_manager: ToolManager) -> MonitorManager:
         """Parse monitors configuration and create MonitorManager"""
         if 'monitors' not in self.cfg:
@@ -220,7 +182,6 @@ class YamlParser:
         return MonitorManager(tool_manager=tool_manager, monitors_to_build=monitors_to_build)
     
     def parse_oracle_manager(self, monitor_manager: MonitorManager) -> Optional[OracleManager]:
-        """Parse oracles configuration and create OracleManager"""
         if 'oracles' not in self.cfg or not self.cfg.oracles:
             return None
         
@@ -240,28 +201,39 @@ class YamlParser:
         
         return OracleManager(oracles_to_build=oracles_to_build, monitor_manager=monitor_manager)
     
-    def parse_time_guarded(self, monitor_manager: MonitorManager) -> TimeGuarded:
-        if 'time_guard' not in self.cfg:
-            return None
-        time_guard_config = self.cfg.get('time_guard', {})
-        time_guard_dict = OmegaConf.to_container(time_guard_config, resolve=True)
-        
-        enabled = time_guard_dict.get('enabled', False)
-        lower_bound = time_guard_dict.get('lower_bound')
-        upper_bound = time_guard_dict.get('upper_bound')
-        guard_type_str = time_guard_dict.get('guard_type')
-        guard_name = time_guard_dict.get('guard_name')
-        
+    def parse_constraints(self, monitor_manager: MonitorManager) -> TimeConstraints:
+        construction = self.parse_construction_constraints(monitor_manager)
+        runtime = self.parse_runtime_constraints()
+        return TimeConstraints(run_time_constraints=runtime, construction_constraints=construction)
+
+    def parse_construction_constraints(self, monitoring_manager: MonitorManager) -> Optional[ConstructionConstraints]:
+        if 'construction_constraints' not in self.cfg:
+            return ConstructionConstraints()
+
+        constr_config = self.cfg.get('construction_constraints', {})
+        constr_dict = OmegaConf.to_container(constr_config, resolve=True)
+
+        guard_type_str = constr_dict.get('guard_type')
+        guard_name = constr_dict.get('guard_name')
+        cond = guard_type_str and guard_type_str.lower() == 'monitor' and not guard_name
+        guard = monitoring_manager.get_monitor(guard_name) if cond else None
+        lower_bound = constr_dict.get('lower_bound')
+        upper_bound = constr_dict.get('upper_bound')
+
         guard_type = self._parse_time_guarding_tool(guard_type_str) if guard_type_str else None
-        
-        return TimeGuarded(
-            time_guarded=enabled,
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            guard_type=guard_type,
-            guard_name=guard_name,
-            monitor_manager=monitor_manager
+        return ConstructionConstraints(
+            guarding_tool=guard_type, guard=guard, lower_bound=lower_bound, upper_bound=upper_bound
         )
+
+    def parse_runtime_constraints(self) -> Optional[RunTimeConstraints]:
+        if 'runtime_constraints' not in self.cfg:
+            return RunTimeConstraints()
+
+        runtime_config = self.cfg.get('runtime_constraints', {})
+        runtime_dict = OmegaConf.to_container(runtime_config, resolve=True)
+
+        upper_bound = runtime_dict.get('upper_bound')
+        return RunTimeConstraints(upper_bound=upper_bound)
     
     def get_tools_to_build(self) -> List[str]:
         """Get list of tool names to build"""
@@ -293,7 +265,7 @@ class YamlParser:
         benchmark_contract = self.parse_benchmark_contract()
         monitor_manager = self.parse_monitor_manager(tool_manager)
         oracle_manager = self.parse_oracle_manager(monitor_manager)
-        time_guarded = self.parse_time_guarded(monitor_manager)
+        constraints = self.parse_constraints(monitor_manager)
         tools_to_build = self.get_tools_to_build()
         oracle_name = self.get_oracle_config()
         repeats = self.get_repeat_experiments()
@@ -304,12 +276,12 @@ class YamlParser:
             'benchmark_contract': benchmark_contract,
             'monitor_manager': monitor_manager,
             'oracle_manager': oracle_manager,
-            'time_guarded': time_guarded,
+            'constraints': constraints,
             'tools_to_build': tools_to_build,
             'oracle': oracle_tuple,
             'repeat_experiments': repeats,
-            'data_setup': None if is_case_study else self.parse_data_generator_setup(),
-            'seeds': None if is_case_study else self.parse_seeds()
+            'data_setup': self.parse_data_setup(),
+            'seeds': self.parse_seeds()
         }
 
     def __del__(self):

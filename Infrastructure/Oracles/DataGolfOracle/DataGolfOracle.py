@@ -2,6 +2,9 @@ import re
 from pathlib import Path
 from typing import AnyStr, Optional, Tuple
 
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Compare.Comparing import comparing
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.DatagolfVerdicts import DatagolfVerdicts
@@ -10,7 +13,11 @@ from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 
 
 class DataGolfOracle(AbstractOracleTemplate):
-    def pre_process_data(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
+    def pre_process_data(
+            self, path_to_folder: str, trace_source_format: InputOutputTraceFormats,
+            policy_source_format: InputOutputPolicyFormats, data_file: str, signature_file: str, policy_file: str,
+            path_manager: PathManager
+    ):
         pass
 
     def compute_result(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
@@ -19,7 +26,7 @@ class DataGolfOracle(AbstractOracleTemplate):
     def post_process_data(self, std_out_str, output_file_name):
         pass
 
-    def verify(self, path_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure, sig_file, formula_file, case_study_maper=None) -> tuple[bool, AnyStr]:
+    def verify(self, path_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure, sig_file, formula_file, result_file) -> tuple[bool, AnyStr]:
         oracle_verdicts = get_oracle_verdicts(path_to_result_folder, data_file)
         return comparing(oracle_verdicts, tool_verdicts)
 

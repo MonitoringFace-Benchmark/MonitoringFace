@@ -16,11 +16,17 @@ class MonPoly(AbstractMonitorTemplate):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 
-    def pre_processing(
-            self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
-            trace_source: InputOutputTraceFormats, policy_source: InputOutputPolicyFormats, path_manager: PathManager
+    def preprocessing_data(
+            self, path_to_folder: AnyStr, data_file: AnyStr,
+            policy_source: InputOutputPolicyFormats, path_manager: PathManager
     ):
-        raise NotImplementedError("MonPoly does not support non-automatic pre-processing")
+        raise NotImplementedError("MonPoly does not support non-automatic preprocessing for data")
+
+    def preprocessing_policy(
+            self, path_to_folder: AnyStr, policy_file: AnyStr, signature_file: AnyStr,
+            policy_source: InputOutputPolicyFormats, path_manager: PathManager
+    ):
+        raise NotImplementedError("MonPoly does not support non-automatic preprocessing for policies")
 
     def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = [

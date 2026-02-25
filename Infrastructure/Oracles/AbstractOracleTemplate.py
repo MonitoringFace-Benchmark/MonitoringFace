@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import AnyStr, Tuple
+from typing import AnyStr, Tuple, Optional
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
@@ -28,5 +28,7 @@ class AbstractOracleTemplate(ABC):
         pass
 
     @abstractmethod
-    def verify(self, path_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure, sig_file, formula_file, case_study_mapper=None) -> Tuple[bool, AnyStr]:
+    def verify(
+            self, path_to_result_folder: str, data_file: str, tool_verdicts: AbstractOutputStructure,
+            sig_file: Optional[str], policy_file: str, result_file: str) -> Tuple[bool, AnyStr]:
         pass

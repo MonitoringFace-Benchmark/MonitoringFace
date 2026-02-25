@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from Infrastructure.Monitors.MonitorManager import MonitorManager
+from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 
 
 class TimeGuardingTool(Enum):
@@ -11,12 +11,9 @@ class TimeGuardingTool(Enum):
 
 
 class ConstructionConstraints:
-    def __init__(self, monitor_manager: MonitorManager, guarding_tool: Optional[TimeGuardingTool] = None, guard_name: str = None, lower_bound: int = None, upper_bound: int = None):
+    def __init__(self, guarding_tool: Optional[TimeGuardingTool] = None, guard: Optional[AbstractMonitorTemplate] = None, lower_bound: int = None, upper_bound: int = None):
         self.guard_type = guarding_tool
-        if self.guard_type == TimeGuardingTool.Monitor and guard_name is not None:
-            self.guard = monitor_manager.get_monitor(guard_name)
-        else:
-            self.guard = None
+        self.guard = guard
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 

@@ -109,6 +109,9 @@ class SyntheticCoordinator(Coordinator):
     def iterate_settings(self) -> List[Tuple[int, str, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
         return self.instructions
 
+    def short_cutting(self):
+        pass
+
 
 def retrieve_setting_seeds(key_list: List[List[int]], seed_dict: Dict) -> Tuple[Optional[int], Optional[int]]:
     sorted_keys = sorted(key_list, key=len, reverse=True)

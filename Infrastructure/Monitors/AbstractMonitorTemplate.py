@@ -37,39 +37,43 @@ class AbstractMonitorTemplate(ABC):
         policy_auto_convertible = True if policy_target_format is not None else False
 
         start = time.perf_counter()
-        if trace_auto_convertible and policy_auto_convertible:
-            print("Automatic conversion")
+        if trace_auto_convertible:
             if verbose:
-                print("Trace conversion from {} to {}".format(trace_source_format, trace_target_format))
-                print("Policy conversion from {} to {}".format(policy_source_format, policy_target_format))
-
-            self.params[SIGNATURE_KEY] = signature_file
-            self.params[FOLDER_KEY] = path_to_folder
+                print("Automatic Trace conversion from {} to {}".format(trace_source_format, trace_target_format))
             self.params[TRACE_KEY] = AutoTraceConverter(path_manager, trace_source_format, trace_target_format).convert(
                 input_file=data_file, output_file=data_file, params=self.params
             )
+        else:
+            if verbose:
+                print("Costume Trace preprocessing for format {}".format(trace_source_format))
+            self.preprocessing_data(path_to_folder, data_file, trace_source_format, path_manager)
+
+        if policy_auto_convertible:
+            if verbose:
+                print("Policy conversion from {} to {}".format(policy_source_format, policy_target_format))
+            self.params[SIGNATURE_KEY] = signature_file
+            self.params[FOLDER_KEY] = path_to_folder
             self.params[POLICY_KEY] = AutoPolicyConverter(path_manager, policy_source_format, policy_target_format).convert(
                 input_file=policy_file, output_file=policy_file, params=self.params
             )
         else:
-            print("Preprocessing")
-            self.pre_processing(
-                path_to_folder, data_file, signature_file, policy_file, trace_source_format, policy_source_format,
-                path_manager
-            )
+            if verbose:
+                print("Costume Policy preprocessing for format {}".format(policy_source_format))
+            self.preprocessing_policy(path_to_folder, policy_file, signature_file, policy_source_format, path_manager)
         end = time.perf_counter()
         return end - start
 
-    """
-        transform csv into the tool format, e.g. sorted
-        @param path_to_data:      path to the initial data in the standard csv format 
-        @param path_to_signature: path to the signature 
-        @param path_to_formula:   path to the formula 
-    """
     @abstractmethod
-    def pre_processing(
-            self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
-            trace_source: InputOutputTraceFormats, policy_source: InputOutputPolicyFormats, path_manager: PathManager
+    def preprocessing_data(
+            self, path_to_folder: AnyStr, data_file: AnyStr,
+            trace_source: InputOutputTraceFormats, path_manager: PathManager
+    ):
+        pass
+
+    @abstractmethod
+    def preprocessing_policy(
+            self, path_to_folder: AnyStr, policy_file: AnyStr, signature_file: AnyStr,
+            policy_source: InputOutputPolicyFormats, path_manager: PathManager
     ):
         pass
 
@@ -141,7 +145,7 @@ def run_monitor(mon: AbstractMonitorTemplate, timeout_value, path_to_folder: Any
 
     if oracle is not None:
         try:
-            verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, policy_file, )
+            verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, policy_file, result_file)
         except Exception as e:
             print(f"Oracle verification failed with exception: {e}")
             raise ResultErrorException((preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed), str(e))

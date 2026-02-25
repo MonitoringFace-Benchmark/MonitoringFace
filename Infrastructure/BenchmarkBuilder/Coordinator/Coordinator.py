@@ -22,6 +22,10 @@ class Coordinator(ABC):
         pass
 
     @abstractmethod
+    def short_cutting(self):
+        pass
+
+    @abstractmethod
     def time_out(self) -> Optional[int]:
         pass
 

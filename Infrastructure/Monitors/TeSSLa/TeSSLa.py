@@ -14,13 +14,18 @@ class TeSSLa(AbstractMonitorTemplate):
     def __init__(self, image: AnyStr, name: str, params: AnyStr):
         super().__init__(image, name, params)
 
-    def pre_processing(
-            self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr,
-            trace_source: InputOutputTraceFormats, policy_source: InputOutputPolicyFormats, path_manager: PathManager
+    def preprocessing_data(
+            self, path_to_folder: AnyStr, data_file: AnyStr,
+            trace_source: InputOutputTraceFormats, path_manager: PathManager
+    ):
+        self.params[TRACE_KEY] = data_file.removeprefix("data/")
+
+    def preprocessing_policy(
+            self, path_to_folder: AnyStr, policy_file: AnyStr, signature_file: AnyStr,
+            policy_source: InputOutputPolicyFormats, path_manager: PathManager
     ):
         self.params[FOLDER_KEY] = path_to_folder
-        self.params[POLICY_KEY] = formula_file.removeprefix("data/")
-        self.params[TRACE_KEY] = data_file.removeprefix("data/")
+        self.params[POLICY_KEY] = policy_file.removeprefix("data/")
 
     def run_offline_command(self, time_on=None, time_out=None) -> Tuple[List[str], Optional[str]]:
         cmd = [self.params[POLICY_KEY], self.params[TRACE_KEY]]

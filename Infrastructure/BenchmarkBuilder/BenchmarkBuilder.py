@@ -123,6 +123,7 @@ class BenchmarkBuilder:
                             )
                             if res == RunToolResult.TIMEOUT:
                                 time_out_dict.add(tool.tool.name)"""
+                        # todo short cutting must be done by the coordinator
                         res = run_tools(
                             result_aggregator=result_aggregator, path_to_folder=path_to_folder, tool=tool.tool,
                             result_file=result, oracle=self.oracle, setting_id=tmp_setting_id,
