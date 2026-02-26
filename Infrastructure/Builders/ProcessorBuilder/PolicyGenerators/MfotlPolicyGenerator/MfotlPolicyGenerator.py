@@ -30,7 +30,7 @@ class MfotlPolicyGenerator(PolicyGeneratorTemplate):
             return parse_gen_output(out)
 
     @staticmethod
-    def output_formats() -> InputOutputPolicyFormats:
+    def output_format() -> InputOutputPolicyFormats:
         return InputOutputPolicyFormats.MFOTL
 
 

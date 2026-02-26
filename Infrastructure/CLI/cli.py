@@ -1,7 +1,3 @@
-"""
-CLI module for MonitoringFace benchmark framework
-Provides command-line interface for running experiments from YAML configuration files
-"""
 import argparse
 import shutil
 import sys
@@ -18,8 +14,6 @@ from Infrastructure.constants import LENGTH
 
 
 class CLI:
-    """Command-line interface for MonitoringFace"""
-    
     def __init__(self, path_to_module: AnyStr):
         self.parser = self._create_parser()
 
@@ -47,7 +41,6 @@ class CLI:
         os.makedirs(self.experiment_folder, exist_ok=True)
     
     def _create_timestamped_result_folder(self, experiment_name: str) -> str:
-        """Create a timestamped result folder for the current run."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         result_folder = os.path.join(self.result_base_folder, f"{experiment_name}_{timestamp}")
         os.makedirs(result_folder, exist_ok=True)
@@ -73,6 +66,18 @@ Examples:
   
   # Dry run to validate configuration without execution
   python -m Infrastructure.main experiments/my_experiment.yaml --dry-run
+  
+  # Enable verbose output for more details
+  python -m Infrastructure.main experiments/my_experiment.yaml --verbose
+  
+  # Save transient and temporary data for debugging purposes
+  python -m Infrastructure.main experiments/my_experiment.yaml --debug
+  
+  # Keep only the latest result of an experiment (clean previous results)
+  python -m Infrastructure.main experiments/my_experiment.yaml --clean
+  
+  # Clean all results before running
+  python -m Infrastructure.main experiments/my_experiment.yaml --clean-all
             """
         )
         
@@ -177,7 +182,7 @@ Examples:
             return False
     
     def run_single_experiment(self, config_name: AnyStr, cli_args: CLIArgs, dry_run: bool = False, result_folder: str = None, is_suite: bool = False) -> Any:
-        yaml_file = f"{self.benchmark_folder}/{config_name}"
+        yaml_file = f"{self.benchmark_folder}{config_name}"
 
         if cli_args.verbose:
             print(f"Loading experiment configuration from: {yaml_file}")
@@ -186,13 +191,13 @@ Examples:
             print(f"Debug mode enabled - scratch folder data will be preserved")
 
         try:
-            # Parse configuration
+            experiment_name = os.path.splitext(os.path.basename(yaml_file))[0]
+            self.path_manager.add_path("path_to_folder", self.path_manager.get_path("path_to_experiments") + "/" + experiment_name)
             parser = YamlParser(
                 yaml_path=yaml_file, path_to_build=self.build_folder,
                 path_to_experiments=self.experiment_folder, path_manager=self.path_manager
             )
             (coordinator, monitor_manager, tools_to_build, num_repeats) = parser.parse_experiment(cli_args=cli_args)
-            experiment_name = os.path.splitext(os.path.basename(yaml_file))[0]
 
             if cli_args.verbose:
                 print(f"Experiment name: {experiment_name}")
@@ -260,15 +265,13 @@ Examples:
             print(f"Found {len(experiment_paths)} enabled experiment(s) in suite")
             
             if dry_run:
-                # Validate all experiments
                 for i, exp_path in enumerate(experiment_paths, 1):
                     if cli_args.verbose:
                         print(f"\nValidating experiment {i}/{len(experiment_paths)}: {exp_path}")
                     self.run_single_experiment(exp_path, dry_run=True, cli_args=cli_args)
                 print(f"\n✓ All {len(experiment_paths)} experiment(s) validated successfully")
                 return []
-            
-            # Create a single timestamped folder for the entire suite
+
             suite_name_clean = os.path.splitext(os.path.basename(suite_name))[0]
             suite_result_folder = self._create_timestamped_result_folder(suite_name_clean)
             print(f"Suite results will be saved to: {suite_result_folder}")
@@ -316,6 +319,5 @@ Examples:
 
 
 def main(argv: List[str] = None, path_to_module: AnyStr = None):
-    """Main entry point for command-line execution"""
     cli = CLI(path_to_module=path_to_module)
     cli.run(argv)

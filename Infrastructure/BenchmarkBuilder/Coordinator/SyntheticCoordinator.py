@@ -1,5 +1,6 @@
 import copy
 import os
+from dataclasses import asdict
 from typing import List, Tuple, Optional, Dict
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
@@ -31,9 +32,9 @@ class SyntheticCoordinator(Coordinator):
         self.experiment = experiment
         self.path_to_folder = self.path_manager.get_path("path_to_folder")
 
-        self.data_setup = copy.copy(data_setup)
+        self.data_setup = asdict(copy.copy(data_setup))
         self.data_source = data_source
-        self.policy_setup = copy.copy(policy_setup)
+        self.policy_setup = asdict(copy.copy(policy_setup))
         self.policy_source = policy_source
 
         self.constraints = constraints

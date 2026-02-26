@@ -92,25 +92,21 @@ class BenchmarkBuilder:
                         result_aggregator.add_missing(tool.name, tmp_setting_id)
                         print_footline()
                     elif isinstance(tool, ValidReturnType):
-                        """if tool.tool.name in time_out_dict and self.short_cut:
-                            print_headline(f"Short cutting {tool.tool.name}")
-                            result_aggregator.add_timeout(tool.tool.name, tmp_setting_id, self.time_guard.upper_bound)
-                            print_footline()
-                        else:
-                            res = run_tools(
-                                result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
-                                oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
-                                data_file=data_file, signature_file=signature_file, formula_file=formula_file,
-                                sfh=sfh, cli_args=self.cli_args, path_manager=self.path_manager
-                            )
-                            if res == RunToolResult.TIMEOUT:
-                                time_out_dict.add(tool.tool.name)"""
-                        # todo short cutting must be done by the coordinator
+                        if self.cli_args.short_cut:
+                            # todo short cutting must be done by the coordinator
+                            """if tool.tool.name in time_out_dict and self.short_cut:
+                                  print_headline(f"Short cutting {tool.tool.name}")
+                                  result_aggregator.add_timeout(tool.tool.name, tmp_setting_id, self.time_guard.upper_bound)
+                                  print_footline()
+                               else:
+                                  res = run_tools(...)
+                                  if res == RunToolResult.TIMEOUT:
+                                     time_out_dict.add(tool.tool.name)"""
+                            pass
                         res = run_tools(
                             result_aggregator=result_aggregator, path_to_folder=path_to_folder, tool=tool.tool,
-                            result_file=result, setting_id=tmp_setting_id,
-                            data_file=data_file, signature_file=signature, policy_file=policy_file,
-                            sfh=sfh, cli_args=self.cli_args,
+                            result_file=result, setting_id=tmp_setting_id, data_file=data_file, signature_file=signature,
+                            policy_file=policy_file, sfh=sfh, cli_args=self.cli_args,
                             coordinator=self.coordinator, policy_type=policy_type, data_type=data_type
                         )
                     else:

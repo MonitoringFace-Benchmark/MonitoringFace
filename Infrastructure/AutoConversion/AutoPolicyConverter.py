@@ -1,6 +1,6 @@
 import os
 import shutil
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from Infrastructure.AutoConversion.AutoConversionMapping import AutoConversionMapping
 from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.PolicyConverterTemplate import PolicyConverterTemplate
@@ -29,7 +29,7 @@ class AutoPolicyConverter:
         return converter_chain
 
     @staticmethod
-    def reachable(path_manager, source, target) -> Optional[InputOutputPolicyFormats, InputOutputPolicyFormats, int]:
+    def reachable(path_manager, source, target) -> Optional[Tuple[InputOutputPolicyFormats, InputOutputPolicyFormats, int]]:
         try:
             res = AutoConversionMapping(path_manager, "PolicyConverters").resolve_format(source, target)
             return source, target, len(res)

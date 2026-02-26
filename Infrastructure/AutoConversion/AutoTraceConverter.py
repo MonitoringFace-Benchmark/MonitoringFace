@@ -1,6 +1,6 @@
 import os
 import shutil
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from Infrastructure.AutoConversion.AutoConversionMapping import AutoConversionMapping
 from Infrastructure.Builders.ProcessorBuilder.DataConverters.DataConverterTemplate import DataConverterTemplate
@@ -29,7 +29,7 @@ class AutoTraceConverter:
         return converter_chain
 
     @staticmethod
-    def reachable(path_manager, source, target) -> Optional[InputOutputTraceFormats, InputOutputTraceFormats, int]:
+    def reachable(path_manager, source, target) -> Optional[Tuple[InputOutputTraceFormats, InputOutputTraceFormats, int]]:
         try:
             res = AutoConversionMapping(path_manager, "DataConverters").resolve_format(source, target)
             return source, target, len(res)

@@ -21,7 +21,6 @@ from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import Sy
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuardingTool, TimeConstraints, ConstructionConstraints, RunTimeConstraints
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Oracles.OracleManager import OracleManager
 
@@ -85,7 +84,7 @@ class YamlParser:
             raise YamlParserException("Missing 'tools' section in YAML configuration")
 
         tools_to_build = []
-        for tool in self.cfg.tools:
+        for tool in self.cfg.monitors:
             name = tool.get('identifier')
             branch = tool.get('branch')
             release = tool.get('release', 'branch')
@@ -170,7 +169,6 @@ class YamlParser:
             raise YamlParserException(f"Invalid Policy Generator Contract: {data_contract_name}")
 
     def parse_monitor_manager(self, tool_manager: ToolManager) -> MonitorManager:
-        """Parse monitors configuration and create MonitorManager"""
         if 'monitors' not in self.cfg:
             raise YamlParserException("Missing 'monitors' section in YAML configuration")
         
@@ -255,19 +253,15 @@ class YamlParser:
         if 'runtime_constraints' not in self.cfg:
             return RunTimeConstraints()
 
-        runtime_config = self.cfg.get('runtime_constraints', {})
-        runtime_dict = OmegaConf.to_container(runtime_config, resolve=True)
-
-        upper_bound = runtime_dict.get('upper_bound')
+        runtime_config_raw = self.cfg.get('runtime_constraints', {})
+        upper_bound = runtime_config_raw.replace(" ", "").replace("upper_bound=", "")
         return RunTimeConstraints(upper_bound=upper_bound)
     
     def get_tools_to_build(self) -> List[str]:
-        """Get list of tool names to build"""
         tools = self.cfg.get('tools_to_build', [])
         return OmegaConf.to_container(tools, resolve=True) if tools else []
     
     def get_oracle_config(self) -> Optional[str]:
-        """Get oracle configuration name"""
         oracle_config = self.cfg.get('oracle', {})
         if isinstance(oracle_config, dict):
             oracle_dict = oracle_config
@@ -299,14 +293,17 @@ class YamlParser:
         if isinstance(data_setup, CaseStudySetupContract):
             coordinator = CaseStudyCoordinator(
                 generator=CaseStudyGenerator(data_setup.name, self.path_to_build),
+                data_setup=data_setup,
                 path_manager=self.path_manager,
                 constraints=constraints,
                 oracle=oracle
             )
         else:
-            data_generator = self._parse_data_generators(self.path_to_project, data_setup.name)
+            data_contract_name = data_setup.__class__.__name__.replace('Contract', 'Generator')
+            data_generator = self._parse_data_generators(self.path_to_project, data_contract_name)
             policy_setup = self.parse_policy_setup()
-            policy_generator = self._parse_policy_generators(self.path_to_project, policy_setup.name)
+            policy_contract_name = policy_setup.__class__.__name__.replace('Contract', 'Generator')
+            policy_generator = self._parse_policy_generators(self.path_to_project, policy_contract_name)
 
             coordinator = SyntheticCoordinator(
                 experiment=self.parse_synthetic_experiment(),
