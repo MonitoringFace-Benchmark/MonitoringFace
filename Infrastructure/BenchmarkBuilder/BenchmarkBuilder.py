@@ -1,5 +1,4 @@
 import os.path
-from dataclasses import asdict
 from enum import Enum
 from typing import AnyStr, List, Optional
 
@@ -12,7 +11,6 @@ from Infrastructure.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.FileRepresenters.FingerPrintHandler import FingerPrintHandler
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
-from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 
 from Infrastructure.Monitors.AbstractMonitorTemplate import run_monitor
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
@@ -29,43 +27,27 @@ class RunToolResult(Enum):
 
 
 class BenchmarkBuilder:
-    def __init__(
-            self, contract, path_manager: PathManager, data_setup,
-            tools_to_build, repeat_runs, cli_args: CLIArgs, coordinator: Coordinator,
-            oracle=None, seeds=None, short_cut=True,
-    ):
+    def __init__(self, experiment_name, coordinator: Coordinator, tools_to_build, repeat_runs, cli_args: CLIArgs):
         print_headline("(Starting) Init Benchmark")
         self.coordinator = coordinator
 
-        self.contract = contract
-        self.seeds = seeds
-        self.short_cut = short_cut
+        self.experiment_name = experiment_name
         self.cli_args = cli_args
         self.repeat_runs = repeat_runs
-        self.path_manager = path_manager
-
-        path_to_project = self.path_manager.get_path("path_to_project")
-        path_to_infrastructure = path_to_project + "/Infrastructure"
-        self.path_manager.add_path("path_to_infrastructure", path_to_infrastructure)
-        named_experiment_path = path_to_infrastructure + "/experiments/" + self.contract.experiment_name
-        self.path_manager.add_path("path_to_experiment", f"{path_to_infrastructure}/experiments")
-        self.path_manager.add_path("path_to_named_experiment", named_experiment_path)
-        self.path_manager.add_path("path_to_debug", named_experiment_path + "/debug")
-
-        self.oracle = None
-        self.oracle_name = None
-        if oracle:
-            self.oracle_name = oracle[1]
-            self.oracle = oracle[0].get_oracle(self.oracle_name)
-
         self.tools_to_build = tools_to_build
 
-        os.makedirs(self.path_manager.get_path("path_to_experiment"), exist_ok=True)
-        os.makedirs(self.path_manager.get_path("path_to_named_experiment"), exist_ok=True)
+        path_to_project = self.coordinator.get_path("path_to_project")
+        path_to_infrastructure = path_to_project + "/Infrastructure"
+        self.coordinator.add_path("path_to_infrastructure", path_to_infrastructure)
+        named_experiment_path = path_to_infrastructure + "/experiments/" + experiment_name
+        self.coordinator.add_path("path_to_experiment", f"{path_to_infrastructure}/experiments")
+        self.coordinator.add_path("path_to_named_experiment", named_experiment_path)
+        self.coordinator.add_path("path_to_debug", named_experiment_path + "/debug")
 
-        data_setup = data_setup if data_setup else {}
-        self.data_setup = data_setup if isinstance(data_setup, dict) else asdict(data_setup)
-        fingerprint_location = self.path_manager.get_path("path_to_named_experiment") + "/fingerprint"
+        os.makedirs(self.coordinator.get_path("path_to_experiment"), exist_ok=True)
+        os.makedirs(self.coordinator.get_path("path_to_named_experiment"), exist_ok=True)
+
+        fingerprint_location = self.coordinator.get_path("path_to_named_experiment") + "/fingerprint"
         finger_print = self.coordinator.finger_print()
 
         print_footline("(Finished) Init Benchmark")
@@ -91,7 +73,7 @@ class BenchmarkBuilder:
         print("-" * LENGTH)
         result_aggregator = ResultAggregator()
 
-        path_to_debug = self.path_manager.get_path("path_to_debug")
+        path_to_debug = self.coordinator.get_path("path_to_debug")
         if os.path.exists(path_to_debug):
             ScratchFolderHandler(path_to_debug).remove_folder()
 
@@ -126,9 +108,9 @@ class BenchmarkBuilder:
                         # todo short cutting must be done by the coordinator
                         res = run_tools(
                             result_aggregator=result_aggregator, path_to_folder=path_to_folder, tool=tool.tool,
-                            result_file=result, oracle=self.oracle, setting_id=tmp_setting_id,
+                            result_file=result, setting_id=tmp_setting_id,
                             data_file=data_file, signature_file=signature, policy_file=policy_file,
-                            sfh=sfh, cli_args=self.cli_args, path_manager=self.path_manager,
+                            sfh=sfh, cli_args=self.cli_args,
                             coordinator=self.coordinator, policy_type=policy_type, data_type=data_type
                         )
                     else:
@@ -175,18 +157,18 @@ class BenchmarkBuilder:
 
 
 def run_tools(
-        result_aggregator: ResultAggregator, tool, setting_id: str, oracle: str, path_to_folder: str,
+        result_aggregator: ResultAggregator, tool, setting_id: str, path_to_folder: str,
         data_file: str, data_type: InputOutputTraceFormats, policy_file: str, policy_type: InputOutputPolicyFormats,
-        signature_file: str, result_file: str, cli_args: CLIArgs, path_manager: PathManager, coordinator: Coordinator, sfh=None
+        signature_file: str, result_file: str, cli_args: CLIArgs, coordinator: Coordinator, sfh=None
 ) -> RunToolResult:
-    debug_path = path_manager.get_path("path_to_debug")
+    debug_path = coordinator.get_path("path_to_debug")
     timeout_value = coordinator.time_out()
     try:
         prep, compiled, runtime, prop = run_monitor(
             mon=tool, path_to_folder=path_to_folder, data_file=data_file, signature_file=signature_file,
-            policy_file=policy_file, path_manager=path_manager, cli_args=cli_args, oracle=oracle,
-            trace_source_format=data_type, policy_source_format=policy_type, result_file=result_file,
-            timeout_value=timeout_value
+            policy_file=policy_file, cli_args=cli_args, trace_source_format=data_type, policy_source_format=policy_type,
+            result_file=result_file, timeout_value=timeout_value,
+            oracle=coordinator.get_oracle(), path_manager=coordinator.get_path_manager()
         )
 
         if cli_args.debug and sfh is not None:

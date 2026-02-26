@@ -187,43 +187,35 @@ Examples:
 
         try:
             # Parse configuration
-            parser = YamlParser(yaml_path=yaml_file, path_to_build=self.build_folder, path_to_experiments=self.experiment_folder)
-            experiment_config = parser.parse_experiment(cli_args=cli_args)
-            
+            parser = YamlParser(
+                yaml_path=yaml_file, path_to_build=self.build_folder,
+                path_to_experiments=self.experiment_folder, path_manager=self.path_manager
+            )
+            (coordinator, monitor_manager, tools_to_build, num_repeats) = parser.parse_experiment(cli_args=cli_args)
+            experiment_name = os.path.splitext(os.path.basename(yaml_file))[0]
+
             if cli_args.verbose:
-                print(f"Experiment name: {experiment_config['benchmark_contract'].experiment_name}")
-                print(f"Experiment type: {experiment_config['experiment_type'].name}")
-                print(f"Tools to build: {', '.join(experiment_config['tools_to_build'])}")
+                print(f"Experiment name: {experiment_name}")
+                print(f"Tools to build: {', '.join(tools_to_build)}")
             
             if dry_run:
                 print(f"✓ Configuration validated successfully: {yaml_file}")
                 return None
 
             benchmark = BenchmarkBuilder(
-                contract=experiment_config['benchmark_contract'],
-                path_manager=self.path_manager,
-                data_setup=experiment_config['data_setup'],
-                gen_mode=experiment_config['experiment_type'],
-                time_guard=experiment_config['time_guarded'],
-                tools_to_build=experiment_config['tools_to_build'],
-                oracle=experiment_config['oracle'],
-                seeds=experiment_config['seeds'],
-                repeat_runs=experiment_config['repeat_experiments'],
-                cli_args=cli_args
+                experiment_name=experiment_name,
+                coordinator=coordinator,
+                tools_to_build=tools_to_build,
+                repeat_runs=num_repeats,
+                cli_args=cli_args,
             )
-            
-            # Get monitors to run
-            monitors = experiment_config['monitor_manager'].get_monitors(
-                experiment_config['tools_to_build']
-            )
+
+            monitors = monitor_manager.get_monitors(tools_to_build)
             
             if cli_args.verbose:
                 print(f"Running experiment with {len(monitors)} monitor(s)...")
-            
-            # Run benchmark
-            results = benchmark.run(monitors)
-            experiment_name = os.path.splitext(os.path.basename(yaml_file))[0]
 
+            results = benchmark.run(monitors)
             if not is_suite:
                 if cli_args.clean_all:
                     self._clean_all()
@@ -237,7 +229,7 @@ Examples:
 
             results.to_csv(result_folder, experiment_name)
 
-            print(f"✓ Experiment completed: {experiment_config['benchmark_contract'].experiment_name}")
+            print(f"✓ Experiment completed: {experiment_name}")
             print(f"  Results saved to: {result_folder}")
             if cli_args.verbose:
                 print(f"Results: {results}")

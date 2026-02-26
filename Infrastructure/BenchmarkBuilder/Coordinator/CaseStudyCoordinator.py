@@ -25,11 +25,10 @@ class RunOracleException(Exception):
 class CaseStudyCoordinator(Coordinator):
     def __init__(self, generator: CaseStudyGenerator, data_setup, path_manager: PathManager, constraints: TimeConstraints,
                  oracle: Optional[AbstractOracleTemplate] = None):
+        super().__init__(path_manager, oracle)
         self.generator = generator
         self.data_setup = data_setup
-        self.oracle = oracle
         self.constraints = constraints
-        self.path_manager = path_manager
         self.results = {}
         self.header, self.instructions = self._init_instr()
 

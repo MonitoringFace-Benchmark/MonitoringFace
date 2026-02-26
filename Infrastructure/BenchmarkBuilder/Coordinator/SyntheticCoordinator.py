@@ -25,10 +25,10 @@ from Infrastructure.AutoConversion.InputOutputTraceFormats import trace_inout_fo
 class SyntheticCoordinator(Coordinator):
     def __init__(
         self, experiment: SyntheticExperiment, data_setup, data_source, policy_setup, policy_source,
-        oracle: Optional[AbstractOracleTemplate], constraints: TimeConstraints, path_manager: PathManager, seeds=None
+        constraints: TimeConstraints, path_manager: PathManager, oracle: Optional[AbstractOracleTemplate] = None, seeds=None
     ):
+        super().__init__(path_manager, oracle)
         self.experiment = experiment
-        self.path_manager = path_manager
         self.path_to_folder = self.path_manager.get_path("path_to_folder")
 
         self.data_setup = copy.copy(data_setup)
@@ -36,7 +36,6 @@ class SyntheticCoordinator(Coordinator):
         self.policy_setup = copy.copy(policy_setup)
         self.policy_source = policy_source
 
-        self.oracle = oracle
         self.constraints = constraints
         self.seeds = seeds
 

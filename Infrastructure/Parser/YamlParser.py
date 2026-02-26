@@ -1,11 +1,15 @@
 import importlib
 import os
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Tuple
 from omegaconf import OmegaConf, DictConfig
 from hydra import compose, initialize_config_dir
 from hydra.core.global_hydra import GlobalHydra
 
+from Infrastructure.BenchmarkBuilder.Coordinator.CaseStudyCoordinator import CaseStudyCoordinator
+from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
+from Infrastructure.BenchmarkBuilder.Coordinator.SyntheticCoordinator import SyntheticCoordinator
+from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import CaseStudyGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 
@@ -14,9 +18,10 @@ from Infrastructure.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import CaseStudySetupContract
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
-from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuardingTool, TimeConstraints, \
-    ConstructionConstraints, RunTimeConstraints
+from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuardingTool, TimeConstraints, ConstructionConstraints, RunTimeConstraints
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
+from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Oracles.OracleManager import OracleManager
 
@@ -26,10 +31,11 @@ class YamlParserException(Exception):
 
 
 class YamlParser:
-    def __init__(self, yaml_path: str, path_to_build: str = None, path_to_experiments: str = None):
+    def __init__(self, yaml_path: str, path_manager: PathManager, path_to_build: str = None, path_to_experiments: str = None):
         self.yaml_path = os.path.abspath(yaml_path)
         self.config_dir = os.path.dirname(self.yaml_path)
         self.config_name = os.path.splitext(os.path.basename(self.yaml_path))[0]
+        self.path_manager = path_manager
 
         your_path_to_mfb = os.getcwd()
         self.path_to_project = your_path_to_mfb
@@ -75,15 +81,15 @@ class YamlParser:
             raise YamlParserException(f"Invalid guard_type value: {value}")
     
     def parse_tool_manager(self, cli_args: CLIArgs) -> ToolManager:
-        if 'tools' not in self.cfg:
+        if 'monitors' not in self.cfg:
             raise YamlParserException("Missing 'tools' section in YAML configuration")
-        
+
         tools_to_build = []
         for tool in self.cfg.tools:
-            name = tool.get('name')
+            name = tool.get('identifier')
             branch = tool.get('branch')
-            commit = tool.get('commit')
             release = tool.get('release', 'branch')
+            commit = tool.get('commit')
             
             if not name or not branch:
                 raise YamlParserException(f"Tool configuration missing 'name' or 'branch': {tool}")
@@ -108,6 +114,13 @@ class YamlParser:
             return build_cls
         else:
             raise YamlParserException(f"Invalid DataGenerator {name} not in {available}")
+
+    @staticmethod
+    def _parse_case_study_generator(path_to_module, name: str) -> CaseStudyGenerator:
+        print(f"-> Attempting to initialize Case Study Generator {name}")
+        build_cls = CaseStudyGenerator(name=name, path_to_build=path_to_module)
+        print("    -> (Success)")
+        return build_cls
 
     def parse_data_setup(self) -> AbstractContract:
         if 'data_setup' not in self.cfg:
@@ -142,7 +155,7 @@ class YamlParser:
     
     def parse_policy_setup(self):
         if 'policy_setup' not in self.cfg:
-            raise YamlParserException("Missing 'policy_setup' section in YAML configuration")
+            return None
         
         policy_setup = self.cfg.policy_setup
         data_contract_name = policy_setup.get('type')
@@ -172,11 +185,9 @@ class YamlParser:
             
             if not identifier or not name or not branch:
                 raise YamlParserException(f"Monitor configuration missing required fields: {monitor_dict}")
-            
-            # Add path_to_project to params if not present (used by ImageManager internally)
+
             if 'path_to_project' not in params:
                 params['path_to_project'] = self.path_to_project
-            
             monitors_to_build.append((identifier, name, branch, commit, params))
         
         return MonitorManager(tool_manager=tool_manager, monitors_to_build=monitors_to_build)
@@ -195,11 +206,26 @@ class YamlParser:
             
             if not identifier or not name:
                 raise YamlParserException(f"Oracle configuration missing required fields: {oracle_dict}")
-            
-            # OracleManager expects: (oracle_name, identifier, monitor_name, params)
+
             oracles_to_build.append((name, identifier, monitor_name, params))
         
         return OracleManager(oracles_to_build=oracles_to_build, monitor_manager=monitor_manager)
+
+    def parse_synthetic_experiment(self):
+        if 'synthetic_config' not in self.cfg:
+            raise YamlParserException("Missing 'synthetic_config' for synthetic benchmark")
+
+        synthetic_config = self.cfg.synthetic_config
+
+        experiment_config = synthetic_config.get('experiment', {})
+        experiment_dict = OmegaConf.to_container(experiment_config, resolve=True)
+        experiment = SyntheticExperiment(
+            num_operators=experiment_dict.get('num_operators', [5]),
+            num_fvs=experiment_dict.get('num_fvs', [2]),
+            num_setting=experiment_dict.get('num_setting', [0]),
+            num_data_set_sizes=experiment_dict.get('num_data_set_sizes', [50])
+        )
+        return experiment
     
     def parse_constraints(self, monitor_manager: MonitorManager) -> TimeConstraints:
         construction = self.parse_construction_constraints(monitor_manager)
@@ -260,29 +286,40 @@ class YamlParser:
             return 1
         return self.cfg.get('repeats')
     
-    def parse_experiment(self, cli_args: CLIArgs) -> Dict[str, Any]:
+    def parse_experiment(self, cli_args: CLIArgs) -> Tuple[Coordinator, MonitorManager, List[str], int]:
         tool_manager = self.parse_tool_manager(cli_args=cli_args)
-        benchmark_contract = self.parse_benchmark_contract()
         monitor_manager = self.parse_monitor_manager(tool_manager)
         oracle_manager = self.parse_oracle_manager(monitor_manager)
-        constraints = self.parse_constraints(monitor_manager)
-        tools_to_build = self.get_tools_to_build()
         oracle_name = self.get_oracle_config()
-        repeats = self.get_repeat_experiments()
-        oracle_tuple = (oracle_manager, oracle_name) if oracle_manager and oracle_name else None
+        oracle = oracle_manager.get_oracle(oracle_name) if oracle_name else None
 
-        return {
-            'tool_manager': tool_manager,
-            'benchmark_contract': benchmark_contract,
-            'monitor_manager': monitor_manager,
-            'oracle_manager': oracle_manager,
-            'constraints': constraints,
-            'tools_to_build': tools_to_build,
-            'oracle': oracle_tuple,
-            'repeat_experiments': repeats,
-            'data_setup': self.parse_data_setup(),
-            'seeds': self.parse_seeds()
-        }
+        constraints = self.parse_constraints(monitor_manager)
+
+        data_setup = self.parse_data_setup()
+        if isinstance(data_setup, CaseStudySetupContract):
+            coordinator = CaseStudyCoordinator(
+                generator=CaseStudyGenerator(data_setup.name, self.path_to_build),
+                path_manager=self.path_manager,
+                constraints=constraints,
+                oracle=oracle
+            )
+        else:
+            data_generator = self._parse_data_generators(self.path_to_project, data_setup.name)
+            policy_setup = self.parse_policy_setup()
+            policy_generator = self._parse_policy_generators(self.path_to_project, policy_setup.name)
+
+            coordinator = SyntheticCoordinator(
+                experiment=self.parse_synthetic_experiment(),
+                data_setup=data_setup,
+                data_source=data_generator,
+                policy_setup=policy_setup,
+                policy_source=policy_generator,
+                oracle=oracle,
+                constraints=constraints,
+                path_manager=self.path_manager,
+                seeds=self.parse_seeds()
+            )
+        return coordinator, monitor_manager, self.get_tools_to_build(), self.get_repeat_experiments()
 
     def __del__(self):
         """Cleanup Hydra instance"""
@@ -324,21 +361,7 @@ class ExperimentSuiteParser:
                     raise YamlParserException(f"Missing 'path' in experiment configuration: {exp_config}")
                 experiment_paths.append(rel_path)
         return experiment_paths
-    
-    def parse_all_experiments(self) -> List[Dict[str, Any]]:
-        experiment_paths = self.get_experiment_paths()
-        parsed_experiments = []
-        
-        for exp_path in experiment_paths:
-            try:
-                parsed_exp = YamlParser(exp_path).parse_experiment()
-                parsed_experiments.append(parsed_exp)
-            except Exception as e:
-                print(f"Error parsing experiment {exp_path}: {e}")
-                raise
-        
-        return parsed_experiments
-    
+
     def __del__(self):
         try:
             GlobalHydra.instance().clear()

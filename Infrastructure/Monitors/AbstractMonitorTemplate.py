@@ -11,6 +11,7 @@ from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
+from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLICY_KEY
 from Infrastructure.printing import print_headline, print_footline
 
@@ -111,7 +112,7 @@ class AbstractMonitorTemplate(ABC):
 
 def run_monitor(mon: AbstractMonitorTemplate, timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
                 path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
-                result_file, cli_args: CLIArgs, oracle=None) -> Tuple[float, float, float, float]:
+                result_file, cli_args: CLIArgs, oracle: Optional[AbstractOracleTemplate] = None) -> Tuple[float, float, float, float]:
     print_headline(f"Run {mon.name}")
 
     preprocessing_elapsed = mon.preprocessing(
