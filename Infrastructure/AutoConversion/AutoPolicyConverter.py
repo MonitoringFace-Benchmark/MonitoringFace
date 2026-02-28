@@ -33,7 +33,7 @@ class AutoPolicyConverter:
         try:
             res = AutoConversionMapping(path_manager, "PolicyConverters").resolve_format(source, target)
             return source, target, len(res)
-        except Exception():
+        except Exception:
             return None
 
     def convert(self, input_file: str, output_file: str, params) -> str:

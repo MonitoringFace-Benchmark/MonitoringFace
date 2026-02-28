@@ -178,7 +178,7 @@ Examples:
             with open(config_path, 'r') as f:
                 config = yaml.safe_load(f)
             return 'experiments' in config
-        except Exception():
+        except Exception:
             return False
     
     def run_single_experiment(self, config_name: AnyStr, cli_args: CLIArgs, dry_run: bool = False, result_folder: str = None, is_suite: bool = False) -> Any:

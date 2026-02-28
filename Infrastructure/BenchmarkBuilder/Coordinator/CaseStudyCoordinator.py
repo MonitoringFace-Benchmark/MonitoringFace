@@ -40,7 +40,7 @@ class CaseStudyCoordinator(Coordinator):
     def time_out(self) -> Optional[int]:
         constraint = self.constraints.runtime_constraint()
         if constraint is not None:
-            return constraint.upper_bound
+            return constraint
         return None
 
     def _init_instr(self):

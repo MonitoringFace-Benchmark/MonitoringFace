@@ -255,7 +255,7 @@ class YamlParser:
 
         runtime_config_raw = self.cfg.get('runtime_constraints', {})
         upper_bound = runtime_config_raw.replace(" ", "").replace("upper_bound=", "")
-        return RunTimeConstraints(upper_bound=upper_bound)
+        return RunTimeConstraints(upper_bound=float(upper_bound))
     
     def get_tools_to_build(self) -> List[str]:
         tools = self.cfg.get('tools_to_build', [])
@@ -322,7 +322,7 @@ class YamlParser:
         """Cleanup Hydra instance"""
         try:
             GlobalHydra.instance().clear()
-        except Exception():
+        except Exception:
             pass
 
 
@@ -362,7 +362,7 @@ class ExperimentSuiteParser:
     def __del__(self):
         try:
             GlobalHydra.instance().clear()
-        except Exception():
+        except Exception:
             pass
 
 

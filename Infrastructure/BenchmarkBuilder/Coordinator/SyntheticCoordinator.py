@@ -16,7 +16,7 @@ from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTempl
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import ORACLE_KEY, SEEDS_KEY, PATH_KEY, SIZE_KEY, FREE_VARIABLES_KEY, PLACEHOLDER_EVENT, \
     SIGNATURE_FILE, SIGNATURE_FILE_ENDING, POLICY_FILE, POLICY_FILE_ENDING, TRACE_LENGTH_KEY, SIGNATURE_KEY, \
-    FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA
+    FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, SIGNATURE_FILE_KEY
 from Infrastructure.DataTypes.FileRepresenters.SeedHandler import SeedHandler
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
 from Infrastructure.Monitors.MonitorExceptions import ToolException
@@ -39,6 +39,7 @@ class SyntheticCoordinator(Coordinator):
 
         self.constraints = constraints
         self.seeds = seeds
+        self.fresh_build = False
 
         self.instructions = []
 
@@ -50,10 +51,11 @@ class SyntheticCoordinator(Coordinator):
     def time_out(self) -> Optional[int]:
         constraint = self.constraints.runtime_constraint()
         if constraint is not None:
-            return constraint.upper_bound
+            return constraint
         return None
 
     def build(self):
+        self.fresh_build = True
         index = 0
         for num_ops in self.experiment.num_operators:
             ops_path = f"{self.path_to_folder}/operators_{num_ops}"
@@ -77,6 +79,7 @@ class SyntheticCoordinator(Coordinator):
                     constraint = self.constraints.construction_constraint()
 
                     for data_set_size in self.experiment.num_data_set_sizes:
+                        print(f"    Build {data_set_size}")
                         if self.seeds:
                             gen_seed, policy_seed = retrieve_setting_seeds(key_list=[
                                 [num_ops, num_fv, num_set, data_set_size],
@@ -89,24 +92,37 @@ class SyntheticCoordinator(Coordinator):
                             if policy_seed:
                                 self.policy_setup[SEEDS_KEY] = policy_seed
 
-                        if constraint is not None and (constraint.lower_bound is not None or constraint.upper_bound is not None):
-                            data_file, policy_file, sig_file, result_file = guarded_synthetic_experiment(
-                                num_path=num_path, num_ops=num_ops, num_fv=num_fv, policy_setup=self.policy_setup,
-                                policy_source=self.policy_source, data_setup=self.data_setup, data_source=self.data_source,
-                                data_set_size=data_set_size, oracle=self.oracle,
-                                constraints=constraint, path_manager=self.path_manager
-                            )
-                        else:
-                            data_file, policy_file, sig_file, result_file = guarded_synthetic_experiment(
-                                num_path=num_path, num_ops=num_ops, num_fv=num_fv, policy_setup=self.policy_setup,
-                                policy_source=self.policy_source, data_setup=self.data_setup, data_source=self.data_source,
-                                data_set_size=data_set_size, oracle=self.oracle,
-                                constraints=None, path_manager=self.path_manager
-                            )
+                        constraint = constraint if constraint is None or (constraint.lower_bound is not None or constraint.upper_bound is not None) else None
+                        data_file, policy_file, sig_file, result_file = guarded_synthetic_experiment(
+                            num_path=num_path, num_ops=num_ops, num_fv=num_fv, policy_setup=self.policy_setup,
+                            policy_source=self.policy_source, data_setup=self.data_setup, data_source=self.data_source,
+                            data_set_size=data_set_size, oracle=self.oracle,
+                            constraints=constraint, path_manager=self.path_manager
+                        )
                         self.instructions.append((index, num_path, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
                         index += 1
 
     def iterate_settings(self) -> List[Tuple[int, str, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
+        if self.fresh_build:
+            return self.instructions
+
+        index = 0
+        for num_ops in self.experiment.num_operators:
+            ops_path = f"{self.path_to_folder}/operators_{num_ops}"
+            for num_fv in self.experiment.num_fvs:
+                fvs_path = f"{ops_path}/free_vars_{num_fv}"
+                for num_set in self.experiment.num_setting:
+                    num_path = f"{fvs_path}/num_{num_set}"
+                    trace_format = self.data_source.output_format()
+                    policy_format = self.policy_source.output_format()
+                    for data_set_size in self.experiment.num_data_set_sizes:
+                        trace_ending = trace_inout_format_to_str(trace_format)
+                        data_file = f"data_{data_set_size}.{trace_ending}"
+                        sig_file = f"{SIGNATURE_FILE}.{SIGNATURE_FILE_ENDING}"
+                        policy_file = f"{POLICY_FILE}.{POLICY_FILE_ENDING}"
+                        result_file = f"{num_path}/result/result_{data_set_size}.res"
+                        self.instructions.append((index, num_path, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
+                        index += 1
         return self.instructions
 
     def short_cutting(self):
@@ -193,6 +209,12 @@ def synthetic_trace_creation(
     result_file = None
 
     data_setup[TRACE_LENGTH_KEY] = num_len
+    if signature_file is not None:
+        data_setup[SIGNATURE_FILE_KEY] = signature_file
+        with open(f"{num_path}/{signature_file}", "r") as sig_file:
+            sig = sig_file.read()
+            data_setup[SIGNATURE_KEY] = sig
+
     sh = SeedHandler(num_path)
     if guard_type is not None and guard_type == TimeGuardingTool.Generator:
         try:

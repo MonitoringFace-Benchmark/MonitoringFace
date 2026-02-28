@@ -75,7 +75,7 @@ class VeriMon(AbstractMonitorTemplate):
             try:
                 ts, tp, vals = parse_pattern(line)
                 verdicts.insert(vals, tp, ts)
-            except Exception():
+            except Exception:
                 if line.startswith("@MaxTS"):
                     pass
                 else:

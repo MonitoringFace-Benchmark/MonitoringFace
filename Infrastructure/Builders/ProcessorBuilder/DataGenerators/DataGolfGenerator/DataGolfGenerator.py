@@ -45,7 +45,7 @@ class DataGolfGenerator(DataGeneratorTemplate):
                 try:
                     with open(f"{data_golf_contract.path}/result/prefix_{str(data_golf_contract.trace_length)}", "w") as file:
                         file.write(prefix)
-                except Exception():
+                except Exception:
                     pass
 
             remove_prefix = "@" + raw_split[1]

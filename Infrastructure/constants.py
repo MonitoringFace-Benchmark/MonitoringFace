@@ -32,6 +32,7 @@ VERSION_KEY = "version"
 BRANCH_KEY = "branch"
 
 SIGNATURE_KEY = "signature"
+SIGNATURE_FILE_KEY = "signature"
 FOLDER_KEY = "folder"
 POLICY_KEY = "policy"
 TRACE_KEY = "trace"
