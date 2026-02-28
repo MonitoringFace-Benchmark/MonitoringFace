@@ -232,6 +232,8 @@ def synthetic_trace_creation(
     data_file = f"data_{num_len}.{trace_ending}"
 
     if oracle is not None:
+        print("In oracle before error")
+        sfh = ScratchFolderHandler(num_path)
         oracle.pre_process_data(
             path_to_folder=num_path, data_file=data_file, policy_file=policy_file, signature_file=signature_file,
             trace_source_format=trace_format, policy_source_format=policy_format, path_manager=path_manager
@@ -252,6 +254,7 @@ def synthetic_trace_creation(
                 raise RunOracleException(out)
         result_file = f"{num_path}/result/result_{num_len}.res"
         oracle.post_process_data(out, result_file)
+        sfh.remove_folder()
 
     if guard_type is not None and guard_type == TimeGuardingTool.Monitor and guard is not None:
         guard.preprocessing(

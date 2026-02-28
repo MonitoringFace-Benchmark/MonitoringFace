@@ -116,7 +116,7 @@ def data_golf_contract_to_command(contract) -> list[AnyStr]:
         contract.sig_file = "signature.sig"
 
     if contract.formula == "":
-        contract.formula = "formula.mfotl"
+        contract.formula = "policy.policy"
 
     args = ["-sig", contract.sig_file, "-formula", contract.formula]
     if hasattr(contract, 'no_rewrite') and contract.no_rewrite is not None:

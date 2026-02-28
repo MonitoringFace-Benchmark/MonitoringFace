@@ -1,8 +1,6 @@
 import copy
 import os
-import re
-from pathlib import Path
-from typing import AnyStr, Optional, Tuple
+from typing import AnyStr, Tuple
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
@@ -14,11 +12,12 @@ from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrd
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
 from Infrastructure.Monitors.SharedFunctions import parse_variable_order_monpoly
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
-from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, FOLDER_KEY
+from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, FOLDER_KEY, TRACE_KEY
 
 
 class VeriMonOracle(AbstractOracleTemplate):
     def __init__(self, veri_mon: AbstractMonitorTemplate, parameters):
+        print("ORACLEEEEEEE")
         super().__init__()
         self.verimon = copy.deepcopy(veri_mon)
         self.verimon.name = "VeriMon"
@@ -35,12 +34,12 @@ class VeriMonOracle(AbstractOracleTemplate):
 
     def compute_result(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
         cmd = [
-            "-sig", str(self.verimon.params["signature"]),
-            "-formula", str(self.verimon.params["formula"]),
-            "-log", str(self.verimon.params["data"]),
+            "-sig", str(self.verimon.params[SIGNATURE_KEY]),
+            "-formula", str(self.verimon.params[POLICY_KEY]),
+            "-log", str(self.verimon.params[TRACE_KEY]),
             "-verified"
         ]
-        return self.verimon.image.run(self.verimon.params["folder"], cmd, time_on, time_out)
+        return self.verimon.image.run(self.verimon.params[FOLDER_KEY], cmd, time_on, time_out)
 
     def post_process_data(self, std_out_str, output_file_name):
         with open(output_file_name, "w") as file:

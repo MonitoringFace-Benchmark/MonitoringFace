@@ -18,7 +18,7 @@ class AutoConversionMapping(Generic[F, T]):
         infra_path = self.path_manager.get_path("path_to_infrastructure")
         if infra_path is None:
             raise ValueError(f"AutoConversionMapping: path_to_infra not found in PathManager")
-        for (name_conv, _) in _discover_trace_converters(infra_path, self.ttype):
+        for (name_conv, _) in _discover_converters(infra_path, self.ttype):
             for (_from, _to) in _retrieve_module(self.ttype, name_conv).conversion_scheme():
                 if (_from, _to) in self.mappings:
                     self.mappings[(_from, _to)].append(name_conv)
@@ -97,7 +97,7 @@ class AutoConversionReachabilityGraph:
         return bfs(self.graph, source, target)
 
 
-def _discover_trace_converters(path_to_infra_: str, ttype: str) -> List[str]:
+def _discover_converters(path_to_infra_: str, ttype: str) -> List[str]:
     converters = []
     for item in Path(f"{path_to_infra_}/Builders/ProcessorBuilder/{ttype}").iterdir():
         if not item.is_dir() or item.name.startswith('_') or item.name == '__pycache__':
