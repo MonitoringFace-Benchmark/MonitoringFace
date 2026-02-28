@@ -62,8 +62,6 @@ class TimelyMon(AbstractMonitorTemplate):
         return cmd, None
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        print("Post processing output...")
-
         cmd = [self.params[POLICY_KEY], "--check"]
         logs, code = self.image.run(self.params["folder"], cmd, measure=False)
         variable_order = VariableOrder(parse_variable_order_timely(logs)) if code == 0 else DefaultVariableOrder()

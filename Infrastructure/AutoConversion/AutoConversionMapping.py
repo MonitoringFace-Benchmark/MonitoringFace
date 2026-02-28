@@ -80,28 +80,21 @@ class AutoConversionReachabilityGraph:
         if target not in self.graph:
             raise ConversionErrorException(f"AutoConversionReachabilityGraph: Target Format {target} not in graph")
 
-        #print(self.graph)
-
-        def _dfs(graph, vertex, _target, _visited, _path) -> List[str]:
-            #print("DFS at vertex: ", vertex.value)
-            #print("Visited: ", _visited)
-            src = vertex.value
-            _visited.add(src)
-            for (neighbor_value, tool) in vertex.edges:
-                #print("Neighbor value: ", neighbor_value)
-                #print("Tool: ", tool)
-                if neighbor_value == _target:
-                    _path.insert(0, (tool, (src, target)))
-                    return _path
-                if neighbor_value not in _visited:
-                    if neighbor_value not in self.graph:
-                        continue
-                    result = _dfs(graph, graph.get(neighbor_value), _target, _visited, _path)
-                    if result:
-                        _path.insert(0, (tool, (src, neighbor_value)))
-                        return _path
+        def bfs(graph, src, _target):
+            visited = set()
+            queue = [(src, [])]
+            while queue:
+                vertex, path = queue.pop(0)
+                if vertex in visited:
+                    continue
+                visited.add(vertex)
+                for (neighbor_value, tool) in graph[vertex].edges:
+                    if neighbor_value == _target:
+                        return path + [(tool, (vertex, _target))]
+                    if neighbor_value not in visited:
+                        queue.append((neighbor_value, path + [(tool, (vertex, neighbor_value))]))
             raise ConversionErrorException(f"AutoConversionReachabilityGraph: No path found from {source} to {target}")
-        return _dfs(self.graph, self.graph[source], target, set(), [])
+        return bfs(self.graph, source, target)
 
 
 def _discover_trace_converters(path_to_infra_: str, ttype: str) -> List[str]:
@@ -117,19 +110,3 @@ def _discover_trace_converters(path_to_infra_: str, ttype: str) -> List[str]:
 
 def _retrieve_module(ttype: str, name: str):
     return getattr(importlib.import_module(f"Infrastructure.Builders.ProcessorBuilder.{ttype}.{name}.{name}"), name)
-
-
-"""
-{<InputOutputTraceFormats.CSV: 'csv'>: Vertex(InputOutputTraceFormats.CSV, [(<InputOutputTraceFormats.OOO_CSV: 'ooo-csv'>, 'OutOfOrderConverter'), (<InputOutputTraceFormats.MONPOLY: 'monpoly'>, 'ReplayerConverter'), (<InputOutputTraceFormats.MONPOLY_LINEAR: 'monpoly-linear'>, 'ReplayerConverter'), (<InputOutputTraceFormats.DEJAVU: 'dejavu'>, 'ReplayerConverter'), (<InputOutputTraceFormats.DEJAVU_ENCODED: 'dejavu-encoded'>, 'ReplayerConverter'), (<InputOutputTraceFormats.DEJAVU_LINEAR: 'dejavu-linear'>, 'ReplayerConverter')]), 
-<InputOutputTraceFormats.OOO_CSV: 'ooo-csv'>: Vertex(InputOutputTraceFormats.OOO_CSV, []), 
-<InputOutputTraceFormats.MONPOLY: 'monpoly'>: Vertex(InputOutputTraceFormats.MONPOLY, [(<InputOutputTraceFormats.CSV: 'csv'>, 'ReplayerConverter'), (<InputOutputTraceFormats.CSV_LINEAR: 'csv-linear'>, 'ReplayerConverter'), (<InputOutputTraceFormats.DEJAVU: 'dejavu'>, 'ReplayerConverter'), (<InputOutputTraceFormats.DEJAVU_ENCODED: 'dejavu-encoded'>, 'ReplayerConverter'), (<InputOutputTraceFormats.DEJAVU_LINEAR: 'dejavu-linear'>, 'ReplayerConverter')]), 
-<InputOutputTraceFormats.CSV_LINEAR: 'csv-linear'>: Vertex(InputOutputTraceFormats.CSV_LINEAR, []), 
-<InputOutputTraceFormats.DEJAVU: 'dejavu'>: Vertex(InputOutputTraceFormats.DEJAVU, [(<InputOutputTraceFormats.MONPOLY: 'monpoly'>, 'ReplayerConverter'), (<InputOutputTraceFormats.MONPOLY_LINEAR: 'monpoly-linear'>, 'ReplayerConverter'), (<InputOutputTraceFormats.CSV: 'csv'>, 'ReplayerConverter'), (<InputOutputTraceFormats.CSV_LINEAR: 'csv-linear'>, 'ReplayerConverter')]),
-<InputOutputTraceFormats.DEJAVU_ENCODED: 'dejavu-encoded'>: Vertex(InputOutputTraceFormats.DEJAVU_ENCODED, []), <InputOutputTraceFormats.DEJAVU_LINEAR: 'dejavu-linear'>: Vertex(InputOutputTraceFormats.DEJAVU_LINEAR, []), 
-<InputOutputTraceFormats.MONPOLY_LINEAR: 'monpoly-linear'>: Vertex(InputOutputTraceFormats.MONPOLY_LINEAR, [])
-}
-
-No path found from InputOutputTraceFormats.CSV to InputOutputTraceFormats.MONPOLY
-
-
-"""
