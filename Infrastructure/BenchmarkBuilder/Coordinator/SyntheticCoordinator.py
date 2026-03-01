@@ -232,7 +232,6 @@ def synthetic_trace_creation(
     data_file = f"data_{num_len}.{trace_ending}"
 
     if oracle is not None:
-        print("In oracle before error")
         sfh = ScratchFolderHandler(num_path)
         oracle.pre_process_data(
             path_to_folder=num_path, data_file=data_file, policy_file=policy_file, signature_file=signature_file,

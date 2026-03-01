@@ -6,6 +6,7 @@ from dataclasses import is_dataclass, asdict
 
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
+from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
 
 def normalize(obj):
@@ -21,6 +22,10 @@ def normalize(obj):
         return f"{obj.__class__.__name__}"
     elif isinstance(obj, PolicyGeneratorTemplate):
         return f"{obj.__class__.__name__}"
+    elif isinstance(obj, AbstractContract):
+        return {k: normalize(v) for k, v in obj.__dict__.items()}
+    elif hasattr(obj, '__dict__') and not isinstance(obj, type):
+        return {k: normalize(v) for k, v in obj.__dict__.items()}
     else:
         return obj
 

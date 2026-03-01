@@ -1,10 +1,12 @@
 import os
+from dataclasses import asdict
 from typing import Optional, List, Tuple, Dict
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import str_to_policy_inout_format, InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import str_to_trace_inout_format, InputOutputTraceFormats
 from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import CaseStudyGenerator
+from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import CaseStudySetupContract
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
@@ -23,14 +25,25 @@ class RunOracleException(Exception):
 
 
 class CaseStudyCoordinator(Coordinator):
-    def __init__(self, generator: CaseStudyGenerator, data_setup, path_manager: PathManager, constraints: TimeConstraints,
+    def __init__(self, generator: CaseStudyGenerator, data_setup: CaseStudySetupContract, path_manager: PathManager, constraints: TimeConstraints,
                  oracle: Optional[AbstractOracleTemplate] = None):
         super().__init__(path_manager, oracle)
         self.generator = generator
         self.data_setup = data_setup
         self.constraints = constraints
         self.results = {}
-        self.header, self.instructions = self._init_instr()
+
+        path_to_named_experiment = self.path_manager.get_path("path_to_named_experiment")
+        named_path_to_data = f"{path_to_named_experiment}/data"
+        self.path_manager.add_path("named_path_to_data", named_path_to_data)
+        tmp = f"{path_to_named_experiment}/instructions.txt"
+        self.path_manager.add_path("instructions", tmp)
+        if os.path.exists(tmp):
+            self.fresh_build = True
+            self.header, self.instructions = self._init_instr()
+        else:
+            self.fresh_build = False
+            self.header, self.instructions = None, None
 
     def finger_print(self) -> Dict[str, str]:
         new_data_setup_fingerprint = data_class_to_finger_print(self.data_setup)
@@ -54,18 +67,20 @@ class CaseStudyCoordinator(Coordinator):
 
         instructions = []
         for (i, line) in enumerate(raw_instructions[1:]):
+            print(line)
             inner_res = dict()
+            print((line.strip().split(",")))
             for (pos, raw_value) in enumerate(line.strip().split(",")):
                 raw_value = raw_value.strip()
                 if ":" in raw_value:
                     raw_val_type = raw_value.split(":")
                     val = raw_val_type[0].strip()
                     val_type = raw_val_type[1].strip()
-                    format_type = str_to_trace_inout_format(val_type) if "data" == header[
+                    format_type = str_to_trace_inout_format(val_type) if TRACE_KEY == header[
                         pos] else str_to_policy_inout_format(val_type)
-                    inner_res[VALUE_KEY] = (val, format_type)
+                    inner_res[header[pos]] = (val, format_type)
                 else:
-                    inner_res[VALUE_KEY] = (raw_value, None)
+                    inner_res[header[pos]] = raw_value
             instructions.append(inner_res)
         return header, instructions
 
@@ -77,9 +92,10 @@ class CaseStudyCoordinator(Coordinator):
             return _out_file
 
         path_to_named_experiment = self.path_manager.get_path("path_to_named_experiment")
-        self.data_setup[PATH_KEY] = path_to_named_experiment
+        tmp_data_setup = asdict(self.data_setup)
+        tmp_data_setup[PATH_KEY] = path_to_named_experiment
         print(f"{BENCHMARK_BUILDING_OFFSET} Begin: Unpacking Data")
-        self.generator.run_generator(self.data_setup)
+        self.generator.run_generator(tmp_data_setup)
         print(f"{BENCHMARK_BUILDING_OFFSET} Finished: Unpacking Data\n")
 
         if self.oracle is None and self.constraints.construction_constraint() is None:
@@ -97,10 +113,13 @@ class CaseStudyCoordinator(Coordinator):
         if run_time_out is None:
             print("Warning: No upper bound for construction time provided, oracle verification or time guard may run indefinitely!")
 
+        if not self.fresh_build:
+            self.header, self.instructions = self._init_instr()
+
         print(f"{BENCHMARK_BUILDING_OFFSET} Begin: Verifying with Oracle")
         for (i, setting) in enumerate(self.instructions):
             print(f"{BENCHMARK_BUILDING_OFFSET} Verifying setting {i + 1}/{len(self.instructions)}")
-
+            print(setting)
             (data_file, data_type) = setting[TRACE_KEY]
             (policy_file, policy_type) = setting[POLICY_KEY]
             sig = setting.get(SIGNATURE_KEY, None)

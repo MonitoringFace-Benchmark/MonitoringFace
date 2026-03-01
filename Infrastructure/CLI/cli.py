@@ -197,7 +197,7 @@ Examples:
                 yaml_path=yaml_file, path_to_build=self.build_folder,
                 path_to_experiments=self.experiment_folder, path_manager=self.path_manager
             )
-            (coordinator, monitor_manager, tools_to_build, num_repeats) = parser.parse_experiment(cli_args=cli_args)
+            (coordinator, monitor_manager, tools_to_build, num_repeats) = parser.parse_experiment(cli_args=cli_args, experiment_name=experiment_name)
 
             if cli_args.verbose:
                 print(f"Experiment name: {experiment_name}")

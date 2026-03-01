@@ -253,8 +253,7 @@ class YamlParser:
         if 'runtime_constraints' not in self.cfg:
             return RunTimeConstraints()
 
-        runtime_config_raw = self.cfg.get('runtime_constraints', {})
-        upper_bound = runtime_config_raw.replace(" ", "").replace("upper_bound=", "")
+        upper_bound = self.cfg.get('runtime_constraints', {}).get('upper_bound')
         return RunTimeConstraints(upper_bound=float(upper_bound))
     
     def get_tools_to_build(self) -> List[str]:
@@ -280,7 +279,7 @@ class YamlParser:
             return 1
         return self.cfg.get('repeats')
     
-    def parse_experiment(self, cli_args: CLIArgs) -> Tuple[Coordinator, MonitorManager, List[str], int]:
+    def parse_experiment(self, cli_args: CLIArgs, experiment_name) -> Tuple[Coordinator, MonitorManager, List[str], int]:
         tool_manager = self.parse_tool_manager(cli_args=cli_args)
         monitor_manager = self.parse_monitor_manager(tool_manager)
         oracle_manager = self.parse_oracle_manager(monitor_manager)
@@ -291,8 +290,9 @@ class YamlParser:
 
         data_setup = self.parse_data_setup()
         if isinstance(data_setup, CaseStudySetupContract):
+            self.path_manager.add_path("path_to_named_experiment", f"{self.path_to_experiments}/{experiment_name}")
             coordinator = CaseStudyCoordinator(
-                generator=CaseStudyGenerator(data_setup.name, self.path_to_build),
+                generator=CaseStudyGenerator(data_setup.name, self.path_to_project),
                 data_setup=data_setup,
                 path_manager=self.path_manager,
                 constraints=constraints,

@@ -8,9 +8,9 @@ class CaseStudyContract:
     path: str
 
 
+@dataclasses.dataclass
 class CaseStudySetupContract(AbstractContract):
-    def __init__(self, name: str):
-        self.name = name
+    name: str
 
     def default_contract(self):
         pass
