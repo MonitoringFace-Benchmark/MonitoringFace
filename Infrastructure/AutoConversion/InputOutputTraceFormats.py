@@ -24,7 +24,7 @@ def str_to_trace_inout_format(format_str: str) -> InputOutputTraceFormats:
         return InputOutputTraceFormats.MONPOLY
     elif format_str == "dejavu":
         return InputOutputTraceFormats.DEJAVU
-    elif format_str == "dejavu_encoded":
+    elif format_str == "dejavu-encoded":
         return InputOutputTraceFormats.DEJAVU_ENCODED
     elif format_str == "dejavu-linear":
         return InputOutputTraceFormats.DEJAVU_LINEAR
@@ -44,7 +44,7 @@ def trace_inout_format_to_str(format_enum: InputOutputTraceFormats) -> str:
     elif format_enum == InputOutputTraceFormats.DEJAVU:
         return "dejavu"
     elif format_enum == InputOutputTraceFormats.DEJAVU_ENCODED:
-        return "dejavu_encoded"
+        return "dejavu-encoded"
     elif format_enum == InputOutputTraceFormats.DEJAVU_LINEAR:
         return "dejavu-linear"
     else:

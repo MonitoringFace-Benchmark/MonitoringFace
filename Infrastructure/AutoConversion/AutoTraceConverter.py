@@ -56,6 +56,7 @@ class AutoTraceConverter:
 
         shutil.copy(input_path_file, intermediate_in)
         for converter, source, target in self._conversion_chain():
+            print(f"AutoTraceConverter: Converting from {source} to {target} using {converter.__class__.__name__}")
             try:
                 converter.auto_convert(
                     intermediate_working_space, intermediate_infile,

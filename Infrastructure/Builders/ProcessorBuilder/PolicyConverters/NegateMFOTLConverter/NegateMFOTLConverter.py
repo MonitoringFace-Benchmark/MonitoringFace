@@ -4,7 +4,7 @@ from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPo
 from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.PolicyConverterTemplate import PolicyConverterTemplate, PolicyTransformationException
 
 
-class NegateMfotlConverter(PolicyConverterTemplate):
+class NegateMFOTLConverter(PolicyConverterTemplate):
     def __init__(self, name, path_to_project):
         pass
 

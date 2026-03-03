@@ -16,23 +16,15 @@ monitors:
   - identifier: VeriMon
     name: VeriMon
     branch: master
-    params:
-      replayer: gen_data
-      verified: true
   - identifier: WhyMon
     name: WhyMon
     branch: main
     release: branch
-    params:
-      replayer: gen_data
 
 oracles:
   - identifier: VeriMonOracle
     name: VeriMonOracle
     monitor_name: VeriMon
-    params:
-      replayer: gen_data
-      verified: true
 
 oracle:
   enabled: true

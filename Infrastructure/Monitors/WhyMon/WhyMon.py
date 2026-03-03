@@ -16,7 +16,6 @@ from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
 class WhyMon(AbstractMonitorTemplate):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
-        self.replayer = ReplayerConverter(self.params["replayer"], self.params["path_to_project"])
 
     def preprocessing_data(
             self, path_to_folder: AnyStr, data_file: AnyStr,

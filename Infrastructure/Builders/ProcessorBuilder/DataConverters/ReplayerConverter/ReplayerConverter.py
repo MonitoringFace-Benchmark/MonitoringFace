@@ -23,6 +23,8 @@ class ReplayerConverter(DataConverterTemplate):
                    f"{self.image.image_name.lower()}", "-cp", "classes:libs/*",
                    "org.entry.Dispatcher", "Replayer", "-i", f"{cast_source}", "-f", f"{cast_target}"] + cmd_params
 
+        print(" ".join(command))
+
         with open(f"{path_to_folder}/{input_file}", 'r') as input_file:
             result = subprocess.run(command, stdin=input_file, capture_output=True, text=True)
             if result.returncode == 0:
@@ -30,7 +32,8 @@ class ReplayerConverter(DataConverterTemplate):
                     for line in filter(lambda x: not x.startswith(">W"), result.stdout.splitlines()):
                         f.write(line + "\n")
             else:
-                raise ReplayerException("Replayer Failed")
+                print(f"Error: {result.stderr}")
+                raise ReplayerException(f"Replayer Failed {result.stderr}")
 
     def convert(
             self, path_to_folder: AnyStr, data_file: AnyStr,

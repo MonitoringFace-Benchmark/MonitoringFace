@@ -58,4 +58,4 @@ class DejaVu(AbstractMonitorTemplate):
 
     @staticmethod
     def supported_trace_formats() -> List[InputOutputTraceFormats]:
-        return [InputOutputTraceFormats.DEJAVU, InputOutputTraceFormats.DEJAVU_LINEAR, InputOutputTraceFormats.DEJAVU_ENCODED]
+        return [InputOutputTraceFormats.DEJAVU_ENCODED, InputOutputTraceFormats.DEJAVU, InputOutputTraceFormats.DEJAVU_LINEAR]
