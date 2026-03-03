@@ -17,7 +17,6 @@ from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, FOLDER_KEY, TRAC
 
 class VeriMonOracle(AbstractOracleTemplate):
     def __init__(self, veri_mon: AbstractMonitorTemplate, parameters):
-        print("ORACLEEEEEEE")
         super().__init__()
         self.verimon = copy.deepcopy(veri_mon)
         self.verimon.name = "VeriMon"

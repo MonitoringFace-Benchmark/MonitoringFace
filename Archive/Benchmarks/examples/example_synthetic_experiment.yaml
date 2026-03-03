@@ -1,7 +1,5 @@
-# Example YAML configuration for a synthetic benchmark experiment
 experiment_name: test_synthetic_experiment
 
-# Monitors configuration
 monitors:
   - identifier: TimelyMon
     name: TimelyMon 1
@@ -15,11 +13,6 @@ monitors:
     params:
       worker: 6
       output_mode: 1
-  - identifier: MonPoly
-    name: MonPoly
-    branch: master
-    params:
-      replayer: gen_data
   - identifier: VeriMon
     name: VeriMon
     branch: master
@@ -33,7 +26,6 @@ monitors:
     params:
       replayer: gen_data
 
-# Oracles configuration (optional)
 oracles:
   - identifier: VeriMonOracle
     name: VeriMonOracle
@@ -42,17 +34,19 @@ oracles:
       replayer: gen_data
       verified: true
 
-runtime_constraints:
-  upper_bound = 200
+oracle:
+  enabled: true
+  name: VeriMonOracle
 
-# Data setup - Hydra structured format
+runtime_constraints:
+  upper_bound: 200
+
 data_setup:
   type: SignatureContract
   SignatureContract:
     trace_length: 1000
     event_rate: 1000
 
-# Policy setup
 policy_setup:
   type: MfotlPolicyContract
   MfotlPolicyContract:
@@ -74,12 +68,7 @@ tools_to_build:
   - TimelyMon 1
   - TimelyMon 6
   - VeriMon
-  - MonPoly
   - WhyMon
-
-oracle:
-  enabled: true
-  name: VeriMonOracle
 
 seeds:
   '[5, 2, 0]': [314159265,87006]
