@@ -27,7 +27,7 @@ class TeSSLa(AbstractMonitorTemplate):
         self.params[FOLDER_KEY] = path_to_folder
         self.params[POLICY_KEY] = policy_file.removeprefix("data/")
 
-    def run_offline_command(self, time_on=None, time_out=None) -> Tuple[List[str], Optional[str]]:
+    def construct_offline_command(self, time_on=None, time_out=None) -> Tuple[List[str], Optional[str]]:
         cmd = [self.params[POLICY_KEY], self.params[TRACE_KEY]]
         return cmd, "interpreter"
 

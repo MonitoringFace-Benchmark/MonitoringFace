@@ -10,7 +10,7 @@ class TimeGuardingTool(Enum):
     Monitor = 3
 
 
-class ConstructionConstraints:
+class GenerationConstraints:
     def __init__(self, guarding_tool: Optional[TimeGuardingTool] = None, guard: Optional[AbstractMonitorTemplate] = None, lower_bound: int = None, upper_bound: int = None):
         self.guard_type = guarding_tool
         self.guard = guard
@@ -24,16 +24,14 @@ class RunTimeConstraints:
 
 
 class TimeConstraints:
-    def __init__(self, run_time_constraints: Optional[RunTimeConstraints] = None, construction_constraints: Optional[ConstructionConstraints] = None):
+    def __init__(self, run_time_constraints: Optional[RunTimeConstraints] = None, generation_constraints: Optional[GenerationConstraints] = None):
         self.run_time_constraints = run_time_constraints
-        self.construction_constraints = construction_constraints
+        self.generation_constraints = generation_constraints
 
     def runtime_constraint(self):
         if self.run_time_constraints is None:
             return None
         return self.run_time_constraints.upper_bound
 
-    def construction_constraint(self):
-        if self.construction_constraints is None:
-            return None
-        return self.construction_constraints
+    def generation_constraint(self):
+        return self.generation_constraints

@@ -16,8 +16,3 @@ class StatsHandler:
                 return wall_time, max_memory, cpu_percentage
         else:
             return None
-
-
-if __name__ == "__main__":
-    sh = StatsHandler("//Infrastructure/experiments/test123456/operators_5/num_0")
-    sh.get_stats()

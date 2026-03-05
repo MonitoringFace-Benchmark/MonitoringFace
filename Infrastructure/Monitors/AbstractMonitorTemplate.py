@@ -97,7 +97,7 @@ class AbstractMonitorTemplate(ABC):
         construct the command to run the monitor on an offline trace
     """
     @abstractmethod
-    def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
+    def construct_offline_command(self) -> Tuple[List[str], Optional[str]]:
         pass
 
     """
@@ -134,7 +134,7 @@ def run_monitor(mon: AbstractMonitorTemplate, timeout_value, path_to_folder: Any
     compile_elapsed = end_compile - start_compile
 
     start = time.perf_counter()
-    cmd, name = mon.run_offline_command()
+    cmd, name = mon.construct_offline_command()
     out, code = mon.image.run(parameters=cmd, path_to_data=path_to_folder, time_on=None, time_out=timeout_value, name=name)
     end = time.perf_counter()
     run_offline_elapsed = end - start
@@ -154,7 +154,7 @@ def run_monitor(mon: AbstractMonitorTemplate, timeout_value, path_to_folder: Any
 
     if oracle is not None:
         try:
-            verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, policy_file, result_file)
+            verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, f"scratch/{policy_file}", result_file)
         except Exception as e:
             print(f"Oracle verification failed with exception: {e}")
             raise ResultErrorException((preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed), str(e))

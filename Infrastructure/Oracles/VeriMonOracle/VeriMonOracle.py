@@ -52,12 +52,5 @@ class VeriMonOracle(AbstractOracleTemplate):
         self.verimon.params[FOLDER_KEY] = path_to_result_folder
         self.verimon.params[SIGNATURE_KEY] = sig_file
         self.verimon.params[POLICY_KEY] = formula_file
-        cmd = ["-sig", str(self.verimon.params[SIGNATURE_KEY]), "-formula", str(self.verimon.params[POLICY_KEY]), "-check"]
-        logs, code = self.verimon.image.run(self.verimon.params[FOLDER_KEY], cmd, measure=False)
-        variable_order = VariableOrder(parse_variable_order_monpoly(logs)) if code == 0 else DefaultVariableOrder()
-
-        if os.path.exists(result_file):
-            with open(result_file, "r") as file:
-                return self.verimon.post_processing(file.read())
-        else:
-            return Verdicts(variable_order=variable_order)
+        with open(result_file, "r") as file:
+            return self.verimon.post_processing(file.read())

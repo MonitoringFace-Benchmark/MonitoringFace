@@ -5,7 +5,7 @@ from typing import Optional, List, Tuple, Dict
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import str_to_policy_inout_format, InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import str_to_trace_inout_format, InputOutputTraceFormats
 from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
-from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import CaseStudyGenerator
+from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyImageGenerator import CaseStudyImageGenerator
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import CaseStudySetupContract
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
@@ -25,7 +25,7 @@ class RunOracleException(Exception):
 
 
 class CaseStudyCoordinator(Coordinator):
-    def __init__(self, generator: CaseStudyGenerator, data_setup: CaseStudySetupContract, path_manager: PathManager, constraints: TimeConstraints,
+    def __init__(self, generator: CaseStudyImageGenerator, data_setup: CaseStudySetupContract, path_manager: PathManager, constraints: TimeConstraints,
                  oracle: Optional[AbstractOracleTemplate] = None):
         super().__init__(path_manager, oracle)
         self.generator = generator
@@ -35,6 +35,7 @@ class CaseStudyCoordinator(Coordinator):
 
         path_to_named_experiment = self.path_manager.get_path("path_to_named_experiment")
         named_path_to_data = f"{path_to_named_experiment}/data"
+
         self.path_manager.add_path("named_path_to_data", named_path_to_data)
         tmp = f"{path_to_named_experiment}/instructions.txt"
         self.path_manager.add_path("instructions", tmp)
@@ -65,11 +66,12 @@ class CaseStudyCoordinator(Coordinator):
             if field not in header:
                 raise Exception(f"Mandatory field {field} missing from instructions")
 
+        named_path_to_data = self.path_manager.get_path("named_path_to_data")
+        result_folder = f"{named_path_to_data}/result"
+
         instructions = []
         for (i, line) in enumerate(raw_instructions[1:]):
-            print(line)
             inner_res = dict()
-            print((line.strip().split(",")))
             for (pos, raw_value) in enumerate(line.strip().split(",")):
                 raw_value = raw_value.strip()
                 if ":" in raw_value:
@@ -82,6 +84,10 @@ class CaseStudyCoordinator(Coordinator):
                 else:
                     inner_res[header[pos]] = raw_value
             instructions.append(inner_res)
+
+            if self.oracle is not None:
+                self.results[i] = f"{result_folder}/result_{i}.res"
+
         return header, instructions
 
     def build(self):
@@ -98,7 +104,7 @@ class CaseStudyCoordinator(Coordinator):
         self.generator.run_generator(tmp_data_setup)
         print(f"{BENCHMARK_BUILDING_OFFSET} Finished: Unpacking Data\n")
 
-        if self.oracle is None and self.constraints.construction_constraint() is None:
+        if self.oracle is None and self.constraints.generation_constraint() is None:
             return
 
         named_path_to_data = f"{path_to_named_experiment}/data"
@@ -108,8 +114,8 @@ class CaseStudyCoordinator(Coordinator):
         result_folder = f"{named_path_to_data}/result"
         os.makedirs(result_folder, exist_ok=True)
 
-        construction_constraint = self.constraints.construction_constraint()
-        run_time_out = construction_constraint.upper_bound
+        generation_constraint = self.constraints.generation_constraint()
+        run_time_out = generation_constraint.upper_bound
         if run_time_out is None:
             print("Warning: No upper bound for construction time provided, oracle verification or time guard may run indefinitely!")
 
@@ -119,7 +125,6 @@ class CaseStudyCoordinator(Coordinator):
         print(f"{BENCHMARK_BUILDING_OFFSET} Begin: Verifying with Oracle")
         for (i, setting) in enumerate(self.instructions):
             print(f"{BENCHMARK_BUILDING_OFFSET} Verifying setting {i + 1}/{len(self.instructions)}")
-            print(setting)
             (data_file, data_type) = setting[TRACE_KEY]
             (policy_file, policy_type) = setting[POLICY_KEY]
             sig = setting.get(SIGNATURE_KEY, None)
@@ -136,14 +141,14 @@ class CaseStudyCoordinator(Coordinator):
                 except TimedOut:
                     raise TimedOut(f"Oracle {self.oracle} timed out ({run_time_out} seconds)")
 
-            if construction_constraint is not None and construction_constraint.guard_type == TimeGuardingTool.Monitor:
+            if generation_constraint is not None and generation_constraint.guard_type == TimeGuardingTool.Monitor:
                 try:
-                    mon = construction_constraint.guard
+                    mon = generation_constraint.guard
                     mon.preprocessing(
                         named_path_to_data, data_type, policy_type, data_file, sig, policy_file,
                         self.path_manager, verbose=False
                     )
-                    cmd, name = mon.run_offline_command()
+                    cmd, name = mon.construct_offline_command()
                     out, code = mon.image.run(
                         parameters=cmd, path_to_data=sfh.folder, time_on=None, timeout=run_time_out, name=name
                     )

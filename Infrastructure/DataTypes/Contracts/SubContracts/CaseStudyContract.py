@@ -11,6 +11,7 @@ class CaseStudyContract:
 @dataclasses.dataclass
 class CaseStudySetupContract(AbstractContract):
     name: str
+    fixed: bool
 
     def default_contract(self):
         pass

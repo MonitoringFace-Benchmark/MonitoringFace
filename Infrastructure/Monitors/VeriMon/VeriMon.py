@@ -28,7 +28,7 @@ class VeriMon(AbstractMonitorTemplate):
     ):
         raise NotImplementedError("VeriMon does not support non-automatic preprocessing for policies")
 
-    def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
+    def construct_offline_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = [
             "-sig", str(self.params[SIGNATURE_KEY]),
             "-formula", str(self.params[POLICY_KEY]),

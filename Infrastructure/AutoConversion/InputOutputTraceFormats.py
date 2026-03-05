@@ -16,6 +16,8 @@ def str_to_trace_inout_format(format_str: str) -> InputOutputTraceFormats:
     format_str = format_str.lower()
     if format_str == "csv":
         return InputOutputTraceFormats.CSV
+    if format_str == "ooo-csv":
+        return InputOutputTraceFormats.OOO_CSV
     elif format_str == "csv-linear":
         return InputOutputTraceFormats.CSV_LINEAR
     elif format_str == "monpoly-linear":

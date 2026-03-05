@@ -52,7 +52,7 @@ def comparing(oracle_structure: AbstractOutputStructure, tool_structure: Abstrac
         tool_variables = set(tool_structure.retrieve_order())
 
         if oracle_variables != tool_variables:
-            return False, "Verified: Variable orders differ! Oracle variables: {oracle_variables}, Tool variables: {tool_variables}"
+            return False, f"Verified: Variable orders differ! Oracle variables: {oracle_variables}, Tool variables: {tool_variables}"
 
         if len(oracle_intermediate_list.values) != len(tool_intermediate_list.values):
             return False, "Verified: Structures are not equivalent"

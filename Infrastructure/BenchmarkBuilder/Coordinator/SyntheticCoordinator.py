@@ -8,7 +8,7 @@ from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTra
 from Infrastructure.BenchmarkBuilder.Coordinator.CaseStudyCoordinator import RunOracleException, TimedOut
 from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
-from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, ConstructionConstraints, TimeGuardingTool
+from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, GenerationConstraints, TimeGuardingTool
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
@@ -76,7 +76,7 @@ class SyntheticCoordinator(Coordinator):
                     print(f"    Build {num_path}")
                     trace_format = self.data_source.output_format()
                     policy_format = self.policy_source.output_format()
-                    constraint = self.constraints.construction_constraint()
+                    constraint = self.constraints.generation_constraint()
 
                     for data_set_size in self.experiment.num_data_set_sizes:
                         print(f"    Build {data_set_size}")
@@ -140,7 +140,7 @@ def retrieve_setting_seeds(key_list: List[List[int]], seed_dict: Dict) -> Tuple[
 
 def guarded_synthetic_experiment(
     num_path: str, num_ops: int, num_fv: int, policy_setup, policy_source, data_setup, data_source,
-    data_set_size: int, oracle: Optional[AbstractOracleTemplate], constraints: Optional[ConstructionConstraints],
+    data_set_size: int, oracle: Optional[AbstractOracleTemplate], constraints: Optional[GenerationConstraints],
     path_manager: PathManager
 ):
     lower_time_bound = None if constraints is None else constraints.lower_bound
@@ -262,7 +262,7 @@ def synthetic_trace_creation(
             verbose=False
         )
         try:
-            cmd, name = guard.run_offline_command()
+            cmd, name = guard.construct_offline_command()
             out, code = guard.image.run(parameters=cmd, path_to_data=num_path, time_on=time_on, timeout=time_out, name=name)
             if code != 0:
                 if code == 124:

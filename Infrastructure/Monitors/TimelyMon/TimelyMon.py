@@ -28,7 +28,7 @@ class TimelyMon(AbstractMonitorTemplate):
                              policy_source: InputOutputPolicyFormats, path_manager: PathManager):
         raise NotImplementedError("TimelyMon does not support non-automatic preprocessing for policies")
 
-    def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
+    def construct_offline_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = [self.params[POLICY_KEY], self.params[TRACE_KEY]]
 
         if not self.params.get("ignore_signature", False):

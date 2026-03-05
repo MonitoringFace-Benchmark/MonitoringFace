@@ -6,7 +6,7 @@ from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, 
 from Infrastructure.constants import WORKDIR_KEY, WORKDIR_VAL, VOLUMES_KEY
 
 
-class CaseStudyGenerator(CaseStudyTemplate):
+class CaseStudyImageGenerator(CaseStudyTemplate):
     def __init__(self, name, path_to_build):
         self.name = name
         print(f"-> Attempting to build Case Study:")

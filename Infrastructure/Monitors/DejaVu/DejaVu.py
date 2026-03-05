@@ -34,7 +34,7 @@ class DejaVu(AbstractMonitorTemplate):
         if code != 0:
             raise ToolException(f"DejaVu compilation failed with code {code} and output: {out}")
 
-    def run_offline_command(self) -> Tuple[List[str], Optional[str]]:
+    def construct_offline_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = ["run", str(self.params[POLICY_KEY]), str(self.params[TRACE_KEY])]
         return cmd, ""
 
