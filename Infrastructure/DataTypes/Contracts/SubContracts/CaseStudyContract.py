@@ -81,8 +81,9 @@ class CaseStudyMapper:
         settings = []
         i = 0
         with open(self.instruction_path, "r") as f:
-            for line in f.readlines():
+            for line in f.readlines()[1:]:
                 l = [l.split()[0] for l in line.split(",")]
+                l = [ll.split(":")[0] if ":" in ll else ll for ll in l]
                 l = l + [None] * (3 - len(l))
                 settings.append(l)
                 self.add_result((l[0], l[1], l[2]), i)
