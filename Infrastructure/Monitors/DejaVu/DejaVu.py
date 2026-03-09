@@ -1,3 +1,5 @@
+import os
+import sys
 from typing import Dict, AnyStr, Any, Tuple, List, Optional
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
@@ -29,13 +31,13 @@ class DejaVu(AbstractMonitorTemplate):
         raise NotImplementedError("DejaVu does not support non-automatic preprocessing for policies")
 
     def compile(self):
-        cmd = ["build", str(self.params[POLICY_KEY])]
+        cmd = ["build", str(self.params[POLICY_KEY]), "scratch"]
         out, code = self.image.run(self.params[FOLDER_KEY], cmd, measure=False, name="")
         if code != 0:
             raise ToolException(f"DejaVu compilation failed with code {code} and output: {out}")
 
     def construct_offline_command(self) -> Tuple[List[str], Optional[str]]:
-        return ["run", str(self.params[POLICY_KEY]), str(self.params[TRACE_KEY])], ""
+        return ["run", str(self.params[POLICY_KEY]), str(self.params[TRACE_KEY]), "scratch"], ""
 
     def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         prop_list = PropositionList(DefaultVariableOrder())

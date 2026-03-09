@@ -14,18 +14,19 @@
 
 
 if [ "$#" -lt 2 ]; then
-    echo "Usage: run <specFile> <traceFile> [<bitsPerVariable> [debug]]"
+    echo "Usage: run <specFile> <traceFile> [<outputDir>] [<bitsPerVariable> [debug]]"
     exit 1
 fi
 SPEC=$1
 LOG=$2
-BDDSIZE=${3:-20} # default number of bits per variable = 20
-DEBUG=${4:-} # default is no debugging
+OUTDIR=${3:-.}
+BDDSIZE=${4:-20} # default number of bits per variable = 20
+DEBUG=${5:-} # default is no debugging
 
 DEJAVU=/home/dejavu
 
 SPECHASH=$(cat $SPEC | md5sum | cut -d' ' -f1)
-SPECFOLDER=$(echo $SPEC-$SPECHASH)
+SPECFOLDER=${OUTDIR}/$(basename $SPEC)-$SPECHASH
 
 # Run the compiled monitor on trace:
 exec /usr/bin/time -v -o scratch/stats.txt scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG | egrep "\*\*\*"

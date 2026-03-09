@@ -14,14 +14,15 @@
 
 
 if [ "$#" -lt 1 ]; then
-    echo "Usage: build <specFile>"
+    echo "Usage: build <specFile> [<outputDir>]"
     exit 1
 fi
 SPEC=$1
 DEJAVU=/home/dejavu
+OUTDIR=${2:-.}
 
 SPECHASH=$(cat $SPEC | md5sum | cut -d' ' -f1)
-SPECFOLDER=$(echo $SPEC-$SPECHASH)
+SPECFOLDER=${OUTDIR}/$(basename $SPEC)-$SPECHASH
 
 echo $SPECFOLDER
 
