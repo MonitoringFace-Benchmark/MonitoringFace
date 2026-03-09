@@ -1,55 +1,39 @@
-experiment_name: GDPR_case_study
+experiment_name: multi_conv
 
-benchmark_type: case_study
-experiment_type: CaseStudy
-
-# Tools configuration
-tools:
-  - name: VeriMon
-    branch: master
-    release: branch
-  - name: TimelyMon
-    branch: development
-    release: branch
-
-# Monitors configuration
 monitors:
   - identifier: VeriMon
     name: VeriMon
     branch: master
-    params:
-      replayer: gen_data
-      preprocessing: false
   - identifier: TimelyMon
     name: TimelyMon 1
     branch: development
     params:
       worker: 1
       output_mode: 1
-      replayer: gen_data
-      preprocessing: false
   - identifier: TimelyMon
     name: TimelyMon 6
     branch: development
     params:
       worker: 6
       output_mode: 1
-      replayer: gen_data
-      preprocessing: false
-      ignore_signature: true
 
-repeats: 3
+# repeats: 3
 
-time_guard:
+oracles:
+  - identifier: VeriMonOracle
+    name: VeriMonOracle
+    monitor_name: VeriMon
+
+oracle:
   enabled: true
-  lower_bound: null
-  upper_bound: 30
-  guard_type: Monitor
-  guard_name: Guard
+  name: VeriMonOracle
 
-case_study_config:
-  case_study_name: GDPR_MonPoly
+data_setup:
+  type: casestudy
+  fixed: true
+  name: MultiConversion
 
 tools_to_build:
+  - VeriMon
   - TimelyMon 1
   - TimelyMon 6

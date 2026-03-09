@@ -1,15 +1,4 @@
-# Example YAML configuration using Patterns data generator
 experiment_name: patterns_experiment
-
-benchmark_type: synthetic
-
-tools:
-  - name: TimelyMon
-    branch: development
-    release: branch
-  - name: MonPoly
-    branch: master
-    release: branch
 
 monitors:
   - identifier: TimelyMon
@@ -21,60 +10,45 @@ monitors:
   - identifier: MonPoly
     name: MonPoly
     branch: master
-    params:
-      replayer: gen_data
 
-time_guard:
-  enabled: true
+runtime_constraints:
+  upper_bound: 150
+
+generation_constraints:
   lower_bound: null
   upper_bound: 150
   guard_type: Monitor
   guard_name: TimelyMon 4
 
-# Data setup using Patterns - Hydra structured format
 data_setup:
-  type: PatternContract
-  PatternContract:
+  type: PatternDataContract
+  PatternDataContract:
     trace_length: 1000
-    seed: null
     event_rate: 1000
-    index_rate: null
-    time_stamp: null
     linear: 1
-    interval: null
-    star: null
-    triangle: null
-    pattern: null
     violations: 1.0
     zipf: "x=1.5+3,z=2"
     prob_a: 0.2
     prob_b: 0.3
     prob_c: 0.5
 
-# Policy setup
 policy_setup:
   type: PatternPolicyContract
   PatternPolicyContract:
     interval: "[0,10)"
     policy: "Star"
 
-# Synthetic benchmark configuration
 synthetic_config:
-  data_source: PatternGenerator
+  data_source: PatternDataGenerator
   policy_source: PatternPolicyGenerator
   experiment:
     num_operators: [3, 5, 7]
     num_setting: [0]
     num_data_set_sizes: [10, 50]
 
-experiment_type: Pattern
-
 tools_to_build:
   - TimelyMon 4
   - MonPoly
-
-oracle:
-  enabled: false
 
 seeds:
   '[3, 0]': [314159265, 1]
