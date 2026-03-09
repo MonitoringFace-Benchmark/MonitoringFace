@@ -1,13 +1,5 @@
 experiment_name: GDPR_case_study
 
-benchmark_type: case_study
-experiment_type: CaseStudy
-
-tools:
-  - name: TimelyMon
-    branch: development
-    release: branch
-
 monitors:
   - identifier: TimelyMon
     name: TimelyMon 1
@@ -15,22 +7,22 @@ monitors:
     params:
       worker: 1
       output_mode: 1
-      replayer: gen_data
-      preprocessing: false
   - identifier: TimelyMon
     name: TimelyMon 6
     branch: development
     params:
       worker: 6
       output_mode: 1
-      replayer: gen_data
-      preprocessing: false
       ignore_signature: true
 
 repeats: 3
 
-case_study_config:
-  case_study_name: GDPR_MonPoly
+runtime_constraints:
+  upper_bound: 30
+
+data_setup:
+  type: CaseStudy
+  name: GDPR_MonPoly
 
 tools_to_build:
   - TimelyMon 1
