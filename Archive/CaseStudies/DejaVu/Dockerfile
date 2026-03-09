@@ -8,6 +8,7 @@ RUN git clone https://github.com/havelund/dejavu.git /tmp/dejavu_case_study && \
 
 CMD mkdir -p data/ && \
     cp -r /tmp/dejavu_case_study/out/examples/* data/ && \
+    echo "Trace, Policy" > instructions.txt && \
     find data/ -type d | while read dir; do \
       qtls=$(ls "$dir"/*.qtl 2>/dev/null); \
       csvs=$(ls "$dir"/*.csv 2>/dev/null); \
@@ -18,4 +19,4 @@ CMD mkdir -p data/ && \
           done; \
         done; \
       fi; \
-    done > instructions.txt
+    done >> instructions.txt
