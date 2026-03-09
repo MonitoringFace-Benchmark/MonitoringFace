@@ -15,7 +15,8 @@ CMD mkdir -p data/ && \
       if [ -n "$qtls" ] && [ -n "$csvs" ]; then \
         for csv in $csvs; do \
           for qtl in $qtls; do \
-            echo "$dir/$(basename "$csv": dejavu-encoded), $dir/$(basename "$qtl": qtl)"; \
+            echo "$dir/$(basename "$csv"), $dir/$(basename "$qtl")"; \
+            echo "$csv: dejavu-encoded, $qtl: qtl"; \
           done; \
         done; \
       fi; \
