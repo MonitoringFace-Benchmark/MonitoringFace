@@ -1,5 +1,8 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+from typing import List
 
 
 class AbstractOutputStructure(ABC):
-    pass
+    @abstractmethod
+    def retrieve_order(self) -> List[str]:
+        pass

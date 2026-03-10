@@ -8,7 +8,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
-from Infrastructure.Monitors.SharedFunctions import parse_pattern, parse_variable_order_monpoly
+from Infrastructure.Monitors.SharedFunctions import parse_pattern, parse_variable_order_monpoly, parse_monpoly_output
 from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY, FOLDER_KEY
 
 
@@ -62,22 +62,7 @@ class MonPoly(AbstractMonitorTemplate):
         cmd = ["-sig", str(self.params[SIGNATURE_KEY]), "-formula", str(self.params[POLICY_KEY]), "-check"]
         logs, code = self.image.run(self.params[FOLDER_KEY], cmd, measure=False)
         variable_order = VariableOrder(parse_variable_order_monpoly(logs)) if code == 0 else DefaultVariableOrder()
-        verdicts = Verdicts(variable_order=variable_order)
-
-        if stdout_input == "":
-            return verdicts
-
-        for line in stdout_input.strip().split("\n"):
-            try:
-                ts, tp, vals = parse_pattern(line)
-                verdicts.insert(vals, tp, ts)
-            except Exception:
-                if line.startswith("@MaxTS"):
-                    pass
-                else:
-                    raise ValueError(f"Could not parse line: {line}")
-
-        return verdicts
+        return parse_monpoly_output(Verdicts(variable_order=variable_order), stdout_input)
 
     @staticmethod
     def supported_policy_formats() -> List[InputOutputPolicyFormats]:

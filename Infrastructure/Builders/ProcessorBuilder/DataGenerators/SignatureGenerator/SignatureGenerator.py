@@ -23,8 +23,6 @@ class SignatureGenerator(DataGeneratorTemplate):
         seed_raw = contract_inner["seed"]
         seed = seed_raw if seed_raw else DEFAULT_SEED
 
-        print(inner_contract)
-
         out, code = self.image.run(inner_contract, time_on=time_on, time_out=time_out)
 
         if code != 0:

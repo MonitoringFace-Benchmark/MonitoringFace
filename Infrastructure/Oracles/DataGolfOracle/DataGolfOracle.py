@@ -21,7 +21,7 @@ class DataGolfOracle(AbstractOracleTemplate):
         pass
 
     def compute_result(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
-        pass
+        return "", 0
 
     def post_process_data(self, std_out_str, output_file_name):
         pass
@@ -33,15 +33,16 @@ class DataGolfOracle(AbstractOracleTemplate):
 
 def get_oracle_verdicts(path_to_result_folder, data_file) -> AbstractOutputStructure:
     data_file_size = extract_data_number(data_file)
-    prefix = path_to_result_folder + f"/prefix_{data_file_size}"
-    result = path_to_result_folder + f"/result_{data_file_size}.res"
+    prefix = path_to_result_folder + f"/result/prefix_{data_file_size}"
+    result = path_to_result_folder + f"/result/result_{data_file_size}.res"
 
     if Path(prefix).exists() and Path(result).exists():
         with open(result, "r") as f:
             output = f.read()
 
         lines = [ln for ln in (l.rstrip() for l in output.splitlines()) if ln != ""]
-        variable_order = VariableOrder(lines[0].strip().split(","))
+        vo = lines[0].strip().replace("(", "").replace(")", "").split(",")
+        variable_order = VariableOrder(vo)
         verdicts = DatagolfVerdicts(variable_order)
 
         current_ts = None

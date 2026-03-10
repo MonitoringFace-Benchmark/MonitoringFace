@@ -17,3 +17,19 @@ def parse_variable_order_timely(text):
     match = re.search(r"Order of free variables:\s*\((.*?)\)", text)
     result = match.group(1).split(", ") if match and match.group(1) else []
     return [v.strip() for v in result]
+
+
+def parse_monpoly_output(verdicts, stdout_input):
+    if stdout_input == "":
+        return verdicts
+
+    for line in stdout_input.strip().split("\n"):
+        try:
+            ts, tp, vals = parse_pattern(line)
+            verdicts.insert(vals, tp, ts)
+        except Exception:
+            if line.startswith("@MaxTS"):
+                pass
+            else:
+                raise ValueError(f"Could not parse line: {line}")
+    return verdicts

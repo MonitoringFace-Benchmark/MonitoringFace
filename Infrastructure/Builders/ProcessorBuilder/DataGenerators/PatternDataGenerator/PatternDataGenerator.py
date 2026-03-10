@@ -47,7 +47,7 @@ class PatternDataGenerator(DataGeneratorTemplate):
         return True
 
     @staticmethod
-    def output_format() -> List[InputOutputTraceFormats]:
+    def output_format() -> InputOutputTraceFormats:
         return InputOutputTraceFormats.CSV
 
 
