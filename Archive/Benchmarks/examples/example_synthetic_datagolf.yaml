@@ -50,15 +50,14 @@ synthetic_config:
     num_setting: [0, 1]
     num_data_set_sizes: [5]
 
-oracles:
-  - identifier: DataGolfOracle
-    name: DataGolfOracle
+#oracles:
+#  - identifier: DataGolfOracle
+#    name: DataGolfOracle
 
-oracle:
-  enabled: true
-  name: DataGolfOracle
+#oracle:
+#  enabled: true
+#  name: DataGolfOracle
 
-# Tools to build and run (list of monitor names)
 tools_to_build:
   - TimelyMon 6
   - MonPoly
