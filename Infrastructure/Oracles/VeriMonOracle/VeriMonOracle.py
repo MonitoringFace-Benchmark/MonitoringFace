@@ -50,7 +50,7 @@ class VeriMonOracle(AbstractOracleTemplate):
 
         variable_order = parse_variable_order_monpoly(logs) if code == 0 else []
         with open(f"{output_file_name}.vo", "w") as file:
-            file.write(variable_order)
+            file.write(str(variable_order))
         with open(output_file_name, "w") as file:
             file.write(std_out_str)
 

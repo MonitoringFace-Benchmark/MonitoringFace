@@ -91,12 +91,6 @@ class CaseStudyCoordinator(Coordinator):
         return header, instructions
 
     def build(self):
-        def _inner_write(folder, n):
-            _out_file = f"{folder}/result_{n}.res"
-            with open(_out_file, "w") as file_:
-                file_.write(out)
-            return _out_file
-
         path_to_named_experiment = self.path_manager.get_path("path_to_named_experiment")
         tmp_data_setup = asdict(self.data_setup)
         tmp_data_setup[PATH_KEY] = path_to_named_experiment
@@ -131,13 +125,12 @@ class CaseStudyCoordinator(Coordinator):
 
             if self.oracle is not None:
                 try:
-                    self.oracle.pre_process_data(
-                        named_path_to_data, data_type, policy_type, data_file, sig, policy_file, self.path_manager
-                    )
+                    self.oracle.pre_process_data(named_path_to_data, data_type, policy_type, data_file, sig, policy_file, self.path_manager)
                     out, code = self.oracle.compute_result(time_on=None, time_out=run_time_out)
                     if code != 0:
                         raise RunOracleException(out)
-                    self.results[i] = _inner_write(result_folder, i)
+                    self.oracle.post_process_data(out, f"{result_folder}/result_{i}.res")
+                    self.results[i] = f"{result_folder}/result_{i}.res"
                 except TimedOut:
                     raise TimedOut(f"Oracle {self.oracle} timed out ({run_time_out} seconds)")
 
@@ -149,7 +142,7 @@ class CaseStudyCoordinator(Coordinator):
                         self.path_manager, verbose=False
                     )
                     cmd, name = mon.construct_offline_command()
-                    out, code = mon.image.run(
+                    mon.image.run(
                         parameters=cmd, path_to_data=sfh.folder, time_on=None, timeout=run_time_out, name=name
                     )
                 except TimedOut:

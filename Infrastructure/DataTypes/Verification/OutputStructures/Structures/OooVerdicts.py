@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Dict
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
@@ -15,7 +15,12 @@ class OooVerdicts(AbstractOutputStructure):
     def retrieve_order(self):
         return self.variable_order.retrieve_order()
 
+    def time_points(self) -> Dict[int, int]:
+        return self.tp_to_ts
+
     def retrieve(self, time_point):
+        if time_point not in self.tp_to_ts:
+            return None
         selected = [x for (tp, _, val) in self.ooo_verdict if tp == time_point for x in val]
         return self.tp_to_ts[time_point], time_point, selected
 

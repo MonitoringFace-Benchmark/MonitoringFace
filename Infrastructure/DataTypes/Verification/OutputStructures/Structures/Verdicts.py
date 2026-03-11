@@ -1,3 +1,5 @@
+from typing import Dict
+
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Proposition import Proposition
@@ -18,6 +20,9 @@ class Verdicts(AbstractOutputStructure):
         if selected:
             return self.tp_to_ts[time_point], time_point, selected
         return None
+
+    def time_points(self) -> Dict[int, int]:
+        return self.tp_to_ts
 
     def insert(self, value, time_point, time_stamp):
         self.tp_to_ts[time_point] = time_stamp
