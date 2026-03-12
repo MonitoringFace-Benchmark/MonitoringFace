@@ -1,6 +1,7 @@
 from typing import Tuple, Union
 
-from Infrastructure.DataTypes.Verification.OutputStructures.AbstractComparator import AbstractComparator, time_point_check
+from Infrastructure.DataTypes.Verification.OutputStructures.AbstractComparator import AbstractComparator, \
+    time_point_check, time_point_pdt_check
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
@@ -25,15 +26,11 @@ class PropositionComparator(AbstractComparator):
 
 
 def prop_to_pdt_comp(oracle: PropositionList, other: PropositionTree) -> Tuple[bool, str]:
-    oracle_tps = set(oracle.prop_list.keys())
-    other_tps = set(other.tp_to_ts.keys())
+    (verdict, txt) = time_point_pdt_check(oracle, other)
+    if not verdict:
+        return False, txt
 
-    complement = other_tps - oracle_tps
-    for c_tp in complement:
-        if not other.retrieve(c_tp).is_false_leave():
-            return False, f"PropositionTree has verdicts at time point {c_tp}"
-
-    for time_point in oracle_tps:
+    for time_point in oracle.time_points():
         tree = other.retrieve(time_point)
         if tree is None:
             return False, f"Time point {time_point} missing in PropositionTree"
@@ -72,5 +69,4 @@ def prop_to_prop_comp(oracle: PropositionList, other: PropositionList) -> Tuple[
 
         if oracle_value != other_value:
             return False, f"Value mismatch at time point {time_point}: Oracle value: {oracle_value}, Tool value: {other_value}"
-
     return True, "Verified"
