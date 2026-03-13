@@ -7,12 +7,12 @@ from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPo
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilderException import BenchmarkCreationFailed
 from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
-from Infrastructure.CLI.cli_args import CLIArgs
+from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.FileRepresenters.FingerPrintHandler import FingerPrintHandler
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
 
-from Infrastructure.Monitors.AbstractMonitorTemplate import run_monitor
+from Infrastructure.Monitors.AbstractMonitorTemplate import run_monitor_offline
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
 from Infrastructure.constants import LENGTH
@@ -160,7 +160,7 @@ def run_tools(
     debug_path = coordinator.get_path("path_to_debug")
     timeout_value = coordinator.time_out()
     try:
-        prep, compiled, runtime, prop = run_monitor(
+        prep, compiled, runtime, prop = run_monitor_offline(
             mon=tool, path_to_folder=path_to_folder, data_file=data_file, signature_file=signature_file,
             policy_file=policy_file, cli_args=cli_args, trace_source_format=data_type, policy_source_format=policy_type,
             result_file=result_file, timeout_value=timeout_value,

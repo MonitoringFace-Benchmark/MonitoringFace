@@ -40,11 +40,11 @@ class VeriMonOracle(AbstractOracleTemplate):
             "-log", str(self.verimon.params[TRACE_KEY]),
             "-verified"
         ]
-        return self.verimon.image.run(self.verimon.params[FOLDER_KEY], cmd, time_on, time_out)
+        return self.verimon.image.run_offline(self.verimon.params[FOLDER_KEY], cmd, time_on, time_out)
 
     def post_process_data(self, std_out_str, output_file_name):
         cmd = ["-sig", str(self.verimon.params[SIGNATURE_KEY]), "-formula", str(self.verimon.params[POLICY_KEY]), "-check"]
-        logs, code = self.verimon.image.run(self.verimon.params[FOLDER_KEY], cmd, measure=False)
+        logs, code = self.verimon.image.run_offline(self.verimon.params[FOLDER_KEY], cmd, measure=False)
         if code != 0:
             raise Exception(f"Error in post-processing VeriMon output Variable order: {logs}")
 

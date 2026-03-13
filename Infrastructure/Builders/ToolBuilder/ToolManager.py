@@ -2,7 +2,7 @@ import os
 
 from Infrastructure.Builders.BuilderUtilities import ImageBuildException
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import DirectToolImageManager, remote_content_handler, IndirectToolImageManager
-from Infrastructure.CLI.cli_args import CLIArgs
+from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader.Resolver import ToolResolver, Location
 from Infrastructure.printing import print_headline, print_footline
 

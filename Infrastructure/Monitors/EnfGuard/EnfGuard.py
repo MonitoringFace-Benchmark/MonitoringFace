@@ -40,7 +40,7 @@ class EnfGuard(AbstractMonitorTemplate):
             cmd += ["-func", str(self.params["func"])]
         return cmd, None
 
-    def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+    def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         return PropositionList(DefaultVariableOrder())
 
     @staticmethod

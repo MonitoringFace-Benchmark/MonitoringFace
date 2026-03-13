@@ -43,7 +43,7 @@ python -m Infrastructure.main my_folder/my_experiment.yaml --dry-run
 
 ### Documentation
 
-- **[CLI Usage Guide](Infrastructure/CLI/CLI_USAGE.md)** - Complete documentation for the command-line interface and YAML configuration
+- **[CLI Usage Guide](Infrastructure/Frontend/CLI/CLI_USAGE.md)** - Complete documentation for the command-line interface and YAML configuration
 - **[Archive README](Archive/README.md)** - How to add Dockerfiles for new tools
 - **[Infrastructure README](Infrastructure/README.md)** - How to integrate new software components
 

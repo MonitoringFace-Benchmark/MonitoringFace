@@ -263,7 +263,7 @@ def synthetic_trace_creation(
         )
         try:
             cmd, name = guard.construct_offline_command()
-            out, code = guard.image.run(parameters=cmd, path_to_data=num_path, time_on=time_on, timeout=time_out, name=name)
+            out, code = guard.image.run_offline(parameters=cmd, path_to_data=num_path, time_on=time_on, timeout=time_out, name=name)
             if code != 0:
                 if code == 124:
                     raise TimedOut()

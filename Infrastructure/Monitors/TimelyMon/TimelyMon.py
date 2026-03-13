@@ -61,9 +61,9 @@ class TimelyMon(AbstractMonitorTemplate):
             cmd += ["--relational-clean-up", str(self.params["relational_clean_up"])]
         return cmd, None
 
-    def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+    def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         cmd = [self.params[POLICY_KEY], "--check"]
-        logs, code = self.image.run(self.params["folder"], cmd, measure=False)
+        logs, code = self.image.run_offline(self.params["folder"], cmd, measure=False)
         variable_order = VariableOrder(parse_variable_order_timely(logs)) if code == 0 else DefaultVariableOrder()
         if self.params["output_mode"] == 0:
             res_file_path = self.params["folder"] + "/" + self.params["output_file"]

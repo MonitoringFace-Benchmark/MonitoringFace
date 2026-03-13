@@ -8,7 +8,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
 from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
-from Infrastructure.Monitors.SharedFunctions import parse_variable_order_monpoly, parse_pattern, parse_monpoly_output
+from Infrastructure.Monitors.SharedFunctions import parse_variable_order_monpoly, parse_monpoly_output
 from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
 
 
@@ -62,9 +62,9 @@ class VeriMon(AbstractMonitorTemplate):
             cmd += ["-no_rw"]
         return cmd, None
 
-    def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+    def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         cmd = ["-sig", str(self.params[SIGNATURE_KEY]), "-formula", str(self.params[POLICY_KEY]), "-check"]
-        logs, code = self.image.run(self.params["folder"], cmd, measure=False)
+        logs, code = self.image.run_offline(self.params["folder"], cmd, measure=False)
         variable_order = VariableOrder(parse_variable_order_monpoly(logs)) if code == 0 else DefaultVariableOrder()
         return parse_monpoly_output(Verdicts(variable_order=variable_order), stdout_input)
 

@@ -1,6 +1,6 @@
 import os.path
 
-from Infrastructure.CLI.cli_args import CLIArgs
+from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import Location
@@ -91,7 +91,7 @@ class IndirectToolImageManager(AbstractToolImageManager):
             to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, self.linked_named_archive, self.args)
 
-    def run(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None):
+    def run_offline(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None):
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
 
@@ -160,7 +160,7 @@ class DirectToolImageManager(AbstractToolImageManager):
             to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, self.named_archive, self.args)
 
-    def run(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None):
+    def run_offline(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None):
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
         inner_name = name if name is not None else self.name.lower()

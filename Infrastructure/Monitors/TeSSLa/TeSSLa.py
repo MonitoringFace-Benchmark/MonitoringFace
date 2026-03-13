@@ -31,7 +31,7 @@ class TeSSLa(AbstractMonitorTemplate):
         cmd = [self.params[POLICY_KEY], self.params[TRACE_KEY]]
         return cmd, "interpreter"
 
-    def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+    def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         return PropositionList(DefaultVariableOrder())
 
     @staticmethod

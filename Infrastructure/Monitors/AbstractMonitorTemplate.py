@@ -6,7 +6,7 @@ from Infrastructure.AutoConversion.AutoPolicyConverter import AutoPolicyConverte
 from Infrastructure.AutoConversion.AutoTraceConverter import AutoTraceConverter
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
-from Infrastructure.CLI.cli_args import CLIArgs
+from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
@@ -16,7 +16,39 @@ from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLIC
 from Infrastructure.printing import print_headline, print_footline
 
 
-class AbstractMonitorTemplate(ABC):
+class AutoConvertable(ABC):
+    @staticmethod
+    @abstractmethod
+    def supported_policy_formats() -> List[InputOutputPolicyFormats]:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def supported_trace_formats() -> List[InputOutputTraceFormats]:
+        pass
+
+
+class OfflineRunnable(ABC):
+    @abstractmethod
+    def construct_offline_command(self) -> Tuple[List[str], Optional[str]]:
+        pass
+
+    @abstractmethod
+    def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        pass
+
+
+class OnlineRunnable(ABC):
+    @abstractmethod
+    def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
+        pass
+
+    @abstractmethod
+    def post_processing_online(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        pass
+
+
+class AbstractMonitorTemplate(AutoConvertable, OfflineRunnable, OnlineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         self.image = image
         self.params = params
@@ -86,41 +118,13 @@ class AbstractMonitorTemplate(ABC):
     ):
         pass
 
-    """
-        compile the monitor
-    """
     def compile(self):
-        # build tool that requires compilation
-        pass
-
-    """
-        construct the command to run the monitor on an offline trace
-    """
-    @abstractmethod
-    def construct_offline_command(self) -> Tuple[List[str], Optional[str]]:
-        pass
-
-    """
-        preprocess the output format for double checking
-    """
-    @abstractmethod
-    def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def supported_policy_formats() -> List[InputOutputPolicyFormats]:
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def supported_trace_formats() -> List[InputOutputTraceFormats]:
         pass
 
 
-def run_monitor(mon: AbstractMonitorTemplate, timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
-                path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
-                result_file, cli_args: CLIArgs, oracle: Optional[AbstractOracleTemplate] = None) -> Tuple[float, float, float, float]:
+def run_monitor_offline(mon: AbstractMonitorTemplate, timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
+                        path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
+                        result_file, cli_args: CLIArgs, oracle: Optional[AbstractOracleTemplate] = None) -> Tuple[float, float, float, float]:
     print_headline(f"Run {mon.name}")
 
     preprocessing_elapsed = mon.preprocessing(
@@ -135,18 +139,15 @@ def run_monitor(mon: AbstractMonitorTemplate, timeout_value, path_to_folder: Any
 
     start = time.perf_counter()
     cmd, name = mon.construct_offline_command()
-    out, code = mon.image.run(parameters=cmd, path_to_data=path_to_folder, time_on=None, time_out=timeout_value, name=name)
+    out, code = mon.image.run_offline(parameters=cmd, path_to_data=path_to_folder, time_on=None, time_out=timeout_value, name=name)
     end = time.perf_counter()
     run_offline_elapsed = end - start
 
     if code != 0:
-        if code == 124:
-            raise TimedOut(f"Timed out: {mon.name}")
-        else:
-            raise ToolException(out)
+        raise TimedOut(f"Timed out: {mon.name}") if code == 124 else ToolException(out)
 
     start = time.perf_counter()
-    res = mon.post_processing(out)
+    res = mon.post_processing_offline(out)
     end = time.perf_counter()
     postprocessing_elapsed = end - start
 

@@ -16,7 +16,7 @@ from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTempla
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
-from Infrastructure.CLI.cli_args import CLIArgs
+from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import CaseStudySetupContract
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment

@@ -142,7 +142,7 @@ class CaseStudyCoordinator(Coordinator):
                         self.path_manager, verbose=False
                     )
                     cmd, name = mon.construct_offline_command()
-                    mon.image.run(
+                    mon.image.run_offline(
                         parameters=cmd, path_to_data=sfh.folder, time_on=None, timeout=run_time_out, name=name
                     )
                 except TimedOut:

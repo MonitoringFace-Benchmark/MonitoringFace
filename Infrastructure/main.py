@@ -2,7 +2,7 @@ import os
 import subprocess
 import urllib.request
 
-from Infrastructure.CLI.cli import main as cli_main
+from Infrastructure.Frontend.CLI.cli import main as cli_main
 
 
 def validate_setup():

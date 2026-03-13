@@ -59,7 +59,7 @@ class WhyMon(AbstractMonitorTemplate):
                 cmd += ["size"]
         return cmd, None
 
-    def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+    def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         if not stdout_input:
             return PropositionTree(DefaultVariableOrder())
         else:
