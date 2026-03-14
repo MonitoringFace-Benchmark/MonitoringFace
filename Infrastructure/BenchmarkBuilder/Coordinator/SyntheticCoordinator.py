@@ -12,7 +12,7 @@ from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConst
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import ORACLE_KEY, SEEDS_KEY, PATH_KEY, SIZE_KEY, FREE_VARIABLES_KEY, PLACEHOLDER_EVENT, \
     SIGNATURE_FILE, SIGNATURE_FILE_ENDING, POLICY_FILE, POLICY_FILE_ENDING, TRACE_LENGTH_KEY, SIGNATURE_KEY, \
@@ -203,7 +203,7 @@ def synthetic_trace_creation(
         policy_format: InputOutputPolicyFormats, num_len: int,
         oracle: Optional[AbstractOracleTemplate], path_manager: PathManager,
         time_on: Optional[int], time_out: Optional[int], guard_type: TimeGuardingTool,
-        guard: Optional[AbstractMonitorTemplate]
+        guard: Optional[BaseMonitorTemplate]
 ):
     data_file = None
     result_file = None

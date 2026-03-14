@@ -9,12 +9,12 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
 from Infrastructure.Monitors.SharedFunctions import parse_variable_order_timely
 from Infrastructure.constants import POLICY_KEY, TRACE_KEY, SIGNATURE_KEY
 
 
-class TimelyMon(AbstractMonitorTemplate):
+class TimelyMon(BaseMonitorTemplate, OfflineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 

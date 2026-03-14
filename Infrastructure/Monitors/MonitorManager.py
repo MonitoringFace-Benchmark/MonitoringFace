@@ -3,7 +3,7 @@ from abc import ABC
 from pathlib import Path
 from typing import AnyStr, List
 
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate
 from Infrastructure.printing import print_headline, print_footline
 
 
@@ -52,7 +52,7 @@ class GetMonitorsReturnType(ABC):
 
 
 class ValidReturnType(GetMonitorsReturnType):
-    def __init__(self, tool: AbstractMonitorTemplate):
+    def __init__(self, tool: BaseMonitorTemplate):
         self.tool = tool
 
 

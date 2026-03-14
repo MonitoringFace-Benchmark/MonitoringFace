@@ -1,6 +1,6 @@
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, AnyStr, Any, Tuple, List, Optional
+from typing import Dict, AnyStr, Any, Tuple, List, Optional, Union
 
 from Infrastructure.AutoConversion.AutoPolicyConverter import AutoPolicyConverter
 from Infrastructure.AutoConversion.AutoTraceConverter import AutoTraceConverter
@@ -48,7 +48,8 @@ class OnlineRunnable(ABC):
         pass
 
 
-class AbstractMonitorTemplate(AutoConvertable, OfflineRunnable, OnlineRunnable):
+# todo make tool implement online runnable and offline runnable
+class BaseMonitorTemplate(AutoConvertable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         self.image = image
         self.params = params
@@ -122,7 +123,11 @@ class AbstractMonitorTemplate(AutoConvertable, OfflineRunnable, OnlineRunnable):
         pass
 
 
-def run_monitor_offline(mon: AbstractMonitorTemplate, timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
+def run_monitor_online(mon: Union[OnlineRunnable, BaseMonitorTemplate], timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr):
+    pass
+
+
+def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
                         path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
                         result_file, cli_args: CLIArgs, oracle: Optional[AbstractOracleTemplate] = None) -> Tuple[float, float, float, float]:
     print_headline(f"Run {mon.name}")
@@ -167,7 +172,7 @@ def run_monitor_offline(mon: AbstractMonitorTemplate, timeout_value, path_to_fol
     return preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed
 
 
-def find_trace_path(mon: AbstractMonitorTemplate, path_manager: PathManager, trace_source_format: InputOutputTraceFormats) -> Tuple[Optional[InputOutputTraceFormats], Optional[int]]:
+def find_trace_path(mon: BaseMonitorTemplate, path_manager: PathManager, trace_source_format: InputOutputTraceFormats) -> Tuple[Optional[InputOutputTraceFormats], Optional[int]]:
     trace_target_format = None
     conversion_distance = None
     supported_formats = mon.supported_trace_formats()
@@ -184,7 +189,7 @@ def find_trace_path(mon: AbstractMonitorTemplate, path_manager: PathManager, tra
     return trace_target_format, conversion_distance
 
 
-def find_policy_path(mon: AbstractMonitorTemplate, path_manager: PathManager, policy_source_format: InputOutputPolicyFormats) -> Tuple[Optional[InputOutputPolicyFormats], Optional[int]]:
+def find_policy_path(mon: BaseMonitorTemplate, path_manager: PathManager, policy_source_format: InputOutputPolicyFormats) -> Tuple[Optional[InputOutputPolicyFormats], Optional[int]]:
     policy_target_format = None
     conversion_distance = None
     supported_formats = mon.supported_policy_formats()

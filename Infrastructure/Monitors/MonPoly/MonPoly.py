@@ -7,12 +7,12 @@ from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
 from Infrastructure.Monitors.SharedFunctions import parse_variable_order_monpoly, parse_monpoly_output
 from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY, FOLDER_KEY
 
 
-class MonPoly(AbstractMonitorTemplate):
+class MonPoly(BaseMonitorTemplate, OfflineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 

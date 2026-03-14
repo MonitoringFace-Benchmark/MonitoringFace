@@ -12,7 +12,7 @@ from Infrastructure.DataTypes.FileRepresenters.FingerPrintHandler import FingerP
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
 
-from Infrastructure.Monitors.AbstractMonitorTemplate import run_monitor_offline
+from Infrastructure.Monitors.BaseMonitorTemplate import run_monitor_offline
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
 from Infrastructure.constants import LENGTH

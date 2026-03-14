@@ -10,14 +10,14 @@ from Infrastructure.DataTypes.Verification.OutputStructures.Compare.Comparing im
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, \
     DefaultVariableOrder
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate
 from Infrastructure.Monitors.SharedFunctions import parse_variable_order_monpoly, parse_pattern, parse_monpoly_output
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, FOLDER_KEY, TRACE_KEY
 
 
 class VeriMonOracle(AbstractOracleTemplate):
-    def __init__(self, veri_mon: AbstractMonitorTemplate, parameters):
+    def __init__(self, veri_mon: BaseMonitorTemplate, parameters):
         super().__init__()
         self.verimon = copy.deepcopy(veri_mon)
         self.verimon.name = "VeriMon"

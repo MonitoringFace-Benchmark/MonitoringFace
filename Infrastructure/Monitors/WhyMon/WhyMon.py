@@ -9,11 +9,11 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PropositionTree
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
 from Infrastructure.DataTypes.Verification.PDTParser import str_to_proposition_tree
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
 from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
 
 
-class WhyMon(AbstractMonitorTemplate):
+class WhyMon(BaseMonitorTemplate, OfflineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 

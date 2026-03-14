@@ -10,11 +10,11 @@ from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import Abstrac
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
 from Infrastructure.constants import POLICY_KEY, FOLDER_KEY, TRACE_KEY
 
 
-class DejaVu(AbstractMonitorTemplate):
+class DejaVu(BaseMonitorTemplate, OfflineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 

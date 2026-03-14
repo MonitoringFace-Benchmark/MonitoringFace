@@ -6,11 +6,11 @@ from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
 from Infrastructure.constants import FOLDER_KEY, POLICY_KEY, TRACE_KEY
 
 
-class TeSSLa(AbstractMonitorTemplate):
+class TeSSLa(BaseMonitorTemplate, OfflineRunnable):
     def __init__(self, image: AnyStr, name: str, params: AnyStr):
         super().__init__(image, name, params)
 
