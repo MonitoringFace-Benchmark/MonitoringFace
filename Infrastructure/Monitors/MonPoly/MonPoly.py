@@ -7,12 +7,12 @@ from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
-from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable, OnlineRunnable
 from Infrastructure.Monitors.SharedFunctions import parse_variable_order_monpoly, parse_monpoly_output
 from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY, FOLDER_KEY
 
 
-class MonPoly(BaseMonitorTemplate, OfflineRunnable):
+class MonPoly(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 
@@ -63,6 +63,36 @@ class MonPoly(BaseMonitorTemplate, OfflineRunnable):
         logs, code = self.image.run_offline(self.params[FOLDER_KEY], cmd, measure=False)
         variable_order = VariableOrder(parse_variable_order_monpoly(logs)) if code == 0 else DefaultVariableOrder()
         return parse_monpoly_output(Verdicts(variable_order=variable_order), stdout_input)
+
+    def construct_online_command(self) -> Tuple[List[str], str, Optional[str]]:
+        cmd = [
+            "-sig", str(self.params[SIGNATURE_KEY]),
+            "-formula", str(self.params[POLICY_KEY])
+        ]
+
+        if "negate" in self.params: cmd += ["-negate"]
+        if "no_trigger" in self.params: cmd += ["-no_trigger"]
+
+        if "unfold_let" in self.params:
+            val = self.params["unfold_let"]
+            cmd += ["-unfold_let"]
+            if val == "full":
+                cmd += ["full"]
+            elif val == "smart":
+                cmd += ["smart"]
+            else:
+                cmd += ["no"]
+
+        if "nonewlastts" in self.params: cmd += ["-nonewlastts"]
+        if "no_rw" in self.params: cmd += ["-no_rw"]
+        return cmd, str(self.params[TRACE_KEY]), None
+
+    @staticmethod
+    def latency_marker() -> Optional[str]:
+        return ">get_pos<"
+
+    def post_processing_online(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        pass
 
     @staticmethod
     def supported_policy_formats() -> List[InputOutputPolicyFormats]:

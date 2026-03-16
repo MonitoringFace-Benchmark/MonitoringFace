@@ -9,12 +9,12 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
-from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable, OnlineRunnable
 from Infrastructure.Monitors.SharedFunctions import parse_variable_order_timely
 from Infrastructure.constants import POLICY_KEY, TRACE_KEY, SIGNATURE_KEY
 
 
-class TimelyMon(BaseMonitorTemplate, OfflineRunnable):
+class TimelyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 
@@ -74,6 +74,27 @@ class TimelyMon(BaseMonitorTemplate, OfflineRunnable):
                 return OooVerdicts(variable_order=variable_order)
         else:
             return parse_output_structure(stdout_input, variable_order)
+
+    def construct_online_command(self) -> Tuple[List[str], str, Optional[str]]:
+        cmd = [self.params[POLICY_KEY]]
+        if not self.params.get("ignore_signature", False):
+            cmd += ["--sig-file", self.params[SIGNATURE_KEY]]
+
+        if "worker" in self.params:
+            cmd += ["-w", str(self.params["worker"])]
+
+        if "step" in self.params:
+            cmd += ["--step", str(self.params["step"])]
+
+        cmd += ["-m", "1", "-l"]
+        return cmd, self.params[TRACE_KEY], None
+
+    @staticmethod
+    def latency_marker() -> Optional[str]:
+        return None
+
+    def post_processing_online(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        pass
 
     @staticmethod
     def supported_policy_formats() -> List[InputOutputPolicyFormats]:

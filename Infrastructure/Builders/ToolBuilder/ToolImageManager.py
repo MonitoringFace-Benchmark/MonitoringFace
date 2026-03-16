@@ -4,7 +4,8 @@ from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import Location
-from Infrastructure.Builders.BuilderUtilities import image_building, run_image, to_prop_file, image_exists, ImageBuildException
+from Infrastructure.Builders.BuilderUtilities import image_building, run_image_offline, to_prop_file, image_exists, \
+    ImageBuildException, run_image_online
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
@@ -104,7 +105,17 @@ class IndirectToolImageManager(AbstractToolImageManager):
         else:
             inner_contract_[COMMAND_KEY] = [inner_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_image(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+        return run_image_offline(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+
+    def run_online(self, path_to_data, data_file, parameters, maximum_latency=None, accumulative_time=None,  name=None, latency_marker=None):
+        inner_contract_ = dict()
+        inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
+        inner_name = name if name is not None else self.binary_name
+        inner_contract_[COMMAND_KEY] = [inner_name] + parameters
+        inner_contract_[WORKDIR_KEY] = "/data"
+        return run_image_online(self.image_name, inner_contract_, input_file=data_file,
+                                maximum_latency=maximum_latency, accumulative_time=accumulative_time,
+                                verbose=self.cli_args.verbose, latency_marker=latency_marker)
 
 
 class DirectToolImageManager(AbstractToolImageManager):
@@ -172,4 +183,14 @@ class DirectToolImageManager(AbstractToolImageManager):
         else:
             inner_contract_[COMMAND_KEY] = [inner_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_image(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+        return run_image_offline(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+
+    def run_online(self, path_to_data, data_file, parameters, maximum_latency=None, accumulative_time=None,  name=None, latency_marker=None):
+        inner_contract_ = dict()
+        inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
+        inner_name = name if name is not None else self.name.lower()
+        inner_contract_[COMMAND_KEY] = [inner_name] + parameters
+        inner_contract_[WORKDIR_KEY] = "/data"
+        return run_image_online(self.image_name, inner_contract_, input_file=data_file,
+                                maximum_latency=maximum_latency, accumulative_time=accumulative_time,
+                                verbose=self.cli_args.verbose, latency_marker=latency_marker)

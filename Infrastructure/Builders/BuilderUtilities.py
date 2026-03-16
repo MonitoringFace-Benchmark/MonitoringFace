@@ -1,5 +1,5 @@
 import time
-from typing import Dict, AnyStr, Any, Iterator, Tuple, Optional
+from typing import Dict, AnyStr, Any, Tuple, Optional, List
 
 import docker
 from docker.errors import APIError, BuildError
@@ -65,7 +65,7 @@ def image_building(image_name, build_dir, args=None):
         return False
 
 
-def run_image(image_name, generic_contract: Dict[AnyStr, Any], verbose=False, time_on=None, time_out=None, is_tool_image=False):
+def run_image_offline(image_name, generic_contract: Dict[AnyStr, Any], verbose=False, time_on=None, time_out=None, is_tool_image=False):
     client = docker.from_env()
 
     command = generic_contract.get(COMMAND_KEY)
@@ -157,17 +157,21 @@ def run_image(image_name, generic_contract: Dict[AnyStr, Any], verbose=False, ti
     return stdout, return_code
 
 
-def run_image_streaming(
+def run_image_online(
     image_name: str,
     generic_contract: Dict[AnyStr, Any],
-    inputs: Iterator[str],
-    #latency_marker: Optional[str], force output command
-    read_timeout: float = 1.0,
+    input_file: str,
+    latency_marker: Optional[str],
+    maximum_latency: Optional[float] = None,
+    accumulative_time: Optional[float] = None,
     verbose: bool = False
-) -> Iterator[Tuple[str, Optional[int], Optional[float]]]:
+) -> Tuple[str, List[float], int]:
     import subprocess
     import select
     import os
+
+    if maximum_latency is None and accumulative_time is None:
+        print("Warning online experiment is not time-restricted!")
 
     command = generic_contract.get(COMMAND_KEY)
     command = list(filter(None, command)) if command is not None else None
@@ -176,34 +180,26 @@ def run_image_streaming(
     entrypoint = generic_contract.get(ENTRYPOINT_KEY)
 
     docker_cmd = ["docker", "run", "-i", "--rm"]
-
     if workdir:
         docker_cmd.extend(["-w", workdir])
-
     if volumes:
         for host_path, mount_info in volumes.items():
             bind_path = mount_info.get('bind', host_path)
             mode = mount_info.get('mode', 'rw')
             docker_cmd.extend(["-v", f"{host_path}:{bind_path}:{mode}"])
-
     if entrypoint:
         docker_cmd.extend(["--entrypoint", entrypoint])
-
     docker_cmd.append(image_name)
-
     if command:
         docker_cmd.extend(command)
-
     if verbose:
         print(f"Streaming command: {' '.join(docker_cmd)}")
 
+    proc = None
     try:
         proc = subprocess.Popen(
-            docker_cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            bufsize=0
+            docker_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, bufsize=0
         )
 
         fd = proc.stdout.fileno()
@@ -213,61 +209,93 @@ def run_image_streaming(
 
         time.sleep(0.3)
 
-        for input_data in inputs:
-            if proc.poll() is not None:
-                break
+        global_out = ""
+        global_latency = []
+        accumulative_start = time.time()
+        exit_code = 0
 
-            if not input_data.endswith('\n'):
-                input_data += '\n'
-            if verbose:
-                print("\nGive input:", input_data.strip())
+        with open(input_file, "r") as f:
+            for input_data in f:
+                if proc.poll() is not None: break
 
-            # Send input to stdin and measure time to first byte
-            cycle_start = time.time()
-            proc.stdin.write(input_data.encode('utf-8'))
-            proc.stdin.flush()
+                if accumulative_time is not None:
+                    if time.time() - accumulative_start >= accumulative_time:
+                        exit_code = 200
+                        break
 
-            output = ""
-            ttfb_ms = None
-            start_time = time.time()
-            while time.time() - start_time < read_timeout:
-                try:
-                    ready, _, _ = select.select([proc.stdout], [], [], 0.05)
-                    if ready:
-                        chunk = proc.stdout.read(4096)
-                        if chunk:
-                            if ttfb_ms is None:
-                                ttfb_ms = (time.time() - cycle_start) * 1000
-                            output += chunk.decode('utf-8', errors='ignore')
-                            start_time = time.time()  # Reset timeout on data
-                        else:
+                if latency_marker is not None:
+                    input_data = f"{latency_marker} {input_data}"
+                elif not input_data.endswith('\n'):
+                    input_data += '\n'
+
+                cycle_start = time.time()
+                proc.stdin.write(input_data.encode('utf-8'))
+                proc.stdin.flush()
+
+                output = ""
+                ttfb_ms = None
+                start_time = time.time()
+                while True:
+                    # Check accumulative time bound inside read loop
+                    if accumulative_time is not None:
+                        if time.time() - accumulative_start >= accumulative_time:
+                            exit_code = 200
                             break
-                except (BlockingIOError, IOError):
-                    time.sleep(0.05)
+                    if maximum_latency is not None:
+                        elapsed = time.time() - start_time
+                        if elapsed >= maximum_latency:
+                            exit_code = 300
+                            break
+                    try:
+                        ready, _, _ = select.select([proc.stdout], [], [], 0.05)
+                        if ready:
+                            chunk = proc.stdout.read(4096)
+                            if chunk:
+                                if ttfb_ms is None: ttfb_ms = (time.time() - cycle_start) * 1000
+                                output += chunk.decode('utf-8', errors='ignore')
+                                if maximum_latency is None: break
+                                start_time = time.time()
+                            else:
+                                break
+                    except (BlockingIOError, IOError):
+                        time.sleep(0.05)
+                global_out += output + "\n"
+                global_latency.append(ttfb_ms)
 
-            yield output, None, ttfb_ms
+                if exit_code != 0:
+                    break
 
-        proc.stdin.close()
-        try:
-            proc.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait()
+        if exit_code == 0:
+            proc.stdin.close()
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
 
-        final_output = ""
-        try:
-            remaining = proc.stdout.read()
-            if remaining:
-                final_output = remaining.decode('utf-8', errors='ignore')
-        except Exception:
-            pass
-
-        yield final_output, proc.returncode, None
-
+            try:
+                remaining = proc.stdout.read()
+                if remaining:
+                    global_out += remaining.decode('utf-8', errors='ignore')
+            except Exception:
+                pass
+        return global_out, global_latency, exit_code if exit_code != 0 else proc.returncode
     except FileNotFoundError:
-        yield "Error: docker command not found", 127, None
+        return "Error: docker command not found", [], 127
     except Exception as e:
-        yield f"Error: {e}", 1, None
+        return f"Error: {e}", [], 1
+    finally:
+        if proc is not None:
+            try:
+                proc.stdin.close()
+            except Exception:
+                pass
+            if proc.poll() is None:
+                try:
+                    proc.kill()
+                    proc.wait(timeout=5)
+                except Exception:
+                    pass
 
 
 if __name__ == "__main__":
@@ -278,20 +306,30 @@ if __name__ == "__main__":
         VOLUMES_KEY: {'/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test': {'bind': '/data', 'mode': 'rw'}}
     }
 
-    inputs = [
-        "C, tp=0, ts=0",
-        "B, tp=0, ts=0, x1=4, x2=10",
-        "A, tp=1, ts=1, x1=1",
-        "A, tp=1, ts=1, x1=3",
-        "A, tp=2, ts=2, x0=1",
-        "A, tp=2, ts=2, x0=2",
-        "A, tp=2, ts=2, x0=3",
-        "B, tp=2, ts=2, x1=4, x2=10",
-        "A, tp=3, ts=3, x1=999"
-    ]
+    input_file_path = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/data"
 
-    for output, code, ttfb_ms in run_image_streaming(
-            "timelymon_simplify_approximation_mf_image", contract, inputs=iter(inputs), verbose=True
-    ):
-        if ttfb_ms:
-            print(f"Output: {output.strip()}, TTFB: {ttfb_ms:.2f}ms")
+    output, ttfb_mss, code = run_image_online(
+            "timelymon_simplify_approximation_mf_image", contract, input_file=input_file_path, latency_marker=None, verbose=True)
+    print(repr(output))
+    print(ttfb_mss)
+    print(code)
+
+    # Example usage
+    contract = {
+        COMMAND_KEY: ["monpoly", "-formula", "policy.policy", "-sig", "sig.sig"],
+        WORKDIR_KEY: "/data",
+        VOLUMES_KEY: {'/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test': {'bind': '/data','mode': 'rw'}}
+    }
+
+    input_file_path = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/log"
+
+    output, ttfb_mss, code = run_image_online(
+        "monpoly_23a655563715dc1e6dcd92fb7a641f404b7ac158_mf_image", contract, input_file=input_file_path, latency_marker=">get_pos<",
+        verbose=True
+    )
+
+    print(repr(output))
+    print(ttfb_mss)
+    print(code)
+
+

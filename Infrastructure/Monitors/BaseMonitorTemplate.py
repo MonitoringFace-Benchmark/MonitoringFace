@@ -40,7 +40,12 @@ class OfflineRunnable(ABC):
 
 class OnlineRunnable(ABC):
     @abstractmethod
-    def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
+    def construct_online_command(self) -> Tuple[List[str], str, Optional[str]]:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def latency_marker() -> Optional[str]:
         pass
 
     @abstractmethod
@@ -48,7 +53,6 @@ class OnlineRunnable(ABC):
         pass
 
 
-# todo make tool implement online runnable and offline runnable
 class BaseMonitorTemplate(AutoConvertable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         self.image = image
@@ -123,14 +127,40 @@ class BaseMonitorTemplate(AutoConvertable):
         pass
 
 
-def run_monitor_online(mon: Union[OnlineRunnable, BaseMonitorTemplate], timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr):
+def run_monitor_online(mon: Union[OnlineRunnable, BaseMonitorTemplate],
+                       maximum_latency, accumulative_time_out, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
+                       path_manager: PathManager, trace_source_format: InputOutputTraceFormats,
+                       policy_source_format: InputOutputPolicyFormats,
+                       cli_args: CLIArgs
+                       ):
+    print_headline(f"Run (Online) {mon.name}")
+
+    preprocessing_elapsed = mon.preprocessing(
+        path_to_folder, trace_source_format, policy_source_format,
+        data_file, signature_file, policy_file, path_manager, verbose=cli_args.verbose
+    )
+
+    start_compile = time.perf_counter()
+    mon.compile()
+    end_compile = time.perf_counter()
+    compile_elapsed = end_compile - start_compile
+
+    cmd, trace, name = mon.construct_online_command()
+    latency_marker = mon.latency_marker()
+
+    out, latency, code = mon.image.run_online(
+        parameters=cmd, path_to_data=path_to_folder, latency_marker=latency_marker, name=name,
+        accumulative_time=accumulative_time_out, maximum_latency=maximum_latency, data_file=trace
+    )
+
+
     pass
 
 
 def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
                         path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
                         result_file, cli_args: CLIArgs, oracle: Optional[AbstractOracleTemplate] = None) -> Tuple[float, float, float, float]:
-    print_headline(f"Run {mon.name}")
+    print_headline(f"Run (Offline) {mon.name}")
 
     preprocessing_elapsed = mon.preprocessing(
         path_to_folder, trace_source_format, policy_source_format,
@@ -144,7 +174,7 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
 
     start = time.perf_counter()
     cmd, name = mon.construct_offline_command()
-    out, code = mon.image.run_offline(parameters=cmd, path_to_data=path_to_folder, time_on=None, time_out=timeout_value, name=name)
+    out, code = mon.image.run_offline(parameters=cmd, path_to_data=path_to_folder, time_out=timeout_value, name=name)
     end = time.perf_counter()
     run_offline_elapsed = end - start
 

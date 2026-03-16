@@ -7,7 +7,7 @@ from Infrastructure.DataLoader.Resolver import ProcessorResolver, Location
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.DataTypes.Types.custome_type import Processor, processor_to_identifier
 from Infrastructure.Builders.ProcessorBuilder.AbstractImageManager import AbstractImageManager
-from Infrastructure.Builders.BuilderUtilities import image_exists, image_building, run_image, to_prop_file, ImageBuildException
+from Infrastructure.Builders.BuilderUtilities import image_exists, image_building, run_image_offline, to_prop_file, ImageBuildException
 from Infrastructure.Monitors.MonitorExceptions import BuildException
 from Infrastructure.constants import IMAGE_POSTFIX, VERSION_KEY, META_FILE_VALUE, PROP_FILES_VALUE, BRANCH_KEY, DOCKERFILE_VALUE
 
@@ -110,4 +110,4 @@ class ImageManager(AbstractImageManager):
         return image_building(image_name, path_to_linked_archive)
 
     def run(self, generic_contract: Dict[AnyStr, Any], time_on=None, time_out=None):
-        return run_image(image_name=self.image_name, generic_contract=generic_contract, time_on=time_on, time_out=time_out)
+        return run_image_offline(image_name=self.image_name, generic_contract=generic_contract, time_on=time_on, time_out=time_out)
