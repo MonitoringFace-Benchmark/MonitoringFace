@@ -1,7 +1,6 @@
 from typing import Tuple, Union
 
-from Infrastructure.DataTypes.Verification.OutputStructures.AbstractComparator import AbstractComparator, \
-    time_point_check, time_point_pdt_check
+from Infrastructure.DataTypes.Verification.OutputStructures.AbstractComparator import time_point_check, time_point_pdt_check
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
@@ -9,20 +8,15 @@ from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Propositi
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 
 
-class PropositionComparator(AbstractComparator):
-    def __init__(self, prop):
-        self.prop = prop
-        pass
-
-    def as_oracle(self, other: AbstractOutputStructure) -> Tuple[bool, str]:
-        if isinstance(other, PropositionList):
-            return prop_to_prop_comp(self.prop, other)
-        elif isinstance(other, OooVerdicts) or isinstance(other, Verdicts):
-            return prop_to_verdicts_comp(self.prop, other)
-        elif isinstance(other, PropositionTree):
-            return prop_to_pdt_comp(self.prop, other)
-        else:
-            raise Exception(f"Unknown type compare with type {other}")
+def as_oracle(prop: PropositionList, other: AbstractOutputStructure) -> Tuple[bool, str]:
+    if isinstance(other, PropositionList):
+        return prop_to_prop_comp(prop, other)
+    elif isinstance(other, OooVerdicts) or isinstance(other, Verdicts):
+        return prop_to_verdicts_comp(prop, other)
+    elif isinstance(other, PropositionTree):
+        return prop_to_pdt_comp(prop, other)
+    else:
+        raise Exception(f"Unknown type compare with type {other}")
 
 
 def prop_to_pdt_comp(oracle: PropositionList, other: PropositionTree) -> Tuple[bool, str]:
@@ -30,24 +24,23 @@ def prop_to_pdt_comp(oracle: PropositionList, other: PropositionTree) -> Tuple[b
     if not verdict:
         return False, txt
 
-    for time_point in oracle.time_points():
+    for time_point in oracle.time_points().keys():
         tree = other.retrieve(time_point)
         if tree is None:
             return False, f"Time point {time_point} missing in PropositionTree"
-
-        if not tree.is_false_leave():
+        if tree.is_false_leave():
             return False, f"Time point {time_point} has no satisfaction"
     return True, "Checked"
 
 
-def prop_to_verdicts_comp(oracle: PropositionList, other: Union[Verdicts, OooVerdicts] ) -> Tuple[bool, str]:
+def prop_to_verdicts_comp(oracle: PropositionList, other: Union[Verdicts, OooVerdicts]) -> Tuple[bool, str]:
     (verdict, txt) = time_point_check(oracle, other)
     if not verdict:
         return False, txt
 
     for time_point in oracle.prop_list.keys():
         if other.retrieve(time_point) is None:
-            return False, f"Time point {time_point} missing in Verdicts"
+            return False, f"Time point {time_point} missing Verdicts"
 
     return True, "Checked"
 
@@ -63,7 +56,7 @@ def prop_to_prop_comp(oracle: PropositionList, other: PropositionList) -> Tuple[
     if not verdict:
         return False, txt
 
-    for time_point in oracle.time_points():
+    for time_point in oracle.time_points().keys():
         oracle_value = oracle.prop_list[time_point]
         other_value = other.prop_list[time_point]
 

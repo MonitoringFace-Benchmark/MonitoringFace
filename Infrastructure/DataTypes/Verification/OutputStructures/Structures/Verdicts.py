@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Tuple
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
@@ -15,10 +15,14 @@ class Verdicts(AbstractOutputStructure):
     def retrieve_order(self):
         return self.variable_order.retrieve_order()
 
+    def as_oracle(self, other: 'AbstractOutputStructure') -> Tuple[bool, str]:
+        from Infrastructure.DataTypes.Verification.OutputStructures.Compare.VerdictsComparator import as_oracle
+        return as_oracle(self, other)
+
     def retrieve(self, time_point):
-        selected = [val for (tp, _, val) in self.verdict if tp == time_point]
-        if selected:
-            return self.tp_to_ts[time_point], time_point, selected
+        for (tp, _, val) in self.verdict:
+            if tp == time_point:
+                return self.tp_to_ts[time_point], time_point, val
         return None
 
     def time_points(self) -> Dict[int, int]:

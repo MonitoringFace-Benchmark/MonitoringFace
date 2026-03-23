@@ -17,13 +17,33 @@ class Assignment(ValueType):
             return False
         return dict(zip(self.order, self.values)) == dict(zip(other.order, other.values))
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(tuple(zip(self.order, self.values)))
+
+    def __lt__(self, other):
+        if not isinstance(other, Assignment):
+            return NotImplemented
+        return tuple(sorted(zip(self.order, self.values))) < tuple(sorted(zip(other.order, other.values)))
+
+    def __le__(self, other):
+        if not isinstance(other, Assignment):
+            return NotImplemented
+        return tuple(sorted(zip(self.order, self.values))) <= tuple(sorted(zip(other.order, other.values)))
+
+    def __gt__(self, other):
+        if not isinstance(other, Assignment):
+            return NotImplemented
+        return tuple(sorted(zip(self.order, self.values))) > tuple(sorted(zip(other.order, other.values)))
+
+    def __ge__(self, other):
+        if not isinstance(other, Assignment):
+            return NotImplemented
+        return tuple(sorted(zip(self.order, self.values))) >= tuple(sorted(zip(other.order, other.values)))
 
     def to_representation(self) -> List[Tuple[Any, AnyStr]]:
         return list(zip(self.values, self.order))
 
-    def retrieve_order(self, new_order: VariableOrdering):
+    def retrieve_order(self, new_order: VariableOrdering) -> 'Assignment':
         if self.order == new_order.retrieve_order():
             return self
         mapping = {v: val for v, val in zip(self.values, self.order)}

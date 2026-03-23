@@ -3,12 +3,13 @@ from typing import Tuple, Dict
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Proposition import Proposition
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.ValueType import ValueType
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering
 
 
 class OooVerdicts(AbstractOutputStructure):
     def __init__(self, variable_order: VariableOrdering):
-        self.ooo_verdict: list[Tuple[int, int, list[Assignment]]] = list()
+        self.ooo_verdict: list[Tuple[int, int, list[ValueType]]] = list()
         self.tp_to_ts = dict()
         self.variable_order = variable_order
 
@@ -17,6 +18,10 @@ class OooVerdicts(AbstractOutputStructure):
 
     def time_points(self) -> Dict[int, int]:
         return self.tp_to_ts
+
+    def as_oracle(self, other: 'AbstractOutputStructure') -> Tuple[bool, str]:
+        from Infrastructure.DataTypes.Verification.OutputStructures.Compare.OooVerdictsComparator import as_oracle
+        return as_oracle(self, other)
 
     def retrieve(self, time_point):
         if time_point not in self.tp_to_ts:

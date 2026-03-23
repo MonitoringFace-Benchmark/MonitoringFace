@@ -149,6 +149,10 @@ class PropositionTree(AbstractOutputStructure):
     def retrieve_order(self):
         return self.variable_order.retrieve_order()
 
+    def as_oracle(self, other: 'AbstractOutputStructure') -> Tuple[bool, str]:
+        from Infrastructure.DataTypes.Verification.OutputStructures.Compare.PropositionTreeComparator import as_oracle
+        return as_oracle(self, other)
+
     def retrieve(self, time_point: int):
         if time_point in self.forest:
             return self.forest[time_point]

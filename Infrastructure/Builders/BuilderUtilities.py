@@ -215,6 +215,7 @@ def run_image_online(
         exit_code = 0
 
         with open(input_file, "r") as f:
+            # todo replayer, and try to identify overhead by running locally
             for input_data in f:
                 if proc.poll() is not None: break
 
@@ -224,17 +225,19 @@ def run_image_online(
                         break
 
                 if latency_marker is not None:
-                    input_data = f"{latency_marker} {input_data}"
+                    input_data = f"{latency_marker}\n{input_data}"
                 elif not input_data.endswith('\n'):
                     input_data += '\n'
 
-                cycle_start = time.time()
+                print(f"Input data: {input_data}")
+
+                cycle_start = time.time_ns()
                 proc.stdin.write(input_data.encode('utf-8'))
                 proc.stdin.flush()
 
                 output = ""
                 ttfb_ms = None
-                start_time = time.time()
+                start_time = time.time_ns()
                 while True:
                     # Check accumulative time bound inside read loop
                     if accumulative_time is not None:
@@ -251,7 +254,7 @@ def run_image_online(
                         if ready:
                             chunk = proc.stdout.read(4096)
                             if chunk:
-                                if ttfb_ms is None: ttfb_ms = (time.time() - cycle_start) * 1000
+                                if ttfb_ms is None: ttfb_ms = (time.time_ns() - cycle_start) / 1000
                                 output += chunk.decode('utf-8', errors='ignore')
                                 if maximum_latency is None: break
                                 start_time = time.time()
@@ -298,23 +301,170 @@ def run_image_online(
                     pass
 
 
+def run_image_online_local(
+    generic_contract: Dict[AnyStr, Any],
+    input_file: str,
+    latency_marker: Optional[str],
+    maximum_latency: Optional[float] = None,
+    accumulative_time: Optional[float] = None,
+    verbose: bool = False
+) -> Tuple[str, List[float], int]:
+    import subprocess
+    import select
+    import os
+
+    if maximum_latency is None and accumulative_time is None:
+        print("Warning online experiment is not time-restricted!")
+
+    command = generic_contract.get(COMMAND_KEY)
+
+    if verbose:
+        print(f"Streaming command: {' '.join(command)}")
+
+    proc = None
+    try:
+        proc = subprocess.Popen(
+            command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, bufsize=0
+        )
+
+        fd = proc.stdout.fileno()
+        import fcntl
+        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        time.sleep(0.3)
+
+        global_out = ""
+        global_latency = []
+        accumulative_start = time.time()
+        exit_code = 0
+
+        with open(input_file, "r") as f:
+            # todo replayer, and try to identify overhead by running locally
+            for input_data in f:
+                if proc.poll() is not None:
+                    # process has exited; avoid BrokenPipe by stopping the sender loop
+                    exit_code = proc.returncode if proc.returncode is not None else 1
+                    break
+                if proc.stdin is None or getattr(proc.stdin, "closed", False):
+                    exit_code = 1
+                    break
+                try:
+                    proc.stdin.write(input_data.encode('utf-8'))
+                    proc.stdin.flush()
+                except BrokenPipeError:
+                    # child closed stdin (broken pipe) — treat as clean exit condition
+                    exit_code = 1
+                    break
+                except Exception:
+                    # any other write error — ensure we stop and let finally cleanup run
+                    exit_code = 1
+                    break
+
+                if accumulative_time is not None:
+                    if time.time() - accumulative_start >= accumulative_time:
+                        exit_code = 200
+                        break
+
+                if latency_marker is not None:
+                    input_data = f"{latency_marker}\n{input_data}"
+                elif not input_data.endswith('\n'):
+                    input_data += '\n'
+
+                print(f"Input data: {input_data}")
+
+                cycle_start = time.time_ns()
+                proc.stdin.write(input_data.encode('utf-8'))
+                proc.stdin.flush()
+
+                output = ""
+                ttfb_ms = None
+                start_time = time.time_ns()
+                while True:
+                    # Check accumulative time bound inside read loop
+                    if accumulative_time is not None:
+                        if time.time() - accumulative_start >= accumulative_time:
+                            exit_code = 200
+                            break
+                    if maximum_latency is not None:
+                        elapsed = time.time() - start_time
+                        if elapsed >= maximum_latency:
+                            exit_code = 300
+                            break
+                    try:
+                        ready, _, _ = select.select([proc.stdout], [], [], 0.05)
+                        if ready:
+                            chunk = proc.stdout.read(4096)
+                            if chunk:
+                                if ttfb_ms is None: ttfb_ms = (time.time_ns() - cycle_start) / 1000
+                                output += chunk.decode('utf-8', errors='ignore')
+                                if maximum_latency is None: break
+                                start_time = time.time()
+                            else:
+                                break
+                    except (BlockingIOError, IOError):
+                        time.sleep(0.05)
+                global_out += output + "\n"
+                global_latency.append(ttfb_ms)
+
+                if exit_code != 0:
+                    break
+
+        if exit_code == 0:
+            proc.stdin.close()
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+
+            try:
+                remaining = proc.stdout.read()
+                if remaining:
+                    global_out += remaining.decode('utf-8', errors='ignore')
+            except Exception:
+                pass
+        return global_out, global_latency, exit_code if exit_code != 0 else proc.returncode
+    except FileNotFoundError:
+        return "Error: docker command not found", [], 127
+    except Exception as e:
+        return f"Error: {e}", [], 1
+    finally:
+        if proc is not None:
+            try:
+                proc.stdin.close()
+            except Exception:
+                pass
+            if proc.poll() is None:
+                try:
+                    proc.kill()
+                    proc.wait(timeout=5)
+                except Exception:
+                    pass
+
+
+
 if __name__ == "__main__":
-    # Example usage
     contract = {
-        COMMAND_KEY: ["timelymon", "policy.policy", "--sig-file", "sig.sig", "-w", "1", "-m", "1", "-S", "1", "-l"],
+        COMMAND_KEY: ["timelymon", "policy.policy", "--sig-file", "sig.sig", "-w", "1", "-m", "0", "-S", "1", "-l"],
         WORKDIR_KEY: "/data",
         VOLUMES_KEY: {'/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test': {'bind': '/data', 'mode': 'rw'}}
     }
 
     input_file_path = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/data"
-
+    start_ns = time.time_ns()
     output, ttfb_mss, code = run_image_online(
             "timelymon_simplify_approximation_mf_image", contract, input_file=input_file_path, latency_marker=None, verbose=True)
+    elapsed_s = (time.time_ns() - start_ns) / 1_000_000_000.0
+    print(f"Final time (s): {elapsed_s:.6f}")
+
     print(repr(output))
     print(ttfb_mss)
     print(code)
-
-    # Example usage
+    
+    
+    """# Example usage
     contract = {
         COMMAND_KEY: ["monpoly", "-formula", "policy.policy", "-sig", "sig.sig"],
         WORKDIR_KEY: "/data",
@@ -332,4 +482,25 @@ if __name__ == "__main__":
     print(ttfb_mss)
     print(code)
 
+    """
 
+    """
+    contract = {
+        COMMAND_KEY: [
+            "/Users/krq770/Desktop/Experiments_Stream_Monitor/monpoly/monpoly", "-formula",
+            "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/policy.policy",
+            "-sig", "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/sig.sig"
+        ]
+    }
+
+    input_file_path = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/log"
+
+    output, ttfb_mss, code = run_image_online_local(
+        contract, input_file=input_file_path,
+        latency_marker=">get_pos<",
+        verbose=True
+    )
+
+    print(repr(output))
+    print(ttfb_mss)
+    print(code)"""

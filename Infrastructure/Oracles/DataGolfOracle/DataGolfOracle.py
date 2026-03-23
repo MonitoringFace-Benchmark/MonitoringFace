@@ -40,17 +40,24 @@ def get_oracle_verdicts(path_to_result_folder, data_file) -> AbstractOutputStruc
         with open(result, "r") as f:
             output = f.read()
 
+        with open(prefix, "r") as f:
+            time_increment = time_shift(f.read())
+
         lines = [ln for ln in (l.rstrip() for l in output.splitlines()) if ln != ""]
         vo = lines[0].strip().replace("(", "").replace(")", "").split(",")
         variable_order = VariableOrder(vo)
         verdicts = DatagolfVerdicts(variable_order)
 
         current_ts = None
-        time_point_counter = 0
+        time_point_counter = None
         for line in lines[1:]:
             if line.startswith("@"):
                 m = re.match(r"^@\s*(\d+)", line)
                 current_ts = int(m.group(1)) if m else None
+                if time_point_counter is None:
+                    time_point_counter = time_increment
+                else:
+                    time_point_counter += 1
                 continue
 
             if line.startswith('pos'):
@@ -65,6 +72,11 @@ def get_oracle_verdicts(path_to_result_folder, data_file) -> AbstractOutputStruc
 def extract_data_number(path: str) -> Optional[int]:
     m = re.compile(r"^data_(\d+)\.csv$", re.IGNORECASE).match(Path(path).name)
     return int(m.group(1)) if m else None
+
+
+def time_shift(line: str) -> int:
+    l = line.split("shifted ")[1]
+    return int(l.split(" ")[0])
 
 
 def _parse_assignment_values(line: str):
