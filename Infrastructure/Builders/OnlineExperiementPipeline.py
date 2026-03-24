@@ -10,6 +10,7 @@ from Infrastructure.Builders.BuilderUtilities import image_building, ImageBuildE
 
 def build_pipeline(path_to_dockerfile: str, image_name: str, tmp_binary_location: str) -> str:
     # todo exists and version verification
+    # should be done by the ToolImageManager
     if not image_exists(image_name):
         if not image_building(image_name, path_to_dockerfile):
             raise ImageBuildException(f"Failed to build image: {image_name}")
@@ -69,46 +70,6 @@ def build_with_extracted_binary(
         path_to_secondary_dockerfile: str, secondary_image_name: str,
         extracted_binary_path: str, binary_destination: str = "/tool"
 ) -> bool:
-    """
-    Build a secondary Docker image that includes an extracted binary from a previous build.
-
-    This function copies the extracted binary into the Docker build context and builds a new image.
-    The secondary Dockerfile should include a COPY instruction to add the binary.
-
-    Args:
-        path_to_secondary_dockerfile: Path to the directory containing the secondary Dockerfile
-        secondary_image_name: Name to tag the secondary Docker image with
-        extracted_binary_path: Path to the extracted binary from build_pipeline()
-        binary_destination: Destination path in the Docker image (default: "/tool")
-
-    Returns:
-        True if build succeeded, False otherwise
-
-    Raises:
-        FileNotFoundError: If extracted binary doesn't exist
-
-    Example:
-        # Dockerfile example:
-        # FROM scratch
-        # COPY tool /tool
-        # ENTRYPOINT ["/tool"]
-
-        # Python usage:
-        # 1. Build and extract binary from first image
-        binary_path = build_pipeline(
-            "/path/to/first/dockerfile",
-            "image-one",
-            "/tmp/extracted"
-        )
-
-        # 2. Build second image using the extracted binary
-        success = build_with_extracted_binary(
-            "/path/to/second/dockerfile",
-            "image-two",
-            binary_path,
-            "/tool"
-        )
-    """
     if not os.path.exists(extracted_binary_path):
         raise FileNotFoundError(f"Extracted binary not found at {extracted_binary_path}")
 

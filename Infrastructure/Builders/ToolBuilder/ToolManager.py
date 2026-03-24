@@ -67,6 +67,5 @@ class ToolManager:
         print_footline("(Finished) Building ToolManager")
 
     def get_image(self, tool, branch, commit):
-        if commit is None:
-            commit = ""
+        commit = "" if commit is None else commit
         return self.images.get((tool, branch, commit))

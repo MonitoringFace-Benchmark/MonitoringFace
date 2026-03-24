@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from Infrastructure.Frontend.CLI.cli_args import CLIArgs
+
 
 class AbstractToolImageManager(ABC):
     @abstractmethod
@@ -7,9 +9,13 @@ class AbstractToolImageManager(ABC):
         pass
 
     @abstractmethod
-    def run_online(self, path_to_data, data_file, parameters, maximum_latency=None, accumulative_time=None, name=None, latency_marker=None):
+    def _build_image(self):
         pass
 
     @abstractmethod
-    def _build_image(self):
+    def get_image_name(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_cli_args(self) -> CLIArgs:
         pass

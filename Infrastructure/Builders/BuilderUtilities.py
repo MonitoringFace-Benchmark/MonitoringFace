@@ -1,5 +1,9 @@
+import io
+import os
+import shutil
+import tarfile
 import time
-from typing import Dict, AnyStr, Any, Tuple, Optional, List
+from typing import Dict, AnyStr, Any
 
 import docker
 from docker.errors import APIError, BuildError
@@ -157,350 +161,82 @@ def run_image_offline(image_name, generic_contract: Dict[AnyStr, Any], verbose=F
     return stdout, return_code
 
 
-def run_image_online(
-    image_name: str,
-    generic_contract: Dict[AnyStr, Any],
-    input_file: str,
-    latency_marker: Optional[str],
-    maximum_latency: Optional[float] = None,
-    accumulative_time: Optional[float] = None,
-    verbose: bool = False
-) -> Tuple[str, List[float], int]:
-    import subprocess
-    import select
-    import os
-
-    if maximum_latency is None and accumulative_time is None:
-        print("Warning online experiment is not time-restricted!")
-
-    command = generic_contract.get(COMMAND_KEY)
-    command = list(filter(None, command)) if command is not None else None
-    volumes = generic_contract.get(VOLUMES_KEY)
-    workdir = generic_contract.get(WORKDIR_KEY)
-    entrypoint = generic_contract.get(ENTRYPOINT_KEY)
-
-    docker_cmd = ["docker", "run", "-i", "--rm"]
-    if workdir:
-        docker_cmd.extend(["-w", workdir])
-    if volumes:
-        for host_path, mount_info in volumes.items():
-            bind_path = mount_info.get('bind', host_path)
-            mode = mount_info.get('mode', 'rw')
-            docker_cmd.extend(["-v", f"{host_path}:{bind_path}:{mode}"])
-    if entrypoint:
-        docker_cmd.extend(["--entrypoint", entrypoint])
-    docker_cmd.append(image_name)
-    if command:
-        docker_cmd.extend(command)
-    if verbose:
-        print(f"Streaming command: {' '.join(docker_cmd)}")
-
-    proc = None
+def extract_binary(image_name: str, tmp_binary_location: str, verbose=False) -> str:
+    client = docker.from_env()
+    extracted_binary_path = None
     try:
-        proc = subprocess.Popen(
-            docker_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, bufsize=0
-        )
-
-        fd = proc.stdout.fileno()
-        import fcntl
-        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
-        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
-        time.sleep(0.3)
-
-        global_out = ""
-        global_latency = []
-        accumulative_start = time.time()
-        exit_code = 0
-
-        with open(input_file, "r") as f:
-            # todo replayer, and try to identify overhead by running locally
-            for input_data in f:
-                if proc.poll() is not None: break
-
-                if accumulative_time is not None:
-                    if time.time() - accumulative_start >= accumulative_time:
-                        exit_code = 200
-                        break
-
-                if latency_marker is not None:
-                    input_data = f"{latency_marker}\n{input_data}"
-                elif not input_data.endswith('\n'):
-                    input_data += '\n'
-
-                print(f"Input data: {input_data}")
-
-                cycle_start = time.time_ns()
-                proc.stdin.write(input_data.encode('utf-8'))
-                proc.stdin.flush()
-
-                output = ""
-                ttfb_ms = None
-                start_time = time.time_ns()
-                while True:
-                    # Check accumulative time bound inside read loop
-                    if accumulative_time is not None:
-                        if time.time() - accumulative_start >= accumulative_time:
-                            exit_code = 200
-                            break
-                    if maximum_latency is not None:
-                        elapsed = time.time() - start_time
-                        if elapsed >= maximum_latency:
-                            exit_code = 300
-                            break
-                    try:
-                        ready, _, _ = select.select([proc.stdout], [], [], 0.05)
-                        if ready:
-                            chunk = proc.stdout.read(4096)
-                            if chunk:
-                                if ttfb_ms is None: ttfb_ms = (time.time_ns() - cycle_start) / 1000
-                                output += chunk.decode('utf-8', errors='ignore')
-                                if maximum_latency is None: break
-                                start_time = time.time()
-                            else:
-                                break
-                    except (BlockingIOError, IOError):
-                        time.sleep(0.05)
-                global_out += output + "\n"
-                global_latency.append(ttfb_ms)
-
-                if exit_code != 0:
-                    break
-
-        if exit_code == 0:
-            proc.stdin.close()
+        container = client.containers.create(image_name, detach=True)
+        try:
+            os.makedirs(tmp_binary_location, exist_ok=True)
+            if not os.access(tmp_binary_location, os.W_OK):
+                raise PermissionError(f"Destination directory {tmp_binary_location} is not writable")
             try:
-                proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait()
-
-            try:
-                remaining = proc.stdout.read()
-                if remaining:
-                    global_out += remaining.decode('utf-8', errors='ignore')
-            except Exception:
-                pass
-        return global_out, global_latency, exit_code if exit_code != 0 else proc.returncode
-    except FileNotFoundError:
-        return "Error: docker command not found", [], 127
+                archive_bytes, _ = container.get_archive("/usr/local/bin")
+                tar_stream = io.BytesIO(b"".join(archive_bytes))
+                with tarfile.open(fileobj=tar_stream, mode='r:*') as tar:
+                    tar.extractall(path=tmp_binary_location)
+                if verbose:
+                    print(f"Binary extracted successfully from /usr/local/bin to {tmp_binary_location}")
+                extracted_binary_path = tmp_binary_location
+            except APIError:
+                archive_bytes, _ = container.get_archive("/")
+                tar_stream = io.BytesIO(b"".join(archive_bytes))
+                with tarfile.open(fileobj=tar_stream, mode='r:*') as tar:
+                    for member in tar.getmembers():
+                        if member.name == '/' or member.name.startswith('/.') or '/' in member.name.lstrip('/'):
+                            continue
+                        if member.isfile():
+                            try:
+                                tar_obj = tar.extractfile(member)
+                                dst_path = os.path.join(tmp_binary_location, member.name.lstrip('/'))
+                                dst_dir = os.path.dirname(dst_path)
+                                os.makedirs(dst_dir, exist_ok=True)
+                                if os.path.exists(dst_path):
+                                    os.remove(dst_path)
+                                with open(dst_path, 'wb') as dst_file:
+                                    shutil.copyfileobj(tar_obj, dst_file)
+                                os.chmod(dst_path, 0o755)
+                                if extracted_binary_path is None:
+                                    extracted_binary_path = dst_path
+                            except OSError as e:
+                                if verbose:
+                                    print(f"Warning: Failed to extract {member.name}: {e}")
+                                continue
+                if verbose:
+                    print(f"Binary extracted successfully from root to {tmp_binary_location}")
+        finally:
+            container.remove(force=True)
+    except APIError as e:
+        raise APIError(f"Docker API error during binary extraction: {e}")
     except Exception as e:
-        return f"Error: {e}", [], 1
-    finally:
-        if proc is not None:
-            try:
-                proc.stdin.close()
-            except Exception:
-                pass
-            if proc.poll() is None:
-                try:
-                    proc.kill()
-                    proc.wait(timeout=5)
-                except Exception:
-                    pass
+        raise Exception(f"Error extracting binary from image {image_name}: {e}")
+    return extracted_binary_path
 
 
-def run_image_online_local(
-    generic_contract: Dict[AnyStr, Any],
-    input_file: str,
-    latency_marker: Optional[str],
-    maximum_latency: Optional[float] = None,
-    accumulative_time: Optional[float] = None,
-    verbose: bool = False
-) -> Tuple[str, List[float], int]:
-    import subprocess
-    import select
-    import os
+def build_with_extracted_binary(
+        path_to_secondary_dockerfile: str, secondary_image_name: str,
+        extracted_binary_path: str, binary_destination: str = "/tool"
+) -> bool:
+    if not os.path.exists(extracted_binary_path):
+        raise FileNotFoundError(f"Extracted binary not found at {extracted_binary_path}")
 
-    if maximum_latency is None and accumulative_time is None:
-        print("Warning online experiment is not time-restricted!")
+    build_context_dir = path_to_secondary_dockerfile
+    binary_name = os.path.basename(extracted_binary_path)
+    binary_in_context = os.path.join(build_context_dir, binary_name)
 
-    command = generic_contract.get(COMMAND_KEY)
-
-    if verbose:
-        print(f"Streaming command: {' '.join(command)}")
-
-    proc = None
     try:
-        proc = subprocess.Popen(
-            command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, bufsize=0
-        )
+        # Copy binary to build context
+        if extracted_binary_path != binary_in_context:
+            shutil.copy2(extracted_binary_path, binary_in_context)
+            print(f"Copied binary '{binary_name}' to build context: {binary_in_context}")
 
-        fd = proc.stdout.fileno()
-        import fcntl
-        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
-        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
-        time.sleep(0.3)
-
-        global_out = ""
-        global_latency = []
-        accumulative_start = time.time()
-        exit_code = 0
-
-        with open(input_file, "r") as f:
-            # todo replayer, and try to identify overhead by running locally
-            for input_data in f:
-                if proc.poll() is not None:
-                    # process has exited; avoid BrokenPipe by stopping the sender loop
-                    exit_code = proc.returncode if proc.returncode is not None else 1
-                    break
-                if proc.stdin is None or getattr(proc.stdin, "closed", False):
-                    exit_code = 1
-                    break
-                try:
-                    proc.stdin.write(input_data.encode('utf-8'))
-                    proc.stdin.flush()
-                except BrokenPipeError:
-                    # child closed stdin (broken pipe) — treat as clean exit condition
-                    exit_code = 1
-                    break
-                except Exception:
-                    # any other write error — ensure we stop and let finally cleanup run
-                    exit_code = 1
-                    break
-
-                if accumulative_time is not None:
-                    if time.time() - accumulative_start >= accumulative_time:
-                        exit_code = 200
-                        break
-
-                if latency_marker is not None:
-                    input_data = f"{latency_marker}\n{input_data}"
-                elif not input_data.endswith('\n'):
-                    input_data += '\n'
-
-                print(f"Input data: {input_data}")
-
-                cycle_start = time.time_ns()
-                proc.stdin.write(input_data.encode('utf-8'))
-                proc.stdin.flush()
-
-                output = ""
-                ttfb_ms = None
-                start_time = time.time_ns()
-                while True:
-                    # Check accumulative time bound inside read loop
-                    if accumulative_time is not None:
-                        if time.time() - accumulative_start >= accumulative_time:
-                            exit_code = 200
-                            break
-                    if maximum_latency is not None:
-                        elapsed = time.time() - start_time
-                        if elapsed >= maximum_latency:
-                            exit_code = 300
-                            break
-                    try:
-                        ready, _, _ = select.select([proc.stdout], [], [], 0.05)
-                        if ready:
-                            chunk = proc.stdout.read(4096)
-                            if chunk:
-                                if ttfb_ms is None: ttfb_ms = (time.time_ns() - cycle_start) / 1000
-                                output += chunk.decode('utf-8', errors='ignore')
-                                if maximum_latency is None: break
-                                start_time = time.time()
-                            else:
-                                break
-                    except (BlockingIOError, IOError):
-                        time.sleep(0.05)
-                global_out += output + "\n"
-                global_latency.append(ttfb_ms)
-
-                if exit_code != 0:
-                    break
-
-        if exit_code == 0:
-            proc.stdin.close()
-            try:
-                proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait()
-
-            try:
-                remaining = proc.stdout.read()
-                if remaining:
-                    global_out += remaining.decode('utf-8', errors='ignore')
-            except Exception:
-                pass
-        return global_out, global_latency, exit_code if exit_code != 0 else proc.returncode
-    except FileNotFoundError:
-        return "Error: docker command not found", [], 127
-    except Exception as e:
-        return f"Error: {e}", [], 1
+        # todo enrich building process with the python infra
+        # Build the secondary image
+        success = image_building(secondary_image_name, build_context_dir)
+        if success:
+            print(f"Secondary image '{secondary_image_name}' built successfully with binary at {binary_destination}")
+        return success
     finally:
-        if proc is not None:
-            try:
-                proc.stdin.close()
-            except Exception:
-                pass
-            if proc.poll() is None:
-                try:
-                    proc.kill()
-                    proc.wait(timeout=5)
-                except Exception:
-                    pass
-
-
-
-if __name__ == "__main__":
-    contract = {
-        COMMAND_KEY: ["timelymon", "policy.policy", "--sig-file", "sig.sig", "-w", "1", "-m", "0", "-S", "1", "-l"],
-        WORKDIR_KEY: "/data",
-        VOLUMES_KEY: {'/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test': {'bind': '/data', 'mode': 'rw'}}
-    }
-
-    input_file_path = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/data"
-    start_ns = time.time_ns()
-    output, ttfb_mss, code = run_image_online(
-            "timelymon_simplify_approximation_mf_image", contract, input_file=input_file_path, latency_marker=None, verbose=True)
-    elapsed_s = (time.time_ns() - start_ns) / 1_000_000_000.0
-    print(f"Final time (s): {elapsed_s:.6f}")
-
-    print(repr(output))
-    print(ttfb_mss)
-    print(code)
-    
-    
-    """# Example usage
-    contract = {
-        COMMAND_KEY: ["monpoly", "-formula", "policy.policy", "-sig", "sig.sig"],
-        WORKDIR_KEY: "/data",
-        VOLUMES_KEY: {'/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test': {'bind': '/data','mode': 'rw'}}
-    }
-
-    input_file_path = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/log"
-
-    output, ttfb_mss, code = run_image_online(
-        "monpoly_23a655563715dc1e6dcd92fb7a641f404b7ac158_mf_image", contract, input_file=input_file_path, latency_marker=">get_pos<",
-        verbose=True
-    )
-
-    print(repr(output))
-    print(ttfb_mss)
-    print(code)
-
-    """
-
-    """
-    contract = {
-        COMMAND_KEY: [
-            "/Users/krq770/Desktop/Experiments_Stream_Monitor/monpoly/monpoly", "-formula",
-            "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/policy.policy",
-            "-sig", "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/sig.sig"
-        ]
-    }
-
-    input_file_path = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/log"
-
-    output, ttfb_mss, code = run_image_online_local(
-        contract, input_file=input_file_path,
-        latency_marker=">get_pos<",
-        verbose=True
-    )
-
-    print(repr(output))
-    print(ttfb_mss)
-    print(code)"""
+        if extracted_binary_path != binary_in_context and os.path.exists(binary_in_context):
+            os.remove(binary_in_context)
+            print(f"Cleaned up temporary binary from build context")

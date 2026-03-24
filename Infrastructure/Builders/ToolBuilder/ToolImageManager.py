@@ -6,7 +6,7 @@ from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import Location
 from Infrastructure.Builders.BuilderUtilities import image_building, run_image_offline, to_prop_file, image_exists, \
-    ImageBuildException, run_image_online
+    ImageBuildException, extract_binary, build_with_extracted_binary
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
@@ -50,7 +50,7 @@ class IndirectToolImageManager(AbstractToolImageManager):
 
         self.named_archive = f"{path_to_archive}/Tools/{self.original_name}"
         self.linked_named_archive = f"{path_to_archive}/Tools/{self.linked_name}"
-        self.image_name = f"{self.linked_name.lower()}_{commit}{IMAGE_POSTFIX}" if commit else f"{self.linked_name.lower()}_{self.branch.lower()}{IMAGE_POSTFIX}"
+        self.image_name = f"{self.linked_name.lower()}_{commit}_{runtime_setting.to_string()}{IMAGE_POSTFIX}" if commit else f"{self.linked_name.lower()}_{self.branch.lower()}_{runtime_setting.to_string()}{IMAGE_POSTFIX}"
 
         self.path_to_infra = path_to_infra
         self.parent_path = f"{path_to_repo}/Monitor/{self.original_name}"
@@ -87,6 +87,12 @@ class IndirectToolImageManager(AbstractToolImageManager):
                 else:
                     print(f"    Exists {self.original_name} - {self.branch}")
 
+    def get_image_name(self) -> str:
+        return self.image_name
+
+    def get_cli_args(self) -> CLIArgs:
+        return self.cli_args
+
     def _build_image(self):
         if self.commit:
             to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: self.commit})
@@ -111,16 +117,6 @@ class IndirectToolImageManager(AbstractToolImageManager):
         inner_contract_[WORKDIR_KEY] = "/data"
         return run_image_offline(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
 
-    def run_online(self, path_to_data, data_file, parameters, maximum_latency=None, accumulative_time=None,  name=None, latency_marker=None):
-        inner_contract_ = dict()
-        inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
-        inner_name = name if name is not None else self.binary_name
-        inner_contract_[COMMAND_KEY] = [inner_name] + parameters
-        inner_contract_[WORKDIR_KEY] = "/data"
-        return run_image_online(self.image_name, inner_contract_, input_file=data_file,
-                                maximum_latency=maximum_latency, accumulative_time=accumulative_time,
-                                verbose=self.cli_args.verbose, latency_marker=latency_marker)
-
 
 class DirectToolImageManager(AbstractToolImageManager):
     def __init__(self, name, branch, release, commit, path_to_build, path_to_archive, path_to_infra, location, cli_args: CLIArgs, runtime_setting: OnlineOffline):
@@ -130,7 +126,7 @@ class DirectToolImageManager(AbstractToolImageManager):
         self.branch = branch
         self.cli_args = cli_args
         self.args = {BUILD_ARG_GIT_BRANCH: branch, BUILD_ARG_GIT_COMMIT: commit} if commit else {BUILD_ARG_GIT_BRANCH: branch}
-        self.image_name = f"{name.lower()}_{commit}{IMAGE_POSTFIX}" if commit else f"{name.lower()}_{branch.lower()}{IMAGE_POSTFIX}"
+        self.image_name = f"{name.lower()}_{commit}_{runtime_setting.to_string()}{IMAGE_POSTFIX}" if commit else f"{name.lower()}_{branch.lower()}_{runtime_setting.to_string()}{IMAGE_POSTFIX}"
 
         self.named_archive = f"{path_to_archive}/Tools/{name}"
         self.path_to_infra = path_to_infra
@@ -166,6 +162,12 @@ class DirectToolImageManager(AbstractToolImageManager):
                 else:
                     print(f"    Exists {self.name} - {self.branch}")
 
+    def get_image_name(self) -> str:
+        return self.image_name
+
+    def get_cli_args(self) -> CLIArgs:
+        return self.cli_args
+
     def _build_image(self):
         os.makedirs(self.path, exist_ok=True)
         if self.commit:
@@ -190,12 +192,28 @@ class DirectToolImageManager(AbstractToolImageManager):
         inner_contract_[WORKDIR_KEY] = "/data"
         return run_image_offline(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
 
-    def run_online(self, path_to_data, data_file, parameters, maximum_latency=None, accumulative_time=None,  name=None, latency_marker=None):
-        inner_contract_ = dict()
-        inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
-        inner_name = name if name is not None else self.name.lower()
-        inner_contract_[COMMAND_KEY] = [inner_name] + parameters
-        inner_contract_[WORKDIR_KEY] = "/data"
-        return run_image_online(self.image_name, inner_contract_, input_file=data_file,
-                                maximum_latency=maximum_latency, accumulative_time=accumulative_time,
-                                verbose=self.cli_args.verbose, latency_marker=latency_marker)
+
+class OnlineToolImageManager:
+    def __init__(self, tool_manager: AbstractToolImageManager):
+        self.tool_manager = tool_manager
+
+    def build_image(self):
+        # build the online tool base image
+        binary_location = extract_binary(
+            self.tool_manager.get_image_name(),
+            "", # probably build folder, copy to Archive/Utilities/OnlineExperiments but temporarily
+            verbose=self.tool_manager.get_cli_args().verbose
+        )
+
+        # extract the binary from the image and build a new image with the binary
+        # add the experiment driver files etc
+        build_with_extracted_binary(
+
+        )
+
+        raise NotImplementedError("OnlineToolImageManager does not support building images")
+
+    def run_online(self): # arguments todo
+        # parameterize the driver and run the experiment
+        raise NotImplementedError("OnlineToolImageManager does not support offline execution")
+
