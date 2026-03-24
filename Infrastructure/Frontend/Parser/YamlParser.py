@@ -23,7 +23,7 @@ from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import Sy
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuardingTool, TimeConstraints, \
     GenerationConstraints, RunTimeConstraints
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
-from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
+from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline, online_offline_from_string
 from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Oracles.OracleManager import OracleManager
 
@@ -87,6 +87,8 @@ class YamlParser:
         if 'monitors' not in self.cfg:
             raise YamlParserException("Missing 'tools' section in YAML configuration")
 
+        runtime_setting = OnlineOffline.Offline if 'runtime_setting' not in self.cfg else online_offline_from_string(self.cfg['runtime_setting'])
+
         tools_to_build = []
         for tool in self.cfg.monitors:
             name = tool.get('identifier')
@@ -99,7 +101,7 @@ class YamlParser:
 
             tools_to_build.append((name, branch, commit, self._parse_branch_or_release(release)))
 
-        return ToolManager(tools_to_build=tools_to_build, path_to_project=self.path_to_project, cli_args=cli_args)
+        return ToolManager(tools_to_build=tools_to_build, path_to_project=self.path_to_project, cli_args=cli_args, runtime_setting=runtime_setting)
 
     def parse_seeds(self) -> Optional[Dict[str, Tuple[int, int]]]:
         if 'seeds' not in self.cfg:

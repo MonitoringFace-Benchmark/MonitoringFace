@@ -32,3 +32,23 @@ def processor_to_identifier(p: Processor) -> AnyStr:
         return "Benchmark"
     else:
         return "GeneralUtilities"
+
+
+class OnlineOffline(Enum):
+    Online = "online"
+    Offline = "offline"
+
+    def to_string(self) -> AnyStr:
+        if self == OnlineOffline.Online:
+            return "online"
+        else:
+            return "offline"
+
+
+def online_offline_from_string(s: AnyStr) -> OnlineOffline:
+    if s == "online":
+        return OnlineOffline.Online
+    elif s == "offline":
+        return OnlineOffline.Offline
+    else:
+        raise ValueError(f"Invalid string for OnlineOffline: {s}")

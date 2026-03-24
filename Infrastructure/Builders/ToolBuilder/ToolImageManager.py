@@ -1,4 +1,5 @@
 import os.path
+from typing import Optional
 
 from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader import init_repo_fetcher
@@ -7,7 +8,7 @@ from Infrastructure.DataLoader.Resolver import Location
 from Infrastructure.Builders.BuilderUtilities import image_building, run_image_offline, to_prop_file, image_exists, \
     ImageBuildException, run_image_online
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
-from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease
+from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.constants import (IMAGE_POSTFIX, BUILD_ARG_GIT_BRANCH, VOLUMES_KEY, COMMAND_KEY, WORKDIR_KEY,
                                       DOCKERFILE_VALUE, DOCKERFILE_KEY, PROP_FILES_VALUE, PROP_FILES_KEY,
@@ -19,24 +20,27 @@ def to_file(path, name, content):
         f.write(content)
 
 
-def remote_content_handler(path_to_named_archive, path_to_infra, name):
+def remote_content_handler(path_to_named_archive, path_to_infra, name, interaction: Optional[OnlineOffline] = None):
     content = MonitoringFaceDownloader(path_to_infra).get_content(name)
     if content is None:
         raise ImageBuildException("Cannot fetch data from Repository")
 
     os.makedirs(path_to_named_archive, exist_ok=True)
+
+    docker_file_location = f"{path_to_named_archive}/{interaction}" if interaction else path_to_named_archive
     if PROP_FILES_KEY in content and DOCKERFILE_KEY in content:
         to_file(path_to_named_archive, PROP_FILES_VALUE, content[PROP_FILES_KEY])
-        to_file(path_to_named_archive, DOCKERFILE_VALUE, content[DOCKERFILE_KEY])
+        to_file(docker_file_location, DOCKERFILE_VALUE, content[DOCKERFILE_KEY])
     elif SYMLINK_KEY in content:
-        to_file(path_to_named_archive, DOCKERFILE_VALUE, content[DOCKERFILE_KEY])
+        to_file(docker_file_location, DOCKERFILE_VALUE, content[DOCKERFILE_KEY])
     else:
         raise ImageBuildException("Incomplete data fetched from Repository")
 
 
 class IndirectToolImageManager(AbstractToolImageManager):
-    def __init__(self, name, linked_name, branch, commit, release, path_to_repo, path_to_archive, path_to_infra, location, cli_args: CLIArgs):
+    def __init__(self, name, linked_name, branch, commit, release, path_to_repo, path_to_archive, path_to_infra, location, cli_args: CLIArgs, runtime_setting: OnlineOffline):
         self.original_name = name
+        self.runtime_setting = runtime_setting
         self.linked_name = linked_name
         self.binary_name = linked_name.lower()
         self.cli_args = cli_args
@@ -90,7 +94,7 @@ class IndirectToolImageManager(AbstractToolImageManager):
             fl = PropertiesHandler.from_file(self.linked_named_archive + PROP_FILES_VALUE)
             version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
             to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
-        return image_building(self.image_name, self.linked_named_archive, self.args)
+        return image_building(self.image_name, f"{self.linked_named_archive}/{self.runtime_setting.to_string()}", self.args)
 
     def run_offline(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None):
         inner_contract_ = dict()
@@ -119,8 +123,9 @@ class IndirectToolImageManager(AbstractToolImageManager):
 
 
 class DirectToolImageManager(AbstractToolImageManager):
-    def __init__(self, name, branch, release, commit, path_to_build, path_to_archive, path_to_infra, location, cli_args: CLIArgs):
+    def __init__(self, name, branch, release, commit, path_to_build, path_to_archive, path_to_infra, location, cli_args: CLIArgs, runtime_setting: OnlineOffline):
         self.name = name
+        self.runtime_setting = runtime_setting
         self.commit = commit
         self.branch = branch
         self.cli_args = cli_args
@@ -169,7 +174,7 @@ class DirectToolImageManager(AbstractToolImageManager):
             fl = PropertiesHandler.from_file(self.named_archive + PROP_FILES_VALUE)
             version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
             to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
-        return image_building(self.image_name, self.named_archive, self.args)
+        return image_building(self.image_name, f"{self.named_archive}/{self.runtime_setting.to_string()}", self.args)
 
     def run_offline(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None):
         inner_contract_ = dict()
