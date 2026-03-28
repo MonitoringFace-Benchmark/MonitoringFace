@@ -8,7 +8,25 @@ from docker.errors import APIError
 from Infrastructure.Builders.BuilderUtilities import image_building, ImageBuildException, image_exists
 
 
-def build_pipeline(path_to_dockerfile: str, image_name: str, tmp_binary_location: str) -> str:
+def build_pipeline(path_to_dockerfile: str, image_name: str, tmp_binary_location: str) -> tuple[str, str]:
+    """
+    Build a Docker image and extract its binary to a temporary location.
+
+    Args:
+        path_to_dockerfile: Path to the directory containing the Dockerfile
+        image_name: Name to tag the built Docker image with
+        tmp_binary_location: Path where the extracted binary should be stored
+
+    Returns:
+        Tuple of (extracted_binary_path, binary_name) where:
+        - extracted_binary_path: Full path to the extracted binary
+        - binary_name: Name of the binary (filename only)
+
+    Raises:
+        ImageBuildException: If the Docker image build fails
+        APIError: If Docker API operations fail
+        Exception: If binary extraction fails
+    """
     # todo exists and version verification
     # should be done by the ToolImageManager
     if not image_exists(image_name):
@@ -19,6 +37,7 @@ def build_pipeline(path_to_dockerfile: str, image_name: str, tmp_binary_location
 
     client = docker.from_env()
     extracted_binary_path = None
+    binary_name = None
     try:
         container = client.containers.create(image_name, detach=True)
         try:
@@ -33,6 +52,8 @@ def build_pipeline(path_to_dockerfile: str, image_name: str, tmp_binary_location
                     tar.extractall(path=tmp_binary_location)
                 print(f"Binary extracted successfully from /usr/local/bin to {tmp_binary_location}")
                 extracted_binary_path = tmp_binary_location
+                # For multi-stage builds, return the directory as the binary location
+                binary_name = "bin"
             except APIError:
                 archive_bytes, _ = container.get_archive("/")
                 tar_stream = io.BytesIO(b"".join(archive_bytes))
@@ -53,6 +74,7 @@ def build_pipeline(path_to_dockerfile: str, image_name: str, tmp_binary_location
                                 os.chmod(dst_path, 0o755)
                                 if extracted_binary_path is None:
                                     extracted_binary_path = dst_path
+                                    binary_name = os.path.basename(dst_path)
                             except OSError as e:
                                 print(f"Warning: Failed to extract {member.name}: {e}")
                                 continue
@@ -63,18 +85,64 @@ def build_pipeline(path_to_dockerfile: str, image_name: str, tmp_binary_location
         raise APIError(f"Docker API error during binary extraction: {e}")
     except Exception as e:
         raise Exception(f"Error extracting binary from image {image_name}: {e}")
-    return extracted_binary_path
+
+    if extracted_binary_path is None or binary_name is None:
+        raise Exception(f"Failed to extract binary from image {image_name}")
+
+    return extracted_binary_path, binary_name
 
 
 def build_with_extracted_binary(
         path_to_secondary_dockerfile: str, secondary_image_name: str,
-        extracted_binary_path: str, binary_destination: str = "/tool"
+        extracted_binary_path: str, binary_name: str,
+        binary_destination: str = "/tool"
 ) -> bool:
+    """
+    Build a secondary Docker image that includes an extracted binary from a previous build.
+
+    This function copies the extracted binary into the Docker build context and builds a new image.
+    The secondary Dockerfile should include a COPY instruction to add the binary.
+
+    Args:
+        path_to_secondary_dockerfile: Path to the directory containing the secondary Dockerfile
+        secondary_image_name: Name to tag the secondary Docker image with
+        extracted_binary_path: Path to the extracted binary from build_pipeline()
+        binary_name: Name of the binary (filename) returned by build_pipeline()
+        binary_destination: Destination path in the Docker image (default: "/tool")
+
+    Returns:
+        True if build succeeded, False otherwise
+
+    Raises:
+        FileNotFoundError: If extracted binary doesn't exist
+
+    Example:
+        # Dockerfile example:
+        # FROM scratch
+        # COPY tool /tool
+        # ENTRYPOINT ["/tool"]
+
+        # Python usage:
+        # 1. Build and extract binary from first image
+        binary_path, binary_name = build_pipeline(
+            "/path/to/first/dockerfile",
+            "image-one",
+            "/tmp/extracted"
+        )
+
+        # 2. Build second image using the extracted binary
+        success = build_with_extracted_binary(
+            "/path/to/second/dockerfile",
+            "image-two",
+            binary_path,
+            binary_name,
+            "/tool"
+        )
+    """
     if not os.path.exists(extracted_binary_path):
         raise FileNotFoundError(f"Extracted binary not found at {extracted_binary_path}")
 
     build_context_dir = path_to_secondary_dockerfile
-    binary_name = os.path.basename(extracted_binary_path)
     binary_in_context = os.path.join(build_context_dir, binary_name)
 
     try:
@@ -98,12 +166,12 @@ if __name__ == "__main__":
     try:
         # Stage 1: Build first image and extract binary
         print("=== Stage 1: Building first image and extracting binary ===")
-        binary_path = build_pipeline(
-            "/Users/krq770/PycharmProjects/MonitoringFace_curr/Archive/Tools/Test",
+        binary_path, binary_name = build_pipeline(
+            "/Users/krq770/PycharmProjects/MonitoringFace_curr/Archive/Tools/TimelyMon/online",
             "timely-standalone",
             "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/build/Monitor/Test"
         )
-        print(f"Extracted binary available at: {binary_path}")
+        print(f"Extracted binary: {binary_path} (name: {binary_name})")
 
         # Stage 2: Build second image using the extracted binary
         print("\n=== Stage 2: Building second image with extracted binary ===")
@@ -111,6 +179,7 @@ if __name__ == "__main__":
             "/Users/krq770/PycharmProjects/MonitoringFace_curr/Archive/Tools/TestMinimal",
             "timely-runner",
             binary_path,
+            binary_name,
             "/usr/local/bin/timelymon"
         )
 

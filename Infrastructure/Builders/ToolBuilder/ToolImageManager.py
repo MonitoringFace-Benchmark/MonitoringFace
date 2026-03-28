@@ -194,15 +194,17 @@ class DirectToolImageManager(AbstractToolImageManager):
 
 
 class OnlineToolImageManager:
-    def __init__(self, tool_manager: AbstractToolImageManager):
+    def __init__(self, tool_manager: AbstractToolImageManager, path_to_archive: str):
         self.tool_manager = tool_manager
+        self.path_to_archive = path_to_archive
 
     def build_image(self):
+        verbose = self.tool_manager.get_cli_args().verbose
         # build the online tool base image
-        binary_location = extract_binary(
-            self.tool_manager.get_image_name(),
-            "", # probably build folder, copy to Archive/Utilities/OnlineExperiments but temporarily
-            verbose=self.tool_manager.get_cli_args().verbose
+        binary_location, binary_name = extract_binary(
+            image_name=self.tool_manager.get_image_name(),
+            tmp_binary_location=f"{self.path_to_archive}/Utilities/OnlineExperiments",
+            verbose=verbose
         )
 
         # extract the binary from the image and build a new image with the binary

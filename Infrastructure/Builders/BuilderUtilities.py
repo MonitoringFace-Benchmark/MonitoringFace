@@ -3,7 +3,7 @@ import os
 import shutil
 import tarfile
 import time
-from typing import Dict, AnyStr, Any
+from typing import Dict, AnyStr, Any, Tuple, List
 
 import docker
 from docker.errors import APIError, BuildError
@@ -161,9 +161,10 @@ def run_image_offline(image_name, generic_contract: Dict[AnyStr, Any], verbose=F
     return stdout, return_code
 
 
-def extract_binary(image_name: str, tmp_binary_location: str, verbose=False) -> str:
+def extract_binary(image_name: str, tmp_binary_location: str, verbose=False) -> Tuple[str, str]:
     client = docker.from_env()
     extracted_binary_path = None
+    binary_name = None
     try:
         container = client.containers.create(image_name, detach=True)
         try:
@@ -178,6 +179,7 @@ def extract_binary(image_name: str, tmp_binary_location: str, verbose=False) -> 
                 if verbose:
                     print(f"Binary extracted successfully from /usr/local/bin to {tmp_binary_location}")
                 extracted_binary_path = tmp_binary_location
+                binary_name = "bin"
             except APIError:
                 archive_bytes, _ = container.get_archive("/")
                 tar_stream = io.BytesIO(b"".join(archive_bytes))
@@ -198,6 +200,7 @@ def extract_binary(image_name: str, tmp_binary_location: str, verbose=False) -> 
                                 os.chmod(dst_path, 0o755)
                                 if extracted_binary_path is None:
                                     extracted_binary_path = dst_path
+                                    binary_name = os.path.basename(dst_path)
                             except OSError as e:
                                 if verbose:
                                     print(f"Warning: Failed to extract {member.name}: {e}")
@@ -210,12 +213,14 @@ def extract_binary(image_name: str, tmp_binary_location: str, verbose=False) -> 
         raise APIError(f"Docker API error during binary extraction: {e}")
     except Exception as e:
         raise Exception(f"Error extracting binary from image {image_name}: {e}")
-    return extracted_binary_path
+    return extracted_binary_path, binary_name
 
 
+# todo need to mount the right directory or specified in build?
 def build_with_extracted_binary(
         path_to_secondary_dockerfile: str, secondary_image_name: str,
-        extracted_binary_path: str, binary_destination: str = "/tool"
+        python_infrastructure_files: List[str],
+        extracted_binary_path: str, binary_destination: str = "/tool", verbose=False
 ) -> bool:
     if not os.path.exists(extracted_binary_path):
         raise FileNotFoundError(f"Extracted binary not found at {extracted_binary_path}")
@@ -224,19 +229,55 @@ def build_with_extracted_binary(
     binary_name = os.path.basename(extracted_binary_path)
     binary_in_context = os.path.join(build_context_dir, binary_name)
 
+    copied_items = []
     try:
         # Copy binary to build context
         if extracted_binary_path != binary_in_context:
             shutil.copy2(extracted_binary_path, binary_in_context)
-            print(f"Copied binary '{binary_name}' to build context: {binary_in_context}")
+            if verbose:
+                print(f"Copied binary '{binary_name}' to build context: {binary_in_context}")
+            copied_items.append(binary_in_context)
 
-        # todo enrich building process with the python infra
+        # Copy Python infrastructure files to build context
+        for infra_file in python_infrastructure_files:
+            if not os.path.exists(infra_file):
+                if verbose:
+                    print(f"Warning: Infrastructure file not found: {infra_file}")
+                continue
+
+            dest_path = os.path.join(build_context_dir, os.path.basename(infra_file))
+            try:
+                if os.path.isdir(infra_file):
+                    if os.path.exists(dest_path):
+                        shutil.rmtree(dest_path)
+                    shutil.copytree(infra_file, dest_path)
+                    if verbose:
+                        print(f"Copied directory to build context: {dest_path}")
+                else:
+                    # Copy file
+                    shutil.copy2(infra_file, dest_path)
+                    if verbose:
+                        print(f"Copied file to build context: {dest_path}")
+                copied_items.append(dest_path)
+            except Exception as e:
+                print(f"Error copying {infra_file}: {e}")
+                continue
+
         # Build the secondary image
         success = image_building(secondary_image_name, build_context_dir)
-        if success:
+        if success and verbose:
             print(f"Secondary image '{secondary_image_name}' built successfully with binary at {binary_destination}")
         return success
     finally:
-        if extracted_binary_path != binary_in_context and os.path.exists(binary_in_context):
-            os.remove(binary_in_context)
-            print(f"Cleaned up temporary binary from build context")
+        for item in copied_items:
+            try:
+                if os.path.isdir(item):
+                    shutil.rmtree(item)
+                    if verbose:
+                        print(f"Cleaned up directory: {item}")
+                elif os.path.isfile(item):
+                    os.remove(item)
+                    if verbose:
+                        print(f"Cleaned up file: {item}")
+            except Exception as e:
+                print(f"Warning: Failed to clean up {item}: {e}")
