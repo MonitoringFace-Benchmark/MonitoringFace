@@ -79,8 +79,6 @@ def move_additional_data(temporary_build_folder: str, folder_name: str, addition
 
 
 def build_image_wrapper(dockerfile_path: str, image_name: str) -> bool:
-    print(f"image name: {image_name}")
-    print(f"dockerfile path: {dockerfile_path}")
     if not image_exists(image_name):
         if not image_building(image_name, dockerfile_path):
             raise ImageBuildException(f"Failed to build image: {image_name}")
@@ -108,7 +106,13 @@ def extract_binary(image_name: str, tmp_binary_location: str, binary_name: str) 
                     tar.extractall(path=tmp_binary_location)
                 print(f"Binary extracted successfully from /usr/local/bin to {tmp_binary_location}")
                 extracted_binary_path = tmp_binary_location
-                binary_name = "bin"
+                print(extracted_binary_path)
+                binary_name = requested_name
+
+                if os.path.exists(f"{tmp_binary_location}/bin"):
+                    shutil.copy(f"{tmp_binary_location}/bin/tool", f"{tmp_binary_location}/tool")
+                    shutil.rmtree(f"{tmp_binary_location}/bin")
+
             except APIError:
                 archive_bytes, _ = container.get_archive("/")
                 tar_stream = io.BytesIO(b"".join(archive_bytes))
@@ -163,7 +167,7 @@ if __name__ == "__main__":
     path_to_archive = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Archive"
 
     tool_manager = DirectToolImageManager(
-        name="TimelyMon", branch="simplify_approximation", release=BranchOrRelease.Branch,
+        name="MonPoly", branch="master", release=BranchOrRelease.Branch,
         commit=None, path_to_build=path_to_build,
         path_to_archive=path_to_archive,
         path_to_infra="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure",
