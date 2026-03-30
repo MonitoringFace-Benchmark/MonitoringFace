@@ -5,8 +5,7 @@ from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import Location
-from Infrastructure.Builders.BuilderUtilities import image_building, run_image_offline, to_prop_file, image_exists, \
-    ImageBuildException, extract_binary, build_with_extracted_binary
+from Infrastructure.Builders.BuilderUtilities import image_building, run_image_offline, to_prop_file, image_exists, ImageBuildException
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
@@ -191,31 +190,3 @@ class DirectToolImageManager(AbstractToolImageManager):
             inner_contract_[COMMAND_KEY] = [inner_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
         return run_image_offline(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
-
-
-class OnlineToolImageManager:
-    def __init__(self, tool_manager: AbstractToolImageManager, path_to_archive: str):
-        self.tool_manager = tool_manager
-        self.path_to_archive = path_to_archive
-
-    def build_image(self):
-        verbose = self.tool_manager.get_cli_args().verbose
-        # build the online tool base image
-        binary_location, binary_name = extract_binary(
-            image_name=self.tool_manager.get_image_name(),
-            tmp_binary_location=f"{self.path_to_archive}/Utilities/OnlineExperiments",
-            verbose=verbose
-        )
-
-        # extract the binary from the image and build a new image with the binary
-        # add the experiment driver files etc
-        build_with_extracted_binary(
-
-        )
-
-        raise NotImplementedError("OnlineToolImageManager does not support building images")
-
-    def run_online(self): # arguments todo
-        # parameterize the driver and run the experiment
-        raise NotImplementedError("OnlineToolImageManager does not support offline execution")
-

@@ -53,6 +53,8 @@ SIGNATURE_FILE_ENDING = "sig"
 POLICY_FILE = "policy"
 POLICY_FILE_ENDING = "policy"
 
+ADDITIONAL_FOLDER = "additional"
+
 FINGERPRINT_DATA = "fingerprint_data"
 FINGERPRINT_EXPERIMENT = "fingerprint_experiment"
 
@@ -63,3 +65,11 @@ BENCHMARK_BUILDING_OFFSET = (" " * 8)
 # Pretty Printing
 LENGTH = 80
 HEADER_ROW = "=" * LENGTH
+
+
+def Signature_File():
+    return f"{SIGNATURE_FILE}.{SIGNATURE_FILE_ENDING}"
+
+
+def Policy_File():
+    return f"{POLICY_FILE}.{POLICY_FILE_ENDING}"

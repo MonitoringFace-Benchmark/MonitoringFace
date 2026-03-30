@@ -2,41 +2,97 @@ import os
 import io
 import shutil
 import tarfile
+from enum import Enum
+from typing import Optional
+
 import docker
 from docker.errors import APIError
 
 from Infrastructure.Builders.BuilderUtilities import image_building, ImageBuildException, image_exists
+from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
+from Infrastructure.constants import Policy_File, Signature_File, ADDITIONAL_FOLDER
 
 
-def build_pipeline(path_to_dockerfile: str, image_name: str, tmp_binary_location: str) -> tuple[str, str]:
-    """
-    Build a Docker image and extract its binary to a temporary location.
+class DataSourceType(Enum):
+    FILE = "file"
+    SCRIPT = "script"
 
-    Args:
-        path_to_dockerfile: Path to the directory containing the Dockerfile
-        image_name: Name to tag the built Docker image with
-        tmp_binary_location: Path where the extracted binary should be stored
 
-    Returns:
-        Tuple of (extracted_binary_path, binary_name) where:
-        - extracted_binary_path: Full path to the extracted binary
-        - binary_name: Name of the binary (filename only)
+def build_pipeline(
+        tool_image_manager: AbstractToolImageManager,
+        path_to_build, path_to_archive, data_source_type: DataSourceType, data_source: str,
+        policy_file: str, signature_file: Optional[str], target_image_name: str
+):
+    path = f"{path_to_build}/OnlineExperimentDriver"
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.makedirs(path, exist_ok=True)
 
-    Raises:
-        ImageBuildException: If the Docker image build fails
-        APIError: If Docker API operations fail
-        Exception: If binary extraction fails
-    """
-    # todo exists and version verification
-    # should be done by the ToolImageManager
+    driver_docker = f"{path_to_archive}/Utilities/OnlineExperimentDriver"
+    driver_tool_name = "online_experiment_driver"
+    build_stage(
+        temporary_build_folder=path, tool_image_manager=tool_image_manager,
+        driver_docker=driver_docker, driver_tool_name=driver_tool_name,
+        data_source=data_source, policy_file=policy_file, signature_file=signature_file
+    )
+
+    # build the final image with the copied dockerfile and the copied data
+    shutil.copy(f"{path_to_archive}/Utilities/OnlineExperimentTemplate/Dockerfile", path)
+    image_building(target_image_name, build_dir=path, args={"host_dir": path})
+
+
+def build_stage(
+        tool_image_manager: AbstractToolImageManager, temporary_build_folder: str,
+        driver_docker: str, driver_tool_name: str,
+        data_source: str, policy_file: str, signature_file: Optional[str]
+):
+    # build, extract and move tool binary to build folder
+    extract_binary(tool_image_manager.get_image_name(), temporary_build_folder, "tool")
+
+    # build, extract and move driver binary to build folder
+    if not build_image_wrapper(driver_docker, driver_tool_name):
+        raise ImageBuildException(f"Failed to build driver image: {driver_tool_name}")
+    extract_binary(driver_tool_name, temporary_build_folder, "driver")
+
+    # pass the file or data script to the build folder
+    move_data_source(temporary_build_folder, data_source)
+    file_dict = {Policy_File(): policy_file, Signature_File(): signature_file}
+    move_additional_data(temporary_build_folder, ADDITIONAL_FOLDER, file_dict)
+
+
+def move_data_source(temporary_build_folder: str, data_source: str):
+    dest_dir = os.path.join(temporary_build_folder, "data")
+    os.makedirs(dest_dir, exist_ok=True)
+
+    dest_path = os.path.join(dest_dir, "data")
+    shutil.copy(data_source, dest_path)
+
+
+def move_additional_data(temporary_build_folder: str, folder_name: str, additional_data: dict[str, str]):
+    dest_dir = os.path.join(temporary_build_folder, folder_name)
+    os.makedirs(dest_dir, exist_ok=True)
+    for data_name, data_path in additional_data.items():
+        if not data_path:
+            continue
+        dest_path = os.path.join(dest_dir, data_name)
+        shutil.copy(data_path, dest_path)
+
+
+def build_image_wrapper(dockerfile_path: str, image_name: str) -> bool:
+    print(f"image name: {image_name}")
+    print(f"dockerfile path: {dockerfile_path}")
     if not image_exists(image_name):
-        if not image_building(image_name, path_to_dockerfile):
+        if not image_building(image_name, dockerfile_path):
             raise ImageBuildException(f"Failed to build image: {image_name}")
     else:
         print(f"Image {image_name} already exists. Skipping build.")
+    return True
 
+
+def extract_binary(image_name: str, tmp_binary_location: str, binary_name: str) -> tuple[str, str]:
     client = docker.from_env()
     extracted_binary_path = None
+    requested_name = binary_name
     binary_name = None
     try:
         container = client.containers.create(image_name, detach=True)
@@ -52,7 +108,6 @@ def build_pipeline(path_to_dockerfile: str, image_name: str, tmp_binary_location
                     tar.extractall(path=tmp_binary_location)
                 print(f"Binary extracted successfully from /usr/local/bin to {tmp_binary_location}")
                 extracted_binary_path = tmp_binary_location
-                # For multi-stage builds, return the directory as the binary location
                 binary_name = "bin"
             except APIError:
                 archive_bytes, _ = container.get_archive("/")
@@ -89,108 +144,37 @@ def build_pipeline(path_to_dockerfile: str, image_name: str, tmp_binary_location
     if extracted_binary_path is None or binary_name is None:
         raise Exception(f"Failed to extract binary from image {image_name}")
 
-    return extracted_binary_path, binary_name
+    if os.path.isfile(extracted_binary_path):
+        target_path = os.path.join(os.path.dirname(extracted_binary_path), requested_name)
+        if target_path != extracted_binary_path:
+            os.replace(extracted_binary_path, target_path)
+            extracted_binary_path = target_path
 
+    return extracted_binary_path, requested_name
 
-def build_with_extracted_binary(
-        path_to_secondary_dockerfile: str, secondary_image_name: str,
-        extracted_binary_path: str, binary_name: str,
-        binary_destination: str = "/tool"
-) -> bool:
-    """
-    Build a secondary Docker image that includes an extracted binary from a previous build.
-
-    This function copies the extracted binary into the Docker build context and builds a new image.
-    The secondary Dockerfile should include a COPY instruction to add the binary.
-
-    Args:
-        path_to_secondary_dockerfile: Path to the directory containing the secondary Dockerfile
-        secondary_image_name: Name to tag the secondary Docker image with
-        extracted_binary_path: Path to the extracted binary from build_pipeline()
-        binary_name: Name of the binary (filename) returned by build_pipeline()
-        binary_destination: Destination path in the Docker image (default: "/tool")
-
-    Returns:
-        True if build succeeded, False otherwise
-
-    Raises:
-        FileNotFoundError: If extracted binary doesn't exist
-
-    Example:
-        # Dockerfile example:
-        # FROM scratch
-        # COPY tool /tool
-        # ENTRYPOINT ["/tool"]
-
-        # Python usage:
-        # 1. Build and extract binary from first image
-        binary_path, binary_name = build_pipeline(
-            "/path/to/first/dockerfile",
-            "image-one",
-            "/tmp/extracted"
-        )
-
-        # 2. Build second image using the extracted binary
-        success = build_with_extracted_binary(
-            "/path/to/second/dockerfile",
-            "image-two",
-            binary_path,
-            binary_name,
-            "/tool"
-        )
-    """
-    if not os.path.exists(extracted_binary_path):
-        raise FileNotFoundError(f"Extracted binary not found at {extracted_binary_path}")
-
-    build_context_dir = path_to_secondary_dockerfile
-    binary_in_context = os.path.join(build_context_dir, binary_name)
-
-    try:
-        # Copy binary to build context
-        if extracted_binary_path != binary_in_context:
-            shutil.copy2(extracted_binary_path, binary_in_context)
-            print(f"Copied binary '{binary_name}' to build context: {binary_in_context}")
-
-        # Build the secondary image
-        success = image_building(secondary_image_name, build_context_dir)
-        if success:
-            print(f"Secondary image '{secondary_image_name}' built successfully with binary at {binary_destination}")
-        return success
-    finally:
-        if extracted_binary_path != binary_in_context and os.path.exists(binary_in_context):
-            os.remove(binary_in_context)
-            print(f"Cleaned up temporary binary from build context")
 
 if __name__ == "__main__":
-    # Example usage: Two-stage build process
-    try:
-        # Stage 1: Build first image and extract binary
-        print("=== Stage 1: Building first image and extracting binary ===")
-        binary_path, binary_name = build_pipeline(
-            "/Users/krq770/PycharmProjects/MonitoringFace_curr/Archive/Tools/TimelyMon/online",
-            "timely-standalone",
-            "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/build/Monitor/Test"
-        )
-        print(f"Extracted binary: {binary_path} (name: {binary_name})")
+    from Infrastructure.Builders.ToolBuilder.ToolImageManager import DirectToolImageManager
+    from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline
+    from Infrastructure.DataLoader.Resolver import Location
+    from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 
-        # Stage 2: Build second image using the extracted binary
-        print("\n=== Stage 2: Building second image with extracted binary ===")
-        success = build_with_extracted_binary(
-            "/Users/krq770/PycharmProjects/MonitoringFace_curr/Archive/Tools/TestMinimal",
-            "timely-runner",
-            binary_path,
-            binary_name,
-            "/usr/local/bin/timelymon"
-        )
+    path_to_build = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/build"
+    path_to_archive = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Archive"
 
-        if success:
-            print("Successfully built secondary image with extracted binary!")
-        else:
-            print("Failed to build secondary image")
+    tool_manager = DirectToolImageManager(
+        name="TimelyMon", branch="simplify_approximation", release=BranchOrRelease.Branch,
+        commit=None, path_to_build=path_to_build,
+        path_to_archive=path_to_archive,
+        path_to_infra="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure",
+        location=Location.Local, cli_args=CLIArgs(), runtime_setting=OnlineOffline.Online
+    )
 
-    except ImageBuildException as e:
-        print(f"Image build failed: {e}")
-    except FileNotFoundError as e:
-        print(f"File not found: {e}")
-    except Exception as e:
-        print(f"Error: {e}")
+    build_pipeline(
+        tool_image_manager=tool_manager, path_to_build=path_to_build,
+        path_to_archive=path_to_archive, data_source_type=DataSourceType.FILE,
+        data_source="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/data",
+        policy_file="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/policy.policy",
+        signature_file="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/signature.sig",
+        target_image_name="online_experiment_image"
+    )

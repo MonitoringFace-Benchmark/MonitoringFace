@@ -9,7 +9,7 @@ RUN rustup install nightly && \
 # Add both architecture targets
 RUN rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl
 
-ARG GIT_BRANCH=development
+ARG GIT_BRANCH=main
 ARG GIT_COMMIT=""
 ARG TARGETARCH
 
@@ -32,7 +32,7 @@ WORKDIR /usr/src/app/OnlineExperimentDriver
 
 # Build for the detected target
 RUN . /tmp/env && \
-    cargo build --release --target ${RUST_TARGET} --bin timelymon && \
+    cargo build --release --target ${RUST_TARGET} --bin OnlineExperimentDriver && \
     cp target/${RUST_TARGET}/release/OnlineExperimentDriver /OnlineExperimentDriver
 
 FROM scratch
