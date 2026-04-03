@@ -75,7 +75,7 @@ class TimelyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
         else:
             return parse_output_structure(stdout_input, variable_order)
 
-    def construct_online_command(self) -> Tuple[List[str], str, Optional[str]]:
+    def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = ["additional/policy.policy"]
         if not self.params.get("ignore_signature", False):
             cmd += ["--sig-file", "additional/signature.sig"]
@@ -87,7 +87,7 @@ class TimelyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
             cmd += ["--step", str(self.params["step"])]
 
         cmd += ["-m", "1", "-l"]
-        return cmd, self.params[TRACE_KEY], None
+        return cmd, None
 
     @staticmethod
     def latency_marker() -> Optional[str]:

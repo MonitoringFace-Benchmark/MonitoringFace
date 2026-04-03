@@ -64,10 +64,10 @@ class MonPoly(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
         variable_order = VariableOrder(parse_variable_order_monpoly(logs)) if code == 0 else DefaultVariableOrder()
         return parse_monpoly_output(Verdicts(variable_order=variable_order), stdout_input)
 
-    def construct_online_command(self) -> Tuple[List[str], str, Optional[str]]:
+    def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = [
-            "-sig", str(self.params[SIGNATURE_KEY]),
-            "-formula", str(self.params[POLICY_KEY])
+            "-sig", "additional/signature.sig",
+            "-formula", "additional/policy.policy"
         ]
 
         if "negate" in self.params: cmd += ["-negate"]
@@ -85,7 +85,7 @@ class MonPoly(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
 
         if "nonewlastts" in self.params: cmd += ["-nonewlastts"]
         if "no_rw" in self.params: cmd += ["-no_rw"]
-        return cmd, str(self.params[TRACE_KEY]), None
+        return cmd, None
 
     @staticmethod
     def latency_marker() -> Optional[str]:

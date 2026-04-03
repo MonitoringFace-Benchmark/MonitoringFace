@@ -10,8 +10,7 @@ from Infrastructure.BenchmarkBuilder.Coordinator.CaseStudyCoordinator import Cas
 from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
 from Infrastructure.BenchmarkBuilder.Coordinator.SyntheticCoordinator import SyntheticCoordinator
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyCopyGenerator import CaseStudyCopyGenerator
-from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyImageGenerator import \
-    CaseStudyImageGenerator
+from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyImageGenerator import CaseStudyImageGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 
@@ -20,13 +19,14 @@ from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import CaseStudySetupContract
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
-from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuardingTool, TimeConstraints, \
-    GenerationConstraints, RunTimeConstraints
+from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuardingTool, TimeConstraints, GenerationConstraints, RunTimeConstraints
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline, online_offline_from_string
 from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Oracles.OracleManager import OracleManager
 from Infrastructure.constants import PATH_TO_NAMED_EXPERIMENT
+from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral, OnlineExperimentContractTool
+from Infrastructure.Builders.OnlineExperiementPipeline import DataSourceType, TimeUnits, FormatType, ResponseMode
 
 
 class YamlParserException(Exception):
@@ -187,7 +187,7 @@ class YamlParser:
             name = monitor_dict.get('name')
             branch = monitor_dict.get('branch')
             commit = monitor_dict.get('commit')
-            params = monitor_dict.get('params', {})
+            params = self.parse_tool_params(monitor_dict)
 
             if not identifier or not name or not branch:
                 raise YamlParserException(f"Monitor configuration missing required fields: {monitor_dict}")
@@ -197,6 +197,42 @@ class YamlParser:
             monitors_to_build.append((identifier, name, branch, commit, params))
 
         return MonitorManager(tool_manager=tool_manager, monitors_to_build=monitors_to_build)
+
+    def parse_tool_params(self, monitor_dict):
+        params = monitor_dict.get('params', {})
+        params = dict(params) if params is not None else {}
+
+        raw_tool_contract = params.get("OnlineExperimentContractTool")
+        if raw_tool_contract is None:
+            return params
+
+        raw = OmegaConf.to_container(raw_tool_contract, resolve=True) if not isinstance(raw_tool_contract, dict) else raw_tool_contract
+
+        fmt_raw = raw.pop("format", None)
+        if fmt_raw is None:
+            raise YamlParserException("Missing 'format' in OnlineExperimentContractTool configuration")
+        fmt = FormatType.CSV if str(fmt_raw).lower() == "csv" else FormatType.LOG
+
+        resp_raw = raw.pop("response_mode", None)
+        resp_l = str(resp_raw).lower()
+        if resp_l == "current-timepoint":
+            response_mode = ResponseMode.CURRENT_TIMEPOINT
+        else:
+            response_mode = ResponseMode.EVENT_COUNT
+
+        input_aggregations = raw.pop("input_aggregations", None)
+        latency_marker = raw.pop("latency_marker", None)
+        warm_up_input = raw.pop("warm_up_input", None)
+
+        params.pop("OnlineExperimentContractTool", None)
+        params["OnlineExperimentContractTool"] = OnlineExperimentContractTool(
+            formatting=fmt,
+            response_mode=response_mode,
+            input_aggregations=input_aggregations,
+            latency_marker=latency_marker,
+            warm_up_input=warm_up_input,
+        )
+        return params
 
     def parse_oracle_manager(self, monitor_manager: MonitorManager) -> Optional[OracleManager]:
         if 'oracles' not in self.cfg or not self.cfg.oracles:
@@ -329,12 +365,43 @@ class YamlParser:
             )
         return coordinator, monitor_manager, self.get_tools_to_build(), self.get_repeat_experiments()
 
-    def __del__(self):
-        """Cleanup Hydra instance"""
-        try:
-            GlobalHydra.instance().clear()
-        except Exception:
-            pass
+    def runtime_setting(self) -> OnlineOffline:
+        if 'runtime_setting' not in self.cfg:
+            return online_offline_from_string("offline")
+        return online_offline_from_string(self.cfg['runtime_setting'])
+
+    def parse_online_experiment_contract(self) -> OnlineExperimentContractGeneral:
+        if "OnlineExperimentContractGeneral" not in self.cfg:
+            raise YamlParserException("Missing 'online experiment' section for online experiment contract")
+
+        online_raw = self.cfg.get("OnlineExperimentContractGeneral", self.cfg)
+        online_dict = OmegaConf.to_container(online_raw, resolve=True)
+
+        dst_type_str = online_dict.get('data_source_type')
+        dst_type = DataSourceType.FILE if str(dst_type_str).lower() == 'file' else DataSourceType.SCRIPT
+
+        max_lat = online_dict.get('maximum_latency')
+        acc_lat = online_dict.get('accumulated_latency')
+        max_lat = int(max_lat) if max_lat is not None else None
+        acc_lat = int(acc_lat) if acc_lat is not None else None
+
+        ts_units_str = online_dict.get('timestamp_units')
+        ts_units_low = str(ts_units_str).lower() if ts_units_str is not None else 'milliseconds'
+        if ts_units_low.startswith('milliseconds'):
+            ts_units = TimeUnits.MILLISECONDS
+        elif ts_units_low.startswith('microseconds'):
+            ts_units = TimeUnits.MICROSECONDS
+        else:
+            ts_units = TimeUnits.SECONDS
+
+        batch_delim = online_dict.get('batch_delimiter')
+        return OnlineExperimentContractGeneral(
+            data_source_type=dst_type,
+            maximum_latency=max_lat,
+            accumulated_latency=acc_lat,
+            timestamp_units=ts_units,
+            batch_delimiter=batch_delim
+        )
 
 
 class ExperimentSuiteParser:
@@ -369,12 +436,6 @@ class ExperimentSuiteParser:
                     raise YamlParserException(f"Missing 'path' in experiment configuration: {exp_config}")
                 experiment_paths.append(rel_path)
         return experiment_paths
-
-    def __del__(self):
-        try:
-            GlobalHydra.instance().clear()
-        except Exception:
-            pass
 
 
 def _discover_names(path_to_infra_, category):

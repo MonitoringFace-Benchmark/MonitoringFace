@@ -5,8 +5,10 @@ from typing import Dict, AnyStr, Any, Tuple, List, Optional, Union
 from Infrastructure.AutoConversion.AutoPolicyConverter import AutoPolicyConverter
 from Infrastructure.AutoConversion.AutoTraceConverter import AutoTraceConverter
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
+from Infrastructure.Builders.BuilderUtilities import run_online_image
 from Infrastructure.Builders.OnlineExperiementPipeline import build_pipeline
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
+from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral, OnlineExperimentContractTool
 from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
@@ -45,7 +47,7 @@ class OfflineRunnable(ABC):
 
 class OnlineRunnable(ABC):
     @abstractmethod
-    def construct_online_command(self) -> Tuple[List[str], str, Optional[str]]:
+    def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
         pass
 
     @staticmethod
@@ -132,14 +134,17 @@ class BaseMonitorTemplate(AutoConvertable):
         pass
 
 
-def run_monitor_online(mon: Union[OnlineRunnable, BaseMonitorTemplate],
-                       path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
-                       path_manager: PathManager, trace_source_format: InputOutputTraceFormats,
-                       policy_source_format: InputOutputPolicyFormats,
-                       cli_args: CLIArgs
-                       ):
+def run_monitor_online(
+        mon: Union[OnlineRunnable, BaseMonitorTemplate],
+        path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
+        path_manager: PathManager, trace_source_format: InputOutputTraceFormats,
+        policy_source_format: InputOutputPolicyFormats, cli_args: CLIArgs,
+        online_experiment_contract: OnlineExperimentContractGeneral,
+        tool_online_experiment_contract: OnlineExperimentContractTool,
+):
     print_headline(f"Run (Online) {mon.name}")
 
+    # todo handle scripts
     preprocessing_elapsed = mon.preprocessing(
         path_to_folder, trace_source_format, policy_source_format,
         data_file, signature_file, policy_file, path_manager, verbose=cli_args.verbose
@@ -156,10 +161,12 @@ def run_monitor_online(mon: Union[OnlineRunnable, BaseMonitorTemplate],
     end_build_comp = time.perf_counter()
     build_comp_elapsed = end_build_comp - start_build_comp
 
-    cmd, trace, name = mon.construct_online_command()
-    latency_marker = mon.latency_marker()
-
-    # todo run the container
+    tool_command, name = mon.construct_online_command()
+    run_online_image(
+        image_name=target_name, tool_command=tool_command,
+        online_experiment_contract=online_experiment_contract,
+        tool_online_experiment_contract=tool_online_experiment_contract,
+    )
 
     # todo post processing of results and latency extraction
     pass
