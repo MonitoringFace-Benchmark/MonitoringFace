@@ -76,9 +76,9 @@ class TimelyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
             return parse_output_structure(stdout_input, variable_order)
 
     def construct_online_command(self) -> Tuple[List[str], str, Optional[str]]:
-        cmd = [self.params[POLICY_KEY]]
+        cmd = ["additional/policy.policy"]
         if not self.params.get("ignore_signature", False):
-            cmd += ["--sig-file", self.params[SIGNATURE_KEY]]
+            cmd += ["--sig-file", "additional/signature.sig"]
 
         if "worker" in self.params:
             cmd += ["-w", str(self.params["worker"])]

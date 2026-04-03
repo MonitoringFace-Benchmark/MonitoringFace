@@ -1,9 +1,12 @@
 import time
-from typing import Dict, AnyStr, Any
+from typing import Dict, AnyStr, Any, Optional, List
 
 import docker
 from docker.errors import APIError, BuildError
 
+from Infrastructure.Builders.OnlineExperiementPipeline import InputSpeed, TimeUnits, DataSourceType
+from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContract, \
+    OnlineExperimentContractGeneral, OnlineExperimentContractTool
 from Infrastructure.Monitors.MonitorExceptions import TimedOut
 from Infrastructure.constants import COMMAND_KEY, WORKDIR_KEY, VOLUMES_KEY, ENTRYPOINT_KEY
 
@@ -65,7 +68,7 @@ def image_building(image_name, build_dir, args=None):
         return False
 
 
-def run_image_offline(image_name, generic_contract: Dict[AnyStr, Any], verbose=False, time_on=None, time_out=None, is_tool_image=False):
+def run_offline_image(image_name, generic_contract: Dict[AnyStr, Any], verbose=False, time_on=None, time_out=None, is_tool_image=False):
     client = docker.from_env()
 
     command = generic_contract.get(COMMAND_KEY)
@@ -96,7 +99,6 @@ def run_image_offline(image_name, generic_contract: Dict[AnyStr, Any], verbose=F
             container = client.containers.run(
                 image=image_name, command=command,
                 volumes=volumes, working_dir=workdir,
-                stdout=True, stderr=True, detach=True,
                 entrypoint=entrypoint
             )
 
@@ -155,3 +157,45 @@ def run_image_offline(image_name, generic_contract: Dict[AnyStr, Any], verbose=F
         stdout = "Error: Image not found"
         return_code = 127
     return stdout, return_code
+
+
+def run_online_image(
+    image_name: str,
+    tool_command: List[str],
+    online_experiment_contract: OnlineExperimentContractGeneral,
+    tool_online_experiment_contract: OnlineExperimentContractTool,
+):
+    client = docker.from_env()
+    workdir = "/app"
+
+    command_fixed = ["--data-source", "data/data", "--binary-location", "/usr/local/bin", "--binary-name", "tool"]
+    command_tool_specific = tool_online_experiment_contract.get_tool_arguments()
+    command_experiment_specific = online_experiment_contract.get_settings()
+    command_driver = command_fixed + command_tool_specific + command_experiment_specific
+    command_driver += ["--"] + tool_command
+
+    try:
+        result = client.containers.run(
+            image=image_name, command=command_driver, working_dir=workdir,
+            remove=True, stdout=True, stderr=True,
+        )
+        # result is bytes when stdout captured
+        stdout = result.decode("utf-8", errors="ignore") if isinstance(result, (bytes, bytearray)) else str(result)
+        return stdout, 0
+    except docker.errors.ContainerError as e:
+        stdout = e.stderr.decode("utf-8", errors="ignore") if isinstance(e.stderr, (bytes, bytearray)) else str(e.stderr)
+        return stdout, e.exit_status
+    except docker.errors.APIError as e:
+        stdout = f"Docker API error: {e}"
+        return stdout, 125
+    except docker.errors.ImageNotFound:
+        pass
+    """stdout=True, stderr=True, detach=True,
+    driver --mode accelerated --format log --data-source-type file --maximum-latency 21
+    --data-source /Users/krq770/Desktop/Experiments_Stream_Monitor/monpoly/exp/log.log
+    --binary-location /Users/krq770/Desktop/Experiments_Stream_Monitor/monpoly
+    --binary-name monpoly --response-mode current-timepoint
+    --warm-up-input ">get_pos<" --latency-marker ">get_pos<" -- "-formula" "/Users/krq770/Desktop/Experiments_Stream_Monitor/monpoly/exp/mfolt.mfotl" "-sig" "/Users/krq770/Desktop/Experiments_Stream_Monitor/monpoly/exp/sig.sig"
+    """
+    pass
+

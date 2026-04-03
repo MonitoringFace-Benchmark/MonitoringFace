@@ -5,7 +5,7 @@ from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import Location
-from Infrastructure.Builders.BuilderUtilities import image_building, run_image_offline, to_prop_file, image_exists, ImageBuildException
+from Infrastructure.Builders.BuilderUtilities import image_building, run_offline_image, to_prop_file, image_exists, ImageBuildException
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
@@ -114,7 +114,7 @@ class IndirectToolImageManager(AbstractToolImageManager):
         else:
             inner_contract_[COMMAND_KEY] = [inner_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_image_offline(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+        return run_offline_image(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
 
 
 class DirectToolImageManager(AbstractToolImageManager):
@@ -189,4 +189,4 @@ class DirectToolImageManager(AbstractToolImageManager):
         else:
             inner_contract_[COMMAND_KEY] = [inner_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_image_offline(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+        return run_offline_image(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)

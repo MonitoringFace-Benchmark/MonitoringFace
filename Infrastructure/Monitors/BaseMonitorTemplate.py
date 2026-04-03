@@ -133,8 +133,7 @@ class BaseMonitorTemplate(AutoConvertable):
 
 
 def run_monitor_online(mon: Union[OnlineRunnable, BaseMonitorTemplate],
-                       maximum_latency, accumulative_time_out, path_to_folder: AnyStr,
-                       data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
+                       path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
                        path_manager: PathManager, trace_source_format: InputOutputTraceFormats,
                        policy_source_format: InputOutputPolicyFormats,
                        cli_args: CLIArgs
