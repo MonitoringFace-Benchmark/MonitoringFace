@@ -58,6 +58,28 @@ ADDITIONAL_FOLDER = "additional"
 FINGERPRINT_DATA = "fingerprint_data"
 FINGERPRINT_EXPERIMENT = "fingerprint_experiment"
 
+
+PATH_TO_BUILD = "path_to_build"
+PATH_TO_ARCHIVE = "path_to_archive"
+PATH_TO_INFRA = "path_to_infra"
+PATH_TO_PROJECT = "path_to_project"
+PATH_TO_EXPERIMENTS = "path_to_experiments"
+PATH_TO_BENCHMARK = "path_to_benchmark"
+PATH_TO_RESULTS = "path_to_results"
+PATH_TO_NAMED_DATA = "path_to_named_data"
+PATH_TO_INSTRUCTIONS = "path_to_instructions"
+PATH_TO_FOLDER = "path_to_folder"
+PATH_TO_NAMED_EXPERIMENT = "path_to_named_experiment"
+PATH_TO_DEBUG = "path_to_debug"
+
+PATH_TO_INTERMEDIATE_WORKSPACE = "path_to_intermediate_workspace"
+PATH_TO_TRACE_INPUT = "path_to_trace_input"
+PATH_TO_TRACE_OUTPUT = "path_to_trace_output"
+
+
+
+
+
 PLACEHOLDER_EVENT = "Placeholder()"
 
 BENCHMARK_BUILDING_OFFSET = (" " * 8)

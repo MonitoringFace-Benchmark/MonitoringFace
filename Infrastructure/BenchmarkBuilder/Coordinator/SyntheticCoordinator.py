@@ -16,7 +16,7 @@ from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import ORACLE_KEY, SEEDS_KEY, PATH_KEY, SIZE_KEY, FREE_VARIABLES_KEY, PLACEHOLDER_EVENT, \
     SIGNATURE_FILE, SIGNATURE_FILE_ENDING, POLICY_FILE, POLICY_FILE_ENDING, TRACE_LENGTH_KEY, SIGNATURE_KEY, \
-    FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, SIGNATURE_FILE_KEY
+    FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, SIGNATURE_FILE_KEY, PATH_TO_FOLDER
 from Infrastructure.DataTypes.FileRepresenters.SeedHandler import SeedHandler
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
 from Infrastructure.Monitors.MonitorExceptions import ToolException
@@ -30,7 +30,7 @@ class SyntheticCoordinator(Coordinator):
     ):
         super().__init__(path_manager, oracle)
         self.experiment = experiment
-        self.path_to_folder = self.path_manager.get_path("path_to_folder")
+        self.path_to_folder = self.path_manager.get_path(PATH_TO_FOLDER)
 
         self.data_setup = asdict(copy.copy(data_setup))
         self.data_source = data_source

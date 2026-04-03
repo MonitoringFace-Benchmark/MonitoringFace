@@ -6,6 +6,8 @@ from Infrastructure.AutoConversion.AutoConversionMapping import AutoConversionMa
 from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.PolicyConverterTemplate import PolicyConverterTemplate
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
+from Infrastructure.constants import PATH_TO_PROJECT, PATH_TO_INTERMEDIATE_WORKSPACE, PATH_TO_TRACE_INPUT, \
+    PATH_TO_TRACE_OUTPUT
 
 
 class PolicyConversionError(Exception):
@@ -23,7 +25,7 @@ class AutoPolicyConverter:
         converter_chain = []
         for converter_name, converter_class, source, target in auto_conversion_mapping.resolve_format(self.source_format, self.target_format):
             try:
-                converter_chain.append((converter_class(converter_name, self.path_manager.get_path("path_to_project")), source, target))
+                converter_chain.append((converter_class(converter_name, self.path_manager.get_path(PATH_TO_PROJECT)), source, target))
             except Exception as e:
                 raise PolicyConversionError(f"AutoPolicyConverter: Failed to initialize converter: {e}")
         return converter_chain
@@ -37,9 +39,9 @@ class AutoPolicyConverter:
             return None
 
     def convert(self, input_file: str, output_file: str, params) -> str:
-        policy_input_path = self.path_manager.get_path("trace_input_path")
-        intermediate_working_space = self.path_manager.get_path("intermediate_working_space")
-        policy_output_path = self.path_manager.get_path("trace_output_path")
+        policy_input_path = self.path_manager.get_path(PATH_TO_TRACE_INPUT)
+        intermediate_working_space = self.path_manager.get_path(PATH_TO_INTERMEDIATE_WORKSPACE)
+        policy_output_path = self.path_manager.get_path(PATH_TO_TRACE_OUTPUT)
 
         input_path_file = f"{policy_input_path}/{input_file}"
         output_file_name = os.path.basename(output_file)

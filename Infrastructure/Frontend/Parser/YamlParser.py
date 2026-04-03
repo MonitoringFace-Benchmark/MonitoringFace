@@ -26,6 +26,7 @@ from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline, online_offline_from_string
 from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Oracles.OracleManager import OracleManager
+from Infrastructure.constants import PATH_TO_NAMED_EXPERIMENT
 
 
 class YamlParserException(Exception):
@@ -298,7 +299,7 @@ class YamlParser:
 
         data_setup = self.parse_data_setup()
         if isinstance(data_setup, CaseStudySetupContract):
-            self.path_manager.add_path("path_to_named_experiment", f"{self.path_to_experiments}/{experiment_name}")
+            self.path_manager.add_path(PATH_TO_NAMED_EXPERIMENT, f"{self.path_to_experiments}/{experiment_name}")
             generator = (CaseStudyCopyGenerator(name=data_setup.name, path_to_project=self.path_to_project)
                          if data_setup.fixed else CaseStudyImageGenerator(data_setup.name, self.path_to_project))
             coordinator = CaseStudyCoordinator(

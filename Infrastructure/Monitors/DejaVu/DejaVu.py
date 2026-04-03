@@ -1,5 +1,3 @@
-import os
-import sys
 from typing import Dict, AnyStr, Any, Tuple, List, Optional
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
@@ -30,7 +28,7 @@ class DejaVu(BaseMonitorTemplate, OfflineRunnable):
     ):
         raise NotImplementedError("DejaVu does not support non-automatic preprocessing for policies")
 
-    def compile(self):
+    def offline_compile(self):
         cmd = ["build", str(self.params[POLICY_KEY]), "scratch"]
         out, code = self.image.run_offline(self.params[FOLDER_KEY], cmd, measure=False, name="")
         if code != 0:

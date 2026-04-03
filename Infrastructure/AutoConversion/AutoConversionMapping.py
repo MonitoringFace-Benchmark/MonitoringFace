@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import List, Dict, TypeVar, Generic, Tuple
 
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
+from Infrastructure.constants import PATH_TO_INFRA
+
 F = TypeVar('F')
 T = TypeVar('T')
 
@@ -15,7 +17,7 @@ class AutoConversionMapping(Generic[F, T]):
         self._build_mapping()
 
     def _build_mapping(self):
-        infra_path = self.path_manager.get_path("path_to_infrastructure")
+        infra_path = self.path_manager.get_path(PATH_TO_INFRA)
         if infra_path is None:
             raise ValueError(f"AutoConversionMapping: path_to_infra not found in PathManager")
         for (name_conv, _) in _discover_converters(infra_path, self.ttype):

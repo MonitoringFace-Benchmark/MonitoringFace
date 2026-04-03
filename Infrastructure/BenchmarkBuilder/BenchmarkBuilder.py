@@ -15,7 +15,8 @@ from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
 from Infrastructure.Monitors.BaseMonitorTemplate import run_monitor_offline
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
-from Infrastructure.constants import LENGTH
+from Infrastructure.constants import LENGTH, PATH_TO_NAMED_EXPERIMENT, PATH_TO_INFRA, PATH_TO_EXPERIMENTS, \
+    PATH_TO_DEBUG, PATH_TO_PROJECT
 from Infrastructure.printing import print_headline, print_footline, normal_line
 
 
@@ -36,18 +37,18 @@ class BenchmarkBuilder:
         self.repeat_runs = repeat_runs
         self.tools_to_build = tools_to_build
 
-        path_to_project = self.coordinator.get_path("path_to_project")
+        path_to_project = self.coordinator.get_path(PATH_TO_PROJECT)
         path_to_infrastructure = path_to_project + "/Infrastructure"
-        self.coordinator.add_path("path_to_infrastructure", path_to_infrastructure)
+        self.coordinator.add_path(PATH_TO_INFRA, path_to_infrastructure)
         named_experiment_path = path_to_infrastructure + "/experiments/" + experiment_name
-        self.coordinator.add_path("path_to_experiment", f"{path_to_infrastructure}/experiments")
-        self.coordinator.add_path("path_to_named_experiment", named_experiment_path)
-        self.coordinator.add_path("path_to_debug", named_experiment_path + "/debug")
+        self.coordinator.add_path(PATH_TO_EXPERIMENTS, f"{path_to_infrastructure}/experiments")
+        self.coordinator.add_path(PATH_TO_NAMED_EXPERIMENT, named_experiment_path)
+        self.coordinator.add_path(PATH_TO_DEBUG, named_experiment_path + "/debug")
 
-        os.makedirs(self.coordinator.get_path("path_to_experiment"), exist_ok=True)
-        os.makedirs(self.coordinator.get_path("path_to_named_experiment"), exist_ok=True)
+        os.makedirs(self.coordinator.get_path(PATH_TO_EXPERIMENTS), exist_ok=True)
+        os.makedirs(self.coordinator.get_path(PATH_TO_NAMED_EXPERIMENT), exist_ok=True)
 
-        fingerprint_location = self.coordinator.get_path("path_to_named_experiment") + "/fingerprint"
+        fingerprint_location = self.coordinator.get_path(PATH_TO_NAMED_EXPERIMENT) + "/fingerprint"
         finger_print = self.coordinator.finger_print()
 
         print_footline("(Finished) Init Benchmark")
@@ -73,7 +74,7 @@ class BenchmarkBuilder:
         print("-" * LENGTH)
         result_aggregator = ResultAggregator()
 
-        path_to_debug = self.coordinator.get_path("path_to_debug")
+        path_to_debug = self.coordinator.get_path(PATH_TO_DEBUG)
         if os.path.exists(path_to_debug):
             ScratchFolderHandler(path_to_debug).remove_folder()
 
@@ -135,7 +136,7 @@ class BenchmarkBuilder:
                 return None
 
         seed_dict = dict()
-        path_to_named_experiment = self.path_manager.get_path("path_to_named_experiment")
+        path_to_named_experiment = self.path_manager.get_path(PATH_TO_NAMED_EXPERIMENT)
         for (_, path_to_data, _, _, _, _, _, _) in self.coordinator.iterate_settings():
             gen_seed_path = f"{path_to_data}/Seeds/generator.seed"
             policy_seed_path = f"{path_to_data}/Seeds/policy.seed"
@@ -157,7 +158,7 @@ def run_tools(
         data_file: str, data_type: InputOutputTraceFormats, policy_file: str, policy_type: InputOutputPolicyFormats,
         signature_file: str, result_file: str, cli_args: CLIArgs, coordinator: Coordinator, sfh=None
 ) -> RunToolResult:
-    debug_path = coordinator.get_path("path_to_debug")
+    debug_path = coordinator.get_path(PATH_TO_DEBUG)
     timeout_value = coordinator.time_out()
     try:
         prep, compiled, runtime, prop = run_monitor_offline(

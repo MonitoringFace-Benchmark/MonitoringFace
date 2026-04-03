@@ -10,7 +10,8 @@ from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.Frontend.Parser.YamlParser import YamlParser, ExperimentSuiteParser, YamlParserException
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
-from Infrastructure.constants import LENGTH
+from Infrastructure.constants import LENGTH, PATH_TO_PROJECT, PATH_TO_BUILD, PATH_TO_EXPERIMENTS, PATH_TO_ARCHIVE, \
+    PATH_TO_BENCHMARK, PATH_TO_RESULTS, PATH_TO_FOLDER
 
 
 class CLI:
@@ -28,12 +29,12 @@ class CLI:
 
         self.result_base_folder = f"{self.infra_folder}/results"
 
-        self.path_manager.add_path("path_to_project", self.path_to_module)
-        self.path_manager.add_path("path_to_build", self.build_folder)
-        self.path_manager.add_path("path_to_experiments", self.experiment_folder)
-        self.path_manager.add_path("path_to_archive", self.archive_folder)
-        self.path_manager.add_path("path_to_benchmark", self.benchmark_folder)
-        self.path_manager.add_path("path_to_results", self.result_base_folder)
+        self.path_manager.add_path(PATH_TO_PROJECT, self.path_to_module)
+        self.path_manager.add_path(PATH_TO_BUILD, self.build_folder)
+        self.path_manager.add_path(PATH_TO_EXPERIMENTS, self.experiment_folder)
+        self.path_manager.add_path(PATH_TO_ARCHIVE, self.archive_folder)
+        self.path_manager.add_path(PATH_TO_BENCHMARK, self.benchmark_folder)
+        self.path_manager.add_path(PATH_TO_RESULTS, self.result_base_folder)
 
         os.makedirs(self.result_base_folder, exist_ok=True)
 
@@ -192,7 +193,7 @@ Examples:
 
         try:
             experiment_name = os.path.splitext(os.path.basename(yaml_file))[0]
-            self.path_manager.add_path("path_to_folder", self.path_manager.get_path("path_to_experiments") + "/" + experiment_name)
+            self.path_manager.add_path(PATH_TO_FOLDER, self.path_manager.get_path(PATH_TO_EXPERIMENTS) + "/" + experiment_name)
             parser = YamlParser(
                 yaml_path=yaml_file, path_to_build=self.build_folder,
                 path_to_experiments=self.experiment_folder, path_manager=self.path_manager

@@ -11,8 +11,9 @@ from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import Scrat
 from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
-from Infrastructure.constants import TRACE_KEY, POLICY_KEY, VALUE_KEY, PATH_KEY, BENCHMARK_BUILDING_OFFSET, \
-    SIGNATURE_KEY, FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA
+from Infrastructure.constants import TRACE_KEY, POLICY_KEY, PATH_KEY, BENCHMARK_BUILDING_OFFSET, \
+    SIGNATURE_KEY, FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, PATH_TO_NAMED_DATA, PATH_TO_NAMED_EXPERIMENT, \
+    PATH_TO_INSTRUCTIONS
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, TimeGuardingTool
 
 
@@ -33,12 +34,12 @@ class CaseStudyCoordinator(Coordinator):
         self.constraints = constraints
         self.results = {}
 
-        path_to_named_experiment = self.path_manager.get_path("path_to_named_experiment")
+        path_to_named_experiment = self.path_manager.get_path(PATH_TO_NAMED_EXPERIMENT)
         named_path_to_data = f"{path_to_named_experiment}/data"
 
-        self.path_manager.add_path("named_path_to_data", named_path_to_data)
+        self.path_manager.add_path(PATH_TO_NAMED_DATA, named_path_to_data)
         tmp = f"{path_to_named_experiment}/instructions.txt"
-        self.path_manager.add_path("instructions", tmp)
+        self.path_manager.add_path(PATH_TO_INSTRUCTIONS, tmp)
         if os.path.exists(tmp):
             self.fresh_build = True
             self.header, self.instructions = self._init_instr()
@@ -58,7 +59,7 @@ class CaseStudyCoordinator(Coordinator):
         return None
 
     def _init_instr(self):
-        with open(self.path_manager.get_path("instructions"), "r") as f:
+        with open(self.path_manager.get_path(PATH_TO_INSTRUCTIONS), "r") as f:
             raw_instructions = f.readlines()
 
         header = [h.strip().lower() for h in raw_instructions[0].strip().split(",")]
@@ -66,7 +67,7 @@ class CaseStudyCoordinator(Coordinator):
             if field not in header:
                 raise Exception(f"Mandatory field {field} missing from instructions")
 
-        named_path_to_data = self.path_manager.get_path("named_path_to_data")
+        named_path_to_data = self.path_manager.get_path(PATH_TO_NAMED_DATA)
         result_folder = f"{named_path_to_data}/result"
 
         instructions = []
@@ -91,7 +92,7 @@ class CaseStudyCoordinator(Coordinator):
         return header, instructions
 
     def build(self):
-        path_to_named_experiment = self.path_manager.get_path("path_to_named_experiment")
+        path_to_named_experiment = self.path_manager.get_path(PATH_TO_NAMED_EXPERIMENT)
         tmp_data_setup = asdict(self.data_setup)
         tmp_data_setup[PATH_KEY] = path_to_named_experiment
         print(f"{BENCHMARK_BUILDING_OFFSET} Begin: Unpacking Data")
@@ -102,7 +103,7 @@ class CaseStudyCoordinator(Coordinator):
             return
 
         named_path_to_data = f"{path_to_named_experiment}/data"
-        self.path_manager.add_path("named_path_to_data", named_path_to_data)
+        self.path_manager.add_path(PATH_TO_NAMED_DATA, named_path_to_data)
         sfh = ScratchFolderHandler(named_path_to_data)
 
         result_folder = f"{named_path_to_data}/result"
@@ -153,7 +154,7 @@ class CaseStudyCoordinator(Coordinator):
 
     def iterate_settings(self) -> List[Tuple[int, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
         res = []
-        path_to_data = self.path_manager.get_path("named_path_to_data")
+        path_to_data = self.path_manager.get_path(PATH_TO_NAMED_DATA)
         for (i, setting) in enumerate(self.instructions):
             (data_file, data_type) = setting[TRACE_KEY]
             (policy_file, policy_type) = setting[POLICY_KEY]

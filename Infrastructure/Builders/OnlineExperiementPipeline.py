@@ -3,7 +3,7 @@ import io
 import shutil
 import tarfile
 from enum import Enum
-from typing import Optional
+from typing import Optional, Dict
 
 import docker
 from docker.errors import APIError
@@ -20,8 +20,9 @@ class DataSourceType(Enum):
 
 def build_pipeline(
         tool_image_manager: AbstractToolImageManager,
-        path_to_build, path_to_archive, data_source_type: DataSourceType, data_source: str,
-        policy_file: str, signature_file: Optional[str], target_image_name: str
+        path_to_build, path_to_archive, data_source: str,
+        policy_file: str, signature_file: Optional[str], target_image_name: str,
+        compilation_details: Optional[Dict[str, str]] = None,
 ):
     path = f"{path_to_build}/OnlineExperimentDriver"
     if os.path.exists(path):
@@ -33,21 +34,28 @@ def build_pipeline(
     build_stage(
         temporary_build_folder=path, tool_image_manager=tool_image_manager,
         driver_docker=driver_docker, driver_tool_name=driver_tool_name,
-        data_source=data_source, policy_file=policy_file, signature_file=signature_file
+        data_source=data_source, policy_file=policy_file, signature_file=signature_file,
+        compilation_details=compilation_details
     )
 
     # build the final image with the copied dockerfile and the copied data
     shutil.copy(f"{path_to_archive}/Utilities/OnlineExperimentTemplate/Dockerfile", path)
-    image_building(target_image_name, build_dir=path, args={"host_dir": path})
+    image_building(image_name=target_image_name, build_dir=path)
 
 
 def build_stage(
         tool_image_manager: AbstractToolImageManager, temporary_build_folder: str,
         driver_docker: str, driver_tool_name: str,
-        data_source: str, policy_file: str, signature_file: Optional[str]
+        data_source: str, policy_file: str, signature_file: Optional[str],
+        compilation_details: Optional[Dict[str, str]] = None,
 ):
-    # build, extract and move tool binary to build folder
-    extract_binary(tool_image_manager.get_image_name(), temporary_build_folder, "tool")
+    if compilation_details is None:
+        extract_binary(tool_image_manager.get_image_name(), temporary_build_folder, "tool")
+    else:
+        tool_name = tool_image_manager.get_image_name()
+        if not build_image_wrapper(tool_name, temporary_build_folder, args=compilation_details):
+            raise ImageBuildException(f"Failed to build driver image: {tool_name}")
+        extract_binary(tool_name, temporary_build_folder, "tool")
 
     # build, extract and move driver binary to build folder
     if not build_image_wrapper(driver_docker, driver_tool_name):
@@ -78,9 +86,9 @@ def move_additional_data(temporary_build_folder: str, folder_name: str, addition
         shutil.copy(data_path, dest_path)
 
 
-def build_image_wrapper(dockerfile_path: str, image_name: str) -> bool:
+def build_image_wrapper(dockerfile_path: str, image_name: str, args: Optional[Dict[str, str]] = None) -> bool:
     if not image_exists(image_name):
-        if not image_building(image_name, dockerfile_path):
+        if not image_building(image_name, dockerfile_path, args):
             raise ImageBuildException(f"Failed to build image: {image_name}")
     else:
         print(f"Image {image_name} already exists. Skipping build.")
@@ -153,7 +161,6 @@ def extract_binary(image_name: str, tmp_binary_location: str, binary_name: str) 
         if target_path != extracted_binary_path:
             os.replace(extracted_binary_path, target_path)
             extracted_binary_path = target_path
-
     return extracted_binary_path, requested_name
 
 
@@ -175,8 +182,7 @@ if __name__ == "__main__":
     )
 
     build_pipeline(
-        tool_image_manager=tool_manager, path_to_build=path_to_build,
-        path_to_archive=path_to_archive, data_source_type=DataSourceType.FILE,
+        tool_image_manager=tool_manager, path_to_build=path_to_build, path_to_archive=path_to_archive,
         data_source="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/data",
         policy_file="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/policy.policy",
         signature_file="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/signature.sig",

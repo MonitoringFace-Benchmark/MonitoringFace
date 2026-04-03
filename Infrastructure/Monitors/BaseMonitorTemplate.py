@@ -5,6 +5,7 @@ from typing import Dict, AnyStr, Any, Tuple, List, Optional, Union
 from Infrastructure.AutoConversion.AutoPolicyConverter import AutoPolicyConverter
 from Infrastructure.AutoConversion.AutoTraceConverter import AutoTraceConverter
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
+from Infrastructure.Builders.OnlineExperiementPipeline import build_pipeline
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
 from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
@@ -12,7 +13,8 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
-from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLICY_KEY
+from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLICY_KEY, PATH_TO_BUILD, PATH_TO_ARCHIVE, \
+    PATH_TO_TRACE_INPUT, PATH_TO_TRACE_OUTPUT, PATH_TO_INTERMEDIATE_WORKSPACE, IMAGE_POSTFIX
 from Infrastructure.printing import print_headline, print_footline
 
 
@@ -33,6 +35,9 @@ class OfflineRunnable(ABC):
     def construct_offline_command(self) -> Tuple[List[str], Optional[str]]:
         pass
 
+    def offline_compile(self):
+        pass
+
     @abstractmethod
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         pass
@@ -47,6 +52,9 @@ class OnlineRunnable(ABC):
     @abstractmethod
     def latency_marker() -> Optional[str]:
         pass
+
+    def online_compile(self) -> Optional[Dict[str, str]]:
+        return None
 
     @abstractmethod
     def post_processing_online(self, stdout_input: AnyStr) -> AbstractOutputStructure:
@@ -64,9 +72,9 @@ class BaseMonitorTemplate(AutoConvertable):
             policy_source_format: InputOutputPolicyFormats, data_file: str, signature_file: str, policy_file: str,
             path_manager: PathManager, verbose=False
     ) -> float:
-        path_manager.add_path("trace_input_path", f"{path_to_folder}")
-        path_manager.add_path("intermediate_working_space", f"{path_to_folder}/scratch")
-        path_manager.add_path("trace_output_path", f"{path_to_folder}/scratch")
+        path_manager.add_path(PATH_TO_TRACE_INPUT, f"{path_to_folder}")
+        path_manager.add_path(PATH_TO_INTERMEDIATE_WORKSPACE, f"{path_to_folder}/scratch")
+        path_manager.add_path(PATH_TO_TRACE_OUTPUT, f"{path_to_folder}/scratch")
 
         trace_target_format, trace_conversion_distance = find_trace_path(self, path_manager, trace_source_format)
         policy_target_format, policy_conversion_distance = find_policy_path(self, path_manager, policy_source_format)
@@ -123,12 +131,10 @@ class BaseMonitorTemplate(AutoConvertable):
     ):
         pass
 
-    def compile(self):
-        pass
-
 
 def run_monitor_online(mon: Union[OnlineRunnable, BaseMonitorTemplate],
-                       maximum_latency, accumulative_time_out, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
+                       maximum_latency, accumulative_time_out, path_to_folder: AnyStr,
+                       data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
                        path_manager: PathManager, trace_source_format: InputOutputTraceFormats,
                        policy_source_format: InputOutputPolicyFormats,
                        cli_args: CLIArgs
@@ -140,20 +146,23 @@ def run_monitor_online(mon: Union[OnlineRunnable, BaseMonitorTemplate],
         data_file, signature_file, policy_file, path_manager, verbose=cli_args.verbose
     )
 
-    start_compile = time.perf_counter()
-    mon.compile()
-    end_compile = time.perf_counter()
-    compile_elapsed = end_compile - start_compile
+    target_name = f"online_experiment_{mon.name}{IMAGE_POSTFIX}"
+    additional_compilation_data = mon.online_compile()
+    start_build_comp = time.perf_counter()
+    build_pipeline(
+        tool_image_manager=mon.image, path_to_build=path_manager.get_path(PATH_TO_BUILD), path_to_archive=path_manager.get_path(PATH_TO_ARCHIVE),
+        data_source=mon.params[TRACE_KEY], policy_file=mon.params[POLICY_KEY], signature_file=mon.params[SIGNATURE_KEY],
+        target_image_name=target_name, compilation_details=additional_compilation_data
+    )
+    end_build_comp = time.perf_counter()
+    build_comp_elapsed = end_build_comp - start_build_comp
 
     cmd, trace, name = mon.construct_online_command()
     latency_marker = mon.latency_marker()
 
-    out, latency, code = mon.image.run_online(
-        parameters=cmd, path_to_data=path_to_folder, latency_marker=latency_marker, name=name,
-        accumulative_time=accumulative_time_out, maximum_latency=maximum_latency, data_file=trace
-    )
+    # todo run the container
 
-
+    # todo post processing of results and latency extraction
     pass
 
 
@@ -168,7 +177,7 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
     )
 
     start_compile = time.perf_counter()
-    mon.compile()
+    mon.offline_compile()
     end_compile = time.perf_counter()
     compile_elapsed = end_compile - start_compile
 

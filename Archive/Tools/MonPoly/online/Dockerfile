@@ -1,43 +1,20 @@
-# Build stage using OCaml opam image
 FROM ocaml/opam:alpine-ocaml-4.14 AS builder
 
-# Install system dependencies
-RUN sudo apk add --update --no-cache \
-    gmp-dev \
-    libffi-dev \
-    m4 \
-    perl \
-    pkgconfig \
-    git \
-    bash \
-    musl-dev \
-    linux-headers \
-    gcc g++ make
+RUN sudo apk add --update --no-cache gmp-dev libffi-dev m4 perl pkgconfig git bash musl-dev linux-headers gcc g++ make
 
 WORKDIR /home/opam
 
 ARG GIT_BRANCH=master
 ARG GIT_COMMIT=""
 
-# Clone repository
 RUN git clone --branch "$GIT_BRANCH" https://bitbucket.org/jshs/monpoly.git && \
     if [ -n "$GIT_COMMIT" ]; then cd monpoly && git checkout "$GIT_COMMIT"; fi
 
 WORKDIR /home/opam/monpoly
-
-# Initialize opam and install dependencies
-RUN opam init --disable-sandboxing -y && \
-    eval $(opam env) && \
-    opam update -y && \
-    opam install -y dune && \
-    opam install -y . --deps-only
+RUN opam init --disable-sandboxing -y && eval $(opam env) && opam update -y && opam install -y dune && opam install -y . --deps-only
 
 # Build the project
-RUN eval $(opam env) && \
-    dune build \
-        --profile=release \
-        @install \
-        -j$(nproc)
+RUN eval $(opam env) && dune build --profile=release @install -j$(nproc)
 
 # Create output directory with proper permissions
 RUN sudo mkdir -p /output && sudo chown opam:opam /output
@@ -59,10 +36,6 @@ RUN mkdir -p /output && \
     file /output/monpoly && \
     ldd /output/monpoly 2>&1 || echo "✓ Binary is static!"
 
-# Final minimal stage
 FROM scratch
-
-# Copy the binary from builder
 COPY --from=builder /output/monpoly /tool
-
 ENTRYPOINT ["tool"]
