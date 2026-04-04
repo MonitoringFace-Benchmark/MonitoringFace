@@ -2,9 +2,7 @@
 FROM rust:1.84.1-alpine as builder
 
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static git pkgconfig make gcc
-
-RUN rustup install nightly && \
-    rustup default nightly
+RUN rustup set auto-self-update disable && rustup install nightly --profile minimal && rustup default nightly
 
 # Add both architecture targets
 RUN rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl

@@ -8,7 +8,7 @@ from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPo
 from Infrastructure.Builders.BuilderUtilities import run_online_image
 from Infrastructure.Builders.OnlineExperiementPipeline import build_pipeline
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
-from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral, OnlineExperimentContractTool
+from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
 from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
@@ -16,7 +16,7 @@ from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTra
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLICY_KEY, PATH_TO_BUILD, PATH_TO_ARCHIVE, \
-    PATH_TO_TRACE_INPUT, PATH_TO_TRACE_OUTPUT, PATH_TO_INTERMEDIATE_WORKSPACE, IMAGE_POSTFIX
+    PATH_TO_TRACE_INPUT, PATH_TO_TRACE_OUTPUT, PATH_TO_INTERMEDIATE_WORKSPACE, IMAGE_POSTFIX, Policy_File, Signature_File
 from Infrastructure.printing import print_headline, print_footline
 
 
@@ -139,22 +139,33 @@ def run_monitor_online(
         path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
         path_manager: PathManager, trace_source_format: InputOutputTraceFormats,
         policy_source_format: InputOutputPolicyFormats, cli_args: CLIArgs,
-        online_experiment_contract: OnlineExperimentContractGeneral,
+        online_experiment_contract: OnlineExperimentContractGeneral, script_name: Optional[str] = None
 ):
     print_headline(f"Run (Online) {mon.name}")
 
-    # todo handle scripts and how to manage types of script output
-    preprocessing_elapsed = mon.preprocessing(
-        path_to_folder, trace_source_format, policy_source_format,
-        data_file, signature_file, policy_file, path_manager, verbose=cli_args.verbose
-    )
+    if script_name is not None:
+        preprocessing_elapsed = 0
+        data_source = script_name
+        policy_file = Policy_File()  # todo where to scripts get policies from, probably hardcoded
+        signature_file = Signature_File()
+    else:
+        preprocessing_elapsed = mon.preprocessing(
+            path_to_folder, trace_source_format, policy_source_format,
+            data_file, signature_file, policy_file, path_manager, verbose=cli_args.verbose
+        )
 
-    target_name = f"online_experiment_{mon.name}{IMAGE_POSTFIX}"
+        data_source = mon.params[TRACE_KEY]
+        policy_file = mon.params[POLICY_KEY]
+        signature_file = mon.params[SIGNATURE_KEY]
+
+    target_name = f"online_experiment_{mon.name.lower()}{IMAGE_POSTFIX}"
     additional_compilation_data = mon.online_compile()
     start_build_comp = time.perf_counter()
+
     build_pipeline(
-        tool_image_manager=mon.image, path_to_build=path_manager.get_path(PATH_TO_BUILD), path_to_archive=path_manager.get_path(PATH_TO_ARCHIVE),
-        data_source=mon.params[TRACE_KEY], policy_file=mon.params[POLICY_KEY], signature_file=mon.params[SIGNATURE_KEY],
+        tool_image_manager=mon.image, path_to_build=path_manager.get_path(PATH_TO_BUILD),
+        path_to_archive=path_manager.get_path(PATH_TO_ARCHIVE), path_to_folder=path_to_folder,
+        data_source=data_source, policy_file=policy_file, signature_file=signature_file,
         target_image_name=target_name, compilation_details=additional_compilation_data
     )
     end_build_comp = time.perf_counter()
@@ -162,7 +173,9 @@ def run_monitor_online(
 
     tool_online_experiment_contract = mon.params.get("OnlineExperimentContractTool")
     if tool_online_experiment_contract is None:
+        print("OnlineExperimentContractTool not defined")
         raise ValueError(f"Monitor {mon.name} has no online experiment contract")
+
     tool_command, name = mon.construct_online_command()
     run_online_image(
         image_name=target_name, tool_command=tool_command,

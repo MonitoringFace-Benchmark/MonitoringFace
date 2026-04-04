@@ -1,14 +1,13 @@
 import time
-from typing import Dict, AnyStr, Any, Optional, List
+from typing import Dict, AnyStr, Any, List
 
 import docker
 from docker.errors import APIError, BuildError
 
-from Infrastructure.Builders.OnlineExperiementPipeline import InputSpeed, TimeUnits, DataSourceType
-from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContract, \
-    OnlineExperimentContractGeneral, OnlineExperimentContractTool
+from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral, OnlineExperimentContractTool
 from Infrastructure.Monitors.MonitorExceptions import TimedOut
 from Infrastructure.constants import COMMAND_KEY, WORKDIR_KEY, VOLUMES_KEY, ENTRYPOINT_KEY
+from Infrastructure.printing import print_headline
 
 
 def to_prop_file(path, name, content: dict):
@@ -165,6 +164,8 @@ def run_online_image(
     online_experiment_contract: OnlineExperimentContractGeneral,
     tool_online_experiment_contract: OnlineExperimentContractTool,
 ):
+    print_headline("RUN ONLINE IMAGE")
+    # todo
     client = docker.from_env()
     workdir = "/app"
 
@@ -179,9 +180,13 @@ def run_online_image(
             image=image_name, command=command_driver, working_dir=workdir,
             remove=True, stdout=True, stderr=True,
         )
+
         # result is bytes when stdout captured
         stdout = result.decode("utf-8", errors="ignore") if isinstance(result, (bytes, bytearray)) else str(result)
+        print(stdout)
         return stdout, 0
+    except Exception as e:
+        print(f"Error running online image: {e}")
     except docker.errors.ContainerError as e:
         stdout = e.stderr.decode("utf-8", errors="ignore") if isinstance(e.stderr, (bytes, bytearray)) else str(e.stderr)
         return stdout, e.exit_status
@@ -190,12 +195,3 @@ def run_online_image(
         return stdout, 125
     except docker.errors.ImageNotFound:
         pass
-    """stdout=True, stderr=True, detach=True,
-    driver --mode accelerated --format log --data-source-type file --maximum-latency 21
-    --data-source /Users/krq770/Desktop/Experiments_Stream_Monitor/monpoly/exp/log.log
-    --binary-location /Users/krq770/Desktop/Experiments_Stream_Monitor/monpoly
-    --binary-name monpoly --response-mode current-timepoint
-    --warm-up-input ">get_pos<" --latency-marker ">get_pos<" -- "-formula" "/Users/krq770/Desktop/Experiments_Stream_Monitor/monpoly/exp/mfolt.mfotl" "-sig" "/Users/krq770/Desktop/Experiments_Stream_Monitor/monpoly/exp/sig.sig"
-    """
-    pass
-

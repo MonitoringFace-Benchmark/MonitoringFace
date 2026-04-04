@@ -23,12 +23,12 @@ from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import Ca
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeGuardingTool, TimeConstraints, GenerationConstraints, RunTimeConstraints
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
-from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline, online_offline_from_string
+from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline, online_offline_from_string, \
+    DataSourceType, TimeUnits, FormatType, ResponseMode, InputSpeed
 from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Oracles.OracleManager import OracleManager
 from Infrastructure.constants import PATH_TO_NAMED_EXPERIMENT
 from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral, OnlineExperimentContractTool
-from Infrastructure.Builders.OnlineExperiementPipeline import DataSourceType, TimeUnits, FormatType, ResponseMode
 
 
 class YamlParserException(Exception):
@@ -399,13 +399,17 @@ class YamlParser:
         else:
             ts_units = TimeUnits.SECONDS
 
+        mode_str = online_dict.get('mode', 'accelerated')
+        mode = InputSpeed.ACCELERATED if str(mode_str).lower() == 'accelerated' else InputSpeed.REAL_TIME
+
         batch_delim = online_dict.get('batch_delimiter')
         return OnlineExperimentContractGeneral(
             data_source_type=dst_type,
             maximum_latency=max_lat,
             accumulated_latency=acc_lat,
             timestamp_units=ts_units,
-            batch_delimiter=batch_delim
+            batch_delimiter=batch_delim,
+            mode=mode
         )
 
 

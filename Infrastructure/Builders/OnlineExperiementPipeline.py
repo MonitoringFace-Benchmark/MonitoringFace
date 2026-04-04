@@ -2,7 +2,6 @@ import os
 import io
 import shutil
 import tarfile
-from enum import Enum
 from typing import Optional, Dict
 
 import docker
@@ -13,77 +12,9 @@ from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import Abstrac
 from Infrastructure.constants import Policy_File, Signature_File, ADDITIONAL_FOLDER
 
 
-class DataSourceType(Enum):
-    FILE = "file"
-    SCRIPT = "script"
-
-    def to_string(self):
-        if self == DataSourceType.FILE:
-            return "file"
-        elif self == DataSourceType.SCRIPT:
-            return "script"
-        else:
-            raise ValueError(f"Unsupported DataSourceType value: {self}")
-
-
-class InputSpeed(Enum):
-    REAL_TIME = "real-time"
-    ACCELERATED = "accelerated"
-
-    def to_string(self):
-        if self == InputSpeed.REAL_TIME:
-            return "real-time"
-        elif self == InputSpeed.ACCELERATED:
-            return "accelerated"
-        else:
-            raise ValueError(f"Unsupported InputSpeed value: {self}")
-
-
-class TimeUnits(Enum):
-    SECONDS = "seconds"
-    MILLISECONDS = "milliseconds"
-    MICROSECONDS = "microseconds"
-
-    def to_string(self):
-        if self == TimeUnits.SECONDS:
-            return "seconds"
-        elif self == TimeUnits.MILLISECONDS:
-            return "milliseconds"
-        elif self == TimeUnits.MICROSECONDS:
-            return "microseconds"
-        else:
-            raise ValueError(f"Unsupported TimeUnits value: {self}")
-
-
-class FormatType(Enum):
-    CSV = "csv"
-    LOG = "log"
-
-    def to_string(self):
-        if self == FormatType.CSV:
-            return "csv"
-        elif self == FormatType.LOG:
-            return "log"
-        else:
-            raise ValueError(f"Unsupported FormatType value: {self}")
-
-
-class ResponseMode(Enum):
-    EVENT_COUNT = "event-count"
-    CURRENT_TIMEPOINT = "current-timepoint"
-
-    def to_string(self):
-        if self == ResponseMode.EVENT_COUNT:
-            return "event-count"
-        elif self == ResponseMode.CURRENT_TIMEPOINT:
-            return "current-timepoint"
-        else:
-            raise ValueError(f"Unsupported ResponseMode value: {self}")
-
-
 def build_pipeline(
         tool_image_manager: AbstractToolImageManager,
-        path_to_build, path_to_archive, data_source: str,
+        path_to_build, path_to_archive, data_source: str, path_to_folder: str,
         policy_file: str, signature_file: Optional[str], target_image_name: str,
         compilation_details: Optional[Dict[str, str]] = None,
 ):
@@ -96,7 +27,7 @@ def build_pipeline(
     driver_tool_name = "online_experiment_driver"
     build_stage(
         temporary_build_folder=path, tool_image_manager=tool_image_manager,
-        driver_docker=driver_docker, driver_tool_name=driver_tool_name,
+        driver_docker=driver_docker, driver_tool_name=driver_tool_name, path_to_folder=path_to_folder,
         data_source=data_source, policy_file=policy_file, signature_file=signature_file,
         compilation_details=compilation_details
     )
@@ -108,7 +39,7 @@ def build_pipeline(
 
 def build_stage(
         tool_image_manager: AbstractToolImageManager, temporary_build_folder: str,
-        driver_docker: str, driver_tool_name: str,
+        driver_docker: str, driver_tool_name: str, path_to_folder: str,
         data_source: str, policy_file: str, signature_file: Optional[str],
         compilation_details: Optional[Dict[str, str]] = None,
 ):
@@ -126,27 +57,27 @@ def build_stage(
     extract_binary(driver_tool_name, temporary_build_folder, "driver")
 
     # pass the file or data script to the build folder
-    move_data_source(temporary_build_folder, data_source)
+    move_data_source(temporary_build_folder, path_to_folder, data_source)
     file_dict = {Policy_File(): policy_file, Signature_File(): signature_file}
-    move_additional_data(temporary_build_folder, ADDITIONAL_FOLDER, file_dict)
+    move_additional_data(temporary_build_folder, path_to_folder, ADDITIONAL_FOLDER, file_dict)
 
 
-def move_data_source(temporary_build_folder: str, data_source: str):
+def move_data_source(temporary_build_folder: str, path_to_folder: str, data_source: str):
     dest_dir = os.path.join(temporary_build_folder, "data")
     os.makedirs(dest_dir, exist_ok=True)
 
     dest_path = os.path.join(dest_dir, "data")
-    shutil.copy(data_source, dest_path)
+    shutil.copy(f"{path_to_folder}/{data_source}", dest_path)
 
 
-def move_additional_data(temporary_build_folder: str, folder_name: str, additional_data: dict[str, str]):
+def move_additional_data(temporary_build_folder: str, path_to_folder: str, folder_name: str, additional_data: dict[str, str]):
     dest_dir = os.path.join(temporary_build_folder, folder_name)
     os.makedirs(dest_dir, exist_ok=True)
     for data_name, data_path in additional_data.items():
         if not data_path:
             continue
         dest_path = os.path.join(dest_dir, data_name)
-        shutil.copy(data_path, dest_path)
+        shutil.copy(f"{path_to_folder}/{data_path}", dest_path)
 
 
 def build_image_wrapper(dockerfile_path: str, image_name: str, args: Optional[Dict[str, str]] = None) -> bool:
@@ -225,29 +156,3 @@ def extract_binary(image_name: str, tmp_binary_location: str, binary_name: str) 
             os.replace(extracted_binary_path, target_path)
             extracted_binary_path = target_path
     return extracted_binary_path, requested_name
-
-
-if __name__ == "__main__":
-    from Infrastructure.Builders.ToolBuilder.ToolImageManager import DirectToolImageManager
-    from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline
-    from Infrastructure.DataLoader.Resolver import Location
-    from Infrastructure.Frontend.CLI.cli_args import CLIArgs
-
-    path_to_build = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/build"
-    path_to_archive = "/Users/krq770/PycharmProjects/MonitoringFace_curr/Archive"
-
-    tool_manager = DirectToolImageManager(
-        name="MonPoly", branch="master", release=BranchOrRelease.Branch,
-        commit=None, path_to_build=path_to_build,
-        path_to_archive=path_to_archive,
-        path_to_infra="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure",
-        location=Location.Local, cli_args=CLIArgs(), runtime_setting=OnlineOffline.Online
-    )
-
-    build_pipeline(
-        tool_image_manager=tool_manager, path_to_build=path_to_build, path_to_archive=path_to_archive,
-        data_source="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/data",
-        policy_file="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/policy.policy",
-        signature_file="/Users/krq770/PycharmProjects/MonitoringFace_curr/Infrastructure/experiments/Test/signature.sig",
-        target_image_name="online_experiment_image"
-    )

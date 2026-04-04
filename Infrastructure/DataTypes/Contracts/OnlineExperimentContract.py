@@ -1,10 +1,10 @@
 from typing import Optional, List
-from Infrastructure.Builders.OnlineExperiementPipeline import DataSourceType, TimeUnits, FormatType
+from Infrastructure.DataTypes.Types.custome_type import DataSourceType, TimeUnits, FormatType, InputSpeed
 
 
 class OnlineExperimentContractGeneral:
     def __init__(
-        self, data_source_type: DataSourceType, maximum_latency: Optional[int],
+        self, data_source_type: DataSourceType, mode: InputSpeed, maximum_latency: Optional[int],
         accumulated_latency: Optional[int], timestamp_units: TimeUnits,
         batch_delimiter: Optional[str]
 
@@ -12,10 +12,15 @@ class OnlineExperimentContractGeneral:
         self.data_source_type = data_source_type
         self.timestamp_units = timestamp_units
 
+        self.mode = mode
+
         self.batch_delimiter = batch_delimiter
 
         self.maximum_latency = maximum_latency
         self.accumulated_latency = accumulated_latency
+
+    def get_mode(self) -> List[str]:
+        return ["--mode", self.mode.to_string()]
 
     def get_batch_delimiter(self) -> List[str]:
         if self.batch_delimiter is None:
@@ -40,6 +45,7 @@ class OnlineExperimentContractGeneral:
 
     def get_settings(self) -> List[str]:
         settings = []
+        settings += self.get_mode()
         settings += self.get_data_source_type()
         settings += self.get_timestamp_units()
         settings += self.get_batch_delimiter()

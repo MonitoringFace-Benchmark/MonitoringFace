@@ -7,12 +7,14 @@ from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPo
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilderException import BenchmarkCreationFailed
 from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
+from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
+from Infrastructure.DataTypes.Types.custome_type import OnlineOffline
 from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.FileRepresenters.FingerPrintHandler import FingerPrintHandler
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
 
-from Infrastructure.Monitors.BaseMonitorTemplate import run_monitor_offline
+from Infrastructure.Monitors.BaseMonitorTemplate import run_monitor_offline, run_monitor_online
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
 from Infrastructure.constants import LENGTH, PATH_TO_NAMED_EXPERIMENT, PATH_TO_INFRA, PATH_TO_EXPERIMENTS, \
@@ -104,13 +106,22 @@ class BenchmarkBuilder:
                                   if res == RunToolResult.TIMEOUT:
                                      time_out_dict.add(tool.tool.name)"""
                             pass
-                        # todo make run_tools sensitive to online offline
-                        res = run_tools(
-                            result_aggregator=result_aggregator, path_to_folder=path_to_folder, tool=tool.tool,
-                            result_file=result, setting_id=tmp_setting_id, data_file=data_file, signature_file=signature,
-                            policy_file=policy_file, sfh=sfh, cli_args=self.cli_args,
-                            coordinator=self.coordinator, policy_type=policy_type, data_type=data_type
-                        )
+
+                        if self.coordinator.get_runtime_settings() == OnlineOffline.Online:
+                            run_tools_online(
+                                result_aggregator=result_aggregator, path_to_folder=path_to_folder, tool=tool.tool,
+                                _result_file=result, setting_id=tmp_setting_id, data_file=data_file,
+                                signature_file=signature, policy_file=policy_file, sfh=sfh, cli_args=self.cli_args,
+                                coordinator=self.coordinator, policy_type=policy_type, data_type=data_type,
+                                online_experiment_contract=self.coordinator.get_online_settings()
+                            )
+                        else:
+                            run_tools_offline(
+                                result_aggregator=result_aggregator, path_to_folder=path_to_folder, tool=tool.tool,
+                                result_file=result, setting_id=tmp_setting_id, data_file=data_file, signature_file=signature,
+                                policy_file=policy_file, sfh=sfh, cli_args=self.cli_args,
+                                coordinator=self.coordinator, policy_type=policy_type, data_type=data_type
+                            )
                     else:
                         raise NotImplemented(f"Not implemented for object {tool}")
 
@@ -154,7 +165,41 @@ class BenchmarkBuilder:
             seed_dict[setting_key] = (gen_seed, policy_seed)
 
 
-def run_tools(
+def run_tools_online(
+        result_aggregator: ResultAggregator, tool, setting_id: str, path_to_folder: str,
+        data_file: str, data_type: InputOutputTraceFormats, policy_file: str, policy_type: InputOutputPolicyFormats,
+        signature_file: str, _result_file: str, cli_args: CLIArgs, coordinator: Coordinator,
+        online_experiment_contract: OnlineExperimentContractGeneral, sfh=None
+):
+    debug_path = coordinator.get_path(PATH_TO_DEBUG)
+    time_out_value = coordinator.time_out()
+    try:
+        # todo decide for return type
+        run_monitor_online(
+            mon=tool, path_to_folder=path_to_folder, data_file=data_file, signature_file=signature_file,
+            policy_file=policy_file, cli_args=cli_args, trace_source_format=data_type, policy_source_format=policy_type,
+            path_manager=coordinator.get_path_manager(), online_experiment_contract=online_experiment_contract
+        )
+    except TimedOut as e:
+        print(f"Monitor {tool.name} timed out: {e}")
+        if cli_args.debug and sfh is not None:
+            sfh.copy_to_debug(debug_path, setting_id, tool.name)
+        result_aggregator.add_timeout(tool.name, setting_id, time_out_value)
+        return RunToolResult.TIMEOUT
+    except ToolException as e:
+        print(f"ToolException for monitor {tool.name}: {e}")
+        if cli_args.debug and sfh is not None:
+            sfh.copy_to_debug(debug_path, setting_id, tool.name)
+        result_aggregator.add_tool_error(tool.name, setting_id, str(e))
+        return RunToolResult.TOOL_ERROR
+    except Exception as e:
+        if cli_args.debug and sfh is not None:
+            sfh.copy_to_debug(debug_path, setting_id, tool.name)
+        result_aggregator.add_tool_error(tool.name, setting_id, str(e))
+        return RunToolResult.TOOL_ERROR
+
+
+def run_tools_offline(
         result_aggregator: ResultAggregator, tool, setting_id: str, path_to_folder: str,
         data_file: str, data_type: InputOutputTraceFormats, policy_file: str, policy_type: InputOutputPolicyFormats,
         signature_file: str, result_file: str, cli_args: CLIArgs, coordinator: Coordinator, sfh=None
