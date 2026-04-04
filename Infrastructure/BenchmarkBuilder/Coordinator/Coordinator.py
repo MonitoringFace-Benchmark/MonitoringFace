@@ -4,7 +4,9 @@ from typing import List, Tuple, Optional, Dict
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
+from Infrastructure.DataTypes.Types.custome_type import OnlineOffline
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 
 
@@ -15,9 +17,14 @@ class SeedType(Enum):
 
 
 class Coordinator(ABC):
-    def __init__(self, path_manager: PathManager, oracle: Optional[AbstractOracleTemplate] = None):
+    def __init__(
+            self, path_manager: PathManager, runtime_settings: OnlineOffline,
+            online_settings: OnlineExperimentContractGeneral,
+            oracle: Optional[AbstractOracleTemplate] = None):
         self.path_manager = path_manager
         self.oracle = oracle
+        self.online_settings = online_settings
+        self.runtime_settings = runtime_settings
 
     @abstractmethod
     def build(self):
@@ -50,4 +57,10 @@ class Coordinator(ABC):
 
     def get_oracle(self) -> Optional[AbstractOracleTemplate]:
         return self.oracle
+
+    def get_runtime_settings(self) -> OnlineOffline:
+        return self.runtime_settings
+
+    def get_online_settings(self) -> OnlineExperimentContractGeneral:
+        return self.online_settings
 

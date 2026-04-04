@@ -104,6 +104,7 @@ class BenchmarkBuilder:
                                   if res == RunToolResult.TIMEOUT:
                                      time_out_dict.add(tool.tool.name)"""
                             pass
+                        # todo make run_tools sensitive to online offline
                         res = run_tools(
                             result_aggregator=result_aggregator, path_to_folder=path_to_folder, tool=tool.tool,
                             result_file=result, setting_id=tmp_setting_id, data_file=data_file, signature_file=signature,

@@ -8,13 +8,15 @@ from hydra.core.global_hydra import GlobalHydra
 
 from Infrastructure.BenchmarkBuilder.Coordinator.CaseStudyCoordinator import CaseStudyCoordinator
 from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
-from Infrastructure.BenchmarkBuilder.Coordinator.SyntheticCoordinator import SyntheticCoordinator
+from Infrastructure.BenchmarkBuilder.Coordinator.ScriptCoordinator import ScriptCoordinator
+from Infrastructure.BenchmarkBuilder.Coordinator.SyntheticDataCoordinator import SyntheticDataCoordinator
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyCopyGenerator import CaseStudyCopyGenerator
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyImageGenerator import CaseStudyImageGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 
 from Infrastructure.Builders.ToolBuilder.ToolManager import ToolManager
+from Infrastructure.DataTypes.Contracts.SubContracts.ScriptSetupContract import ScriptSetupContract
 from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import CaseStudySetupContract
@@ -135,9 +137,12 @@ class YamlParser:
         data_setup = self.cfg.data_setup
         data_contract_name = data_setup.get('type')
         if data_contract_name.lower() == "casestudy":
-            case_study_name = data_setup.get('name')
             fixed = bool(data_setup.get('fixed', False))
-            return CaseStudySetupContract(name=case_study_name, fixed=fixed)
+            return CaseStudySetupContract(name=data_setup.get('name'), fixed=fixed)
+        elif data_contract_name.lower() == "script":
+            fixed = bool(data_setup.get('fixed', False))
+            script_name = data_setup.get('script_name')
+            return ScriptSetupContract(name=data_setup.get('name'), fixed=fixed, script_name=script_name)
         else:
             folder_files = _discover_contract_names(self.path_to_project + "/Infrastructure", "DataGenerators")
             if _contract_names(folder_files, data_contract_name):
@@ -323,27 +328,30 @@ class YamlParser:
             return 1
         return self.cfg.get('repeats')
 
-    def parse_experiment(self, cli_args: CLIArgs, experiment_name) -> Tuple[
-        Coordinator, MonitorManager, List[str], int]:
+    def parse_experiment(self, cli_args: CLIArgs, experiment_name) -> Tuple[Coordinator, MonitorManager, List[str], int]:
         tool_manager = self.parse_tool_manager(cli_args=cli_args)
         monitor_manager = self.parse_monitor_manager(tool_manager)
         oracle_manager = self.parse_oracle_manager(monitor_manager)
         oracle_name = self.get_oracle_config()
         oracle = oracle_manager.get_oracle(oracle_name) if oracle_name else None
-
         constraints = self.parse_constraints(monitor_manager)
+        runtime_settings = self.runtime_setting()
 
+        online_experiments_settings = self.parse_online_experiment_contract()
         data_setup = self.parse_data_setup()
-        if isinstance(data_setup, CaseStudySetupContract):
+        if isinstance(data_setup, ScriptSetupContract):
+            coordinator = ScriptCoordinator(
+                path_manager=self.path_manager, script_contract=data_setup,
+                online_experiment_settings=online_experiments_settings)
+        elif isinstance(data_setup, CaseStudySetupContract):
             self.path_manager.add_path(PATH_TO_NAMED_EXPERIMENT, f"{self.path_to_experiments}/{experiment_name}")
             generator = (CaseStudyCopyGenerator(name=data_setup.name, path_to_project=self.path_to_project)
                          if data_setup.fixed else CaseStudyImageGenerator(data_setup.name, self.path_to_project))
             coordinator = CaseStudyCoordinator(
-                generator=generator,
-                data_setup=data_setup,
-                path_manager=self.path_manager,
-                constraints=constraints,
-                oracle=oracle
+                generator=generator, data_setup=data_setup,
+                path_manager=self.path_manager, constraints=constraints,
+                oracle=oracle, runtime_settings=runtime_settings,
+                online_settings=online_experiments_settings
             )
         else:
             data_contract_name = data_setup.__class__.__name__.replace('Contract', 'Generator')
@@ -352,16 +360,13 @@ class YamlParser:
             policy_contract_name = policy_setup.__class__.__name__.replace('Contract', 'Generator')
             policy_generator = self._parse_policy_generators(self.path_to_project, policy_contract_name)
 
-            coordinator = SyntheticCoordinator(
-                experiment=self.parse_synthetic_experiment(),
-                data_setup=data_setup,
-                data_source=data_generator,
-                policy_setup=policy_setup,
-                policy_source=policy_generator,
-                oracle=oracle,
-                constraints=constraints,
-                path_manager=self.path_manager,
-                seeds=self.parse_seeds()
+            coordinator = SyntheticDataCoordinator(
+                experiment=self.parse_synthetic_experiment(), data_setup=data_setup,
+                data_source=data_generator, policy_setup=policy_setup,
+                policy_source=policy_generator, oracle=oracle,
+                constraints=constraints, path_manager=self.path_manager,
+                seeds=self.parse_seeds(), runtime_settings=runtime_settings,
+                online_settings=online_experiments_settings
             )
         return coordinator, monitor_manager, self.get_tools_to_build(), self.get_repeat_experiments()
 

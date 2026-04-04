@@ -7,11 +7,13 @@ from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPo
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.BenchmarkBuilder.Coordinator.CaseStudyCoordinator import RunOracleException, TimedOut
 from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
+from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, GenerationConstraints, TimeGuardingTool
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
+from Infrastructure.DataTypes.Types.custome_type import OnlineOffline
 from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import ORACLE_KEY, SEEDS_KEY, PATH_KEY, SIZE_KEY, FREE_VARIABLES_KEY, PLACEHOLDER_EVENT, \
@@ -23,12 +25,14 @@ from Infrastructure.Monitors.MonitorExceptions import ToolException
 from Infrastructure.AutoConversion.InputOutputTraceFormats import trace_inout_format_to_str
 
 
-class SyntheticCoordinator(Coordinator):
+class SyntheticDataCoordinator(Coordinator):
     def __init__(
         self, experiment: SyntheticExperiment, data_setup, data_source, policy_setup, policy_source,
-        constraints: TimeConstraints, path_manager: PathManager, oracle: Optional[AbstractOracleTemplate] = None, seeds=None
+        constraints: TimeConstraints, path_manager: PathManager, runtime_settings: OnlineOffline,
+        online_settings: OnlineExperimentContractGeneral = None,
+        oracle: Optional[AbstractOracleTemplate] = None, seeds=None
     ):
-        super().__init__(path_manager, oracle)
+        super().__init__(path_manager, runtime_settings, online_settings, oracle)
         self.experiment = experiment
         self.path_to_folder = self.path_manager.get_path(PATH_TO_FOLDER)
 

@@ -6,10 +6,12 @@ from Infrastructure.AutoConversion.InputOutputPolicyFormats import str_to_policy
 from Infrastructure.AutoConversion.InputOutputTraceFormats import str_to_trace_inout_format, InputOutputTraceFormats
 from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyImageGenerator import CaseStudyImageGenerator
+from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import CaseStudySetupContract
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
+from Infrastructure.DataTypes.Types.custome_type import OnlineOffline
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import TRACE_KEY, POLICY_KEY, PATH_KEY, BENCHMARK_BUILDING_OFFSET, \
     SIGNATURE_KEY, FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, PATH_TO_NAMED_DATA, PATH_TO_NAMED_EXPERIMENT, \
@@ -26,9 +28,12 @@ class RunOracleException(Exception):
 
 
 class CaseStudyCoordinator(Coordinator):
-    def __init__(self, generator: CaseStudyImageGenerator, data_setup: CaseStudySetupContract, path_manager: PathManager, constraints: TimeConstraints,
-                 oracle: Optional[AbstractOracleTemplate] = None):
-        super().__init__(path_manager, oracle)
+    def __init__(
+            self, generator: CaseStudyImageGenerator, data_setup: CaseStudySetupContract, path_manager: PathManager,
+            constraints: TimeConstraints, runtime_settings: OnlineOffline,
+            online_settings: OnlineExperimentContractGeneral = None, oracle: Optional[AbstractOracleTemplate] = None
+    ):
+        super().__init__(path_manager, runtime_settings, online_settings, oracle)
         self.generator = generator
         self.data_setup = data_setup
         self.constraints = constraints

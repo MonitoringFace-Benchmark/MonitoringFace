@@ -140,11 +140,10 @@ def run_monitor_online(
         path_manager: PathManager, trace_source_format: InputOutputTraceFormats,
         policy_source_format: InputOutputPolicyFormats, cli_args: CLIArgs,
         online_experiment_contract: OnlineExperimentContractGeneral,
-        tool_online_experiment_contract: OnlineExperimentContractTool,
 ):
     print_headline(f"Run (Online) {mon.name}")
 
-    # todo handle scripts
+    # todo handle scripts and how to manage types of script output
     preprocessing_elapsed = mon.preprocessing(
         path_to_folder, trace_source_format, policy_source_format,
         data_file, signature_file, policy_file, path_manager, verbose=cli_args.verbose
@@ -161,6 +160,9 @@ def run_monitor_online(
     end_build_comp = time.perf_counter()
     build_comp_elapsed = end_build_comp - start_build_comp
 
+    tool_online_experiment_contract = mon.params.get("OnlineExperimentContractTool")
+    if tool_online_experiment_contract is None:
+        raise ValueError(f"Monitor {mon.name} has no online experiment contract")
     tool_command, name = mon.construct_online_command()
     run_online_image(
         image_name=target_name, tool_command=tool_command,
