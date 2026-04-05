@@ -1,81 +1,82 @@
 import os
 from enum import Enum
-from typing import Tuple
+from typing import Tuple, Optional
 
 import pandas as pd
 
-from Infrastructure.Analysis.Formatting import parse_wall_time
-from Infrastructure.Analysis.Formatting import parse_memory
-from Infrastructure.Analysis.Formatting import parse_cpu
+from Infrastructure.Analysis.Aggregators.AbstractAggregator import AbstractAggregator
 
 
 class Status(Enum):
     OK = "OK"
-    TO = "Time out"
+    ATO = "Accumulative Latency Time out"
+    MTO = "Maximum Latency Time out"
     TE = "Tool Error"
     RE = "Result Error"
     MI = "Missing"
 
 
-class ResultAggregator:
-    """
-    Handles results of run_tools in BenchmarkBuilder.
-    Manages four result states: valid, timeout, tool_error, result_error.
-    """
-
+class ResultAggregatorOnline(AbstractAggregator):
     def __init__(self):
-        # Valid runs: full timing and stats
         self.valid_results = pd.DataFrame(columns=[
-            "Status", "Name", "Setting", "pre", "compilation", "runtime", "post", "wall_time", "max_mem", "cpu"
+            "Status", "Name", "Setting", "pre", "build", "total_elapsed", "total_count"
         ])
 
-        # Timed out runs: only status, tool name, setting, and timeout value
-        self.timeout_results = pd.DataFrame(columns=[
-            "Status", "Name", "Setting", "timeout"
+        self.timeout_maximum_latency_results = pd.DataFrame(columns=[
+            "Status", "Name", "Setting", "pre", "build", "total_elapsed", "total_count"
         ])
 
-        # Tool exceptions: status, tool name, setting, and error message
+        self.timeout_accumulative_latency_results = pd.DataFrame(columns=[
+            "Status", "Name", "Setting", "pre", "build", "total_elapsed", "total_count"
+        ])
+
         self.tool_error_results = pd.DataFrame(columns=[
             "Status", "Name", "Setting", "error"
         ])
 
-        # Result errors: same as valid but with error message
         self.result_error_results = pd.DataFrame(columns=[
-            "Status", "Name", "Setting", "pre", "compilation", "runtime", "post", "wall_time", "max_mem", "cpu", "error_msg"
+            "Status", "Name", "Setting", "pre", "build", "total_elapsed", "total_count", "error_msg"
         ])
 
-        # Missing tools: status, tool name, setting
-        self.missing_results = pd.DataFrame(columns=[
-            "Status", "Name", "Setting"
-        ])
+        self.missing_results = pd.DataFrame(columns=["Status", "Name", "Setting"])
 
     def add_valid(
             self,
             tool_name: str,
             setting_id: str,
             prep: float,
-            compiled: float,
-            runtime: float,
-            prop: float,
-            wall_time: str,
-            max_mem: str,
-            cpu: str
+            build: float,
+            total_elapsed: Optional[float],
+            total_count: Optional[int]
     ) -> None:
-        """Add a valid run result."""
         self.valid_results.loc[len(self.valid_results)] = [
-            Status.OK, tool_name, setting_id, prep, compiled, runtime, prop,
-            parse_wall_time(wall_time), parse_memory(max_mem), parse_cpu(cpu)
+            Status.OK, tool_name, setting_id, prep, build, total_elapsed, total_count
         ]
 
-    def add_timeout(
+    def add_timeout_accumulative_latency(
             self,
             tool_name: str,
             setting_id: str,
-            timeout: int
+            prep: float,
+            build: float,
+            total_elapsed: Optional[float],
+            total_count: Optional[int]
     ) -> None:
-        """Add a timed out run result."""
-        self.timeout_results.loc[len(self.timeout_results)] = [
-            Status.TO, tool_name, setting_id, timeout
+        self.timeout_accumulative_latency_results.loc[len(self.timeout_accumulative_latency_results)] = [
+            Status.ATO, tool_name, setting_id, prep, build, total_elapsed, total_count
+        ]
+
+    def add_timeout_maximum_latency(
+            self,
+            tool_name: str,
+            setting_id: str,
+            prep: float,
+            build: float,
+            total_elapsed: Optional[float],
+            total_count: Optional[int]
+    ) -> None:
+        self.timeout_maximum_latency_results.loc[len(self.timeout_maximum_latency_results)] = [
+            Status.MTO, tool_name, setting_id, prep, build, total_elapsed, total_count
         ]
 
     def add_tool_error(
@@ -84,7 +85,6 @@ class ResultAggregator:
             setting_id: str,
             error: str
     ) -> None:
-        """Add a tool exception result."""
         self.tool_error_results.loc[len(self.tool_error_results)] = [
             Status.TE, tool_name, setting_id, str(error)
         ]
@@ -94,18 +94,13 @@ class ResultAggregator:
             tool_name: str,
             setting_id: str,
             prep: float,
-            compiled: float,
-            runtime: float,
-            prop: float,
-            wall_time: str,
-            max_mem: str,
-            cpu: str,
+            build: float,
+            total_elapsed: Optional[float],
+            total_count: Optional[int],
             error_msg: str
     ) -> None:
-        """Add a result error (verification failed)."""
         self.result_error_results.loc[len(self.result_error_results)] = [
-            Status.RE, tool_name, setting_id, prep, compiled, runtime, prop,
-            parse_wall_time(wall_time), parse_memory(max_mem), parse_cpu(cpu), error_msg
+            Status.RE, tool_name, setting_id, prep, build, total_elapsed, total_count, error_msg
         ]
 
     def add_missing(
@@ -113,46 +108,39 @@ class ResultAggregator:
             tool_name: str,
             setting_id: str
     ) -> None:
-        """Add a missing tool result."""
         self.missing_results.loc[len(self.missing_results)] = [
             Status.MI, tool_name, setting_id
         ]
 
     def get_valid(self) -> pd.DataFrame:
-        """Get all valid run results."""
         return self.valid_results.copy()
 
-    def get_timeout(self) -> pd.DataFrame:
-        """Get all timeout results."""
-        return self.timeout_results.copy()
+    def get_timeout_accumulative_latency(self) -> pd.DataFrame:
+        return self.timeout_accumulative_latency_results.copy()
+
+    def get_timeout_maximum_latency(self) -> pd.DataFrame:
+        return self.timeout_maximum_latency_results.copy()
 
     def get_tool_error(self) -> pd.DataFrame:
-        """Get all tool error results."""
         return self.tool_error_results.copy()
 
     def get_result_error(self) -> pd.DataFrame:
-        """Get all result error results."""
         return self.result_error_results.copy()
 
     def get_missing(self) -> pd.DataFrame:
-        """Get all missing tool results."""
         return self.missing_results.copy()
 
-    def get_all(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        """Get all result dataframes."""
+    def get_all(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         return (
             self.get_valid(),
-            self.get_timeout(),
+            self.get_timeout_accumulative_latency(),
+            self.get_timeout_maximum_latency(),
             self.get_tool_error(),
             self.get_result_error(),
             self.get_missing()
         )
 
     def to_csv(self, path: str, name: str) -> None:
-        """
-        Write all dataframes to CSV files in the specified folder.
-        Creates files: {name}_valid.csv, {name}_timeout.csv, {name}_tool_error.csv, {name}_result_error.csv
-        """
         os.makedirs(path, exist_ok=True)
         print(f"Writing results to: {path} with name: {name}")
 
@@ -161,10 +149,15 @@ class ResultAggregator:
             print(f"  Writing valid results ({len(self.valid_results)} rows) to: {filepath}")
             self.valid_results.to_csv(filepath, index=False)
 
-        if not self.timeout_results.empty:
-            filepath = os.path.join(path, f"{name}_timeout.csv")
-            print(f"  Writing timeout results ({len(self.timeout_results)} rows) to: {filepath}")
-            self.timeout_results.to_csv(filepath, index=False)
+        if not self.timeout_accumulative_latency_results.empty:
+            filepath = os.path.join(path, f"{name}_timeout_accumulative_latency.csv")
+            print(f"  Writing timeout_accumulative_latency results ({len(self.timeout_accumulative_latency_results)} rows) to: {filepath}")
+            self.timeout_accumulative_latency_results.to_csv(filepath, index=False)
+
+        if not self.timeout_maximum_latency_results.empty:
+            filepath = os.path.join(path, f"{name}_timeout_maximum_latency.csv")
+            print(f"  Writing timeout_maximum_latency results ({len(self.timeout_maximum_latency_results)} rows) to: {filepath}")
+            self.timeout_maximum_latency_results.to_csv(filepath, index=False)
 
         if not self.tool_error_results.empty:
             filepath = os.path.join(path, f"{name}_tool_error.csv")
@@ -183,12 +176,12 @@ class ResultAggregator:
 
     def __repr__(self) -> str:
         return (
-            f"ResultAggregator(\n"
+            f"ResultAggregatorOnline(\n"
             f"  valid={len(self.valid_results)},\n"
-            f"  timeout={len(self.timeout_results)},\n"
+            f"  timeout_accumulative_latency={len(self.timeout_accumulative_latency_results)},\n"
+            f"  timeout_maximum_latency={len(self.timeout_maximum_latency_results)},\n"
             f"  tool_error={len(self.tool_error_results)},\n"
             f"  result_error={len(self.result_error_results)},\n"
             f"  missing={len(self.missing_results)}\n"
             f")"
         )
-
