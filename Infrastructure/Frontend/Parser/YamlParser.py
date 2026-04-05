@@ -386,7 +386,7 @@ class YamlParser:
         dst_type = DataSourceType.FILE if str(dst_type_str).lower() == 'file' else DataSourceType.SCRIPT
 
         max_lat = online_dict.get('maximum_latency')
-        acc_lat = online_dict.get('accumulated_latency')
+        acc_lat = online_dict.get('accumulative_time')
         max_lat = int(max_lat) if max_lat is not None else None
         acc_lat = int(acc_lat) if acc_lat is not None else None
 

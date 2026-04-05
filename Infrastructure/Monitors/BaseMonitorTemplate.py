@@ -177,14 +177,17 @@ def run_monitor_online(
         raise ValueError(f"Monitor {mon.name} has no online experiment contract")
 
     tool_command, name = mon.construct_online_command()
-    run_online_image(
+    output, total_elapsed_s, total_count, latency_err_msg, code = run_online_image(
         image_name=target_name, tool_command=tool_command,
         online_experiment_contract=online_experiment_contract,
         tool_online_experiment_contract=tool_online_experiment_contract,
     )
 
-    # todo post processing of results and latency extraction
-    pass
+    # todo post processing of results and latency extraction (future work)
+
+    # todo verify results with oracle (future work)
+
+    return preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count, output, code
 
 
 def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,

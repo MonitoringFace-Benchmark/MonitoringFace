@@ -36,7 +36,7 @@ class OnlineExperimentContractGeneral:
     def get_accumulated_latency(self) -> List[str]:
         if self.accumulated_latency is None:
             return []
-        return ["--accumulated-latency", str(self.accumulated_latency)]
+        return ["--accumulative-time", str(self.accumulated_latency)]
 
     def get_maximum_latency(self) -> List[str]:
         if self.maximum_latency is None:

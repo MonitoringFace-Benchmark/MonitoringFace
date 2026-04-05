@@ -74,6 +74,8 @@ class BenchmarkBuilder:
         print("\n" + "-" * LENGTH)
         normal_line("Run Experiments")
         print("-" * LENGTH)
+        self.coordinator.get_runtime_settings()
+        # todo make two variants dependent on online offline
         result_aggregator = ResultAggregator()
 
         path_to_debug = self.coordinator.get_path(PATH_TO_DEBUG)
@@ -174,12 +176,20 @@ def run_tools_online(
     debug_path = coordinator.get_path(PATH_TO_DEBUG)
     time_out_value = coordinator.time_out()
     try:
-        # todo decide for return type
-        run_monitor_online(
+        # todo make online result aggregator (prompt)
+        preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count, output, code = run_monitor_online(
             mon=tool, path_to_folder=path_to_folder, data_file=data_file, signature_file=signature_file,
             policy_file=policy_file, cli_args=cli_args, trace_source_format=data_type, policy_source_format=policy_type,
             path_manager=coordinator.get_path_manager(), online_experiment_contract=online_experiment_contract
         )
+
+        if code == 0:
+            pass
+        elif code == 200:
+            pass
+        elif code == 250:
+            pass
+
     except TimedOut as e:
         print(f"Monitor {tool.name} timed out: {e}")
         if cli_args.debug and sfh is not None:

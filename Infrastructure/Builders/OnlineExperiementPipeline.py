@@ -16,7 +16,7 @@ def build_pipeline(
         tool_image_manager: AbstractToolImageManager,
         path_to_build, path_to_archive, data_source: str, path_to_folder: str,
         policy_file: str, signature_file: Optional[str], target_image_name: str,
-        compilation_details: Optional[Dict[str, str]] = None,
+        compilation_details: Optional[Dict[str, str]] = None, verbose: bool = False
 ):
     path = f"{path_to_build}/OnlineExperimentDriver"
     if os.path.exists(path):
@@ -29,7 +29,7 @@ def build_pipeline(
         temporary_build_folder=path, tool_image_manager=tool_image_manager,
         driver_docker=driver_docker, driver_tool_name=driver_tool_name, path_to_folder=path_to_folder,
         data_source=data_source, policy_file=policy_file, signature_file=signature_file,
-        compilation_details=compilation_details
+        compilation_details=compilation_details, verbose=verbose
     )
 
     # build the final image with the copied dockerfile and the copied data
@@ -41,20 +41,20 @@ def build_stage(
         tool_image_manager: AbstractToolImageManager, temporary_build_folder: str,
         driver_docker: str, driver_tool_name: str, path_to_folder: str,
         data_source: str, policy_file: str, signature_file: Optional[str],
-        compilation_details: Optional[Dict[str, str]] = None,
+        compilation_details: Optional[Dict[str, str]] = None, verbose: bool = False
 ):
     if compilation_details is None:
-        extract_binary(tool_image_manager.get_image_name(), temporary_build_folder, "tool")
+        extract_binary(tool_image_manager.get_image_name(), temporary_build_folder, "tool", verbose=verbose)
     else:
         tool_name = tool_image_manager.get_image_name()
-        if not build_image_wrapper(tool_name, temporary_build_folder, args=compilation_details):
+        if not build_image_wrapper(tool_name, temporary_build_folder, args=compilation_details, verbose=verbose):
             raise ImageBuildException(f"Failed to build driver image: {tool_name}")
-        extract_binary(tool_name, temporary_build_folder, "tool")
+        extract_binary(tool_name, temporary_build_folder, "tool", verbose=verbose)
 
     # build, extract and move driver binary to build folder
-    if not build_image_wrapper(driver_docker, driver_tool_name):
+    if not build_image_wrapper(driver_docker, driver_tool_name, verbose=verbose):
         raise ImageBuildException(f"Failed to build driver image: {driver_tool_name}")
-    extract_binary(driver_tool_name, temporary_build_folder, "driver")
+    extract_binary(driver_tool_name, temporary_build_folder, "driver", verbose=verbose)
 
     # pass the file or data script to the build folder
     move_data_source(temporary_build_folder, path_to_folder, data_source)
@@ -80,16 +80,17 @@ def move_additional_data(temporary_build_folder: str, path_to_folder: str, folde
         shutil.copy(f"{path_to_folder}/{data_path}", dest_path)
 
 
-def build_image_wrapper(dockerfile_path: str, image_name: str, args: Optional[Dict[str, str]] = None) -> bool:
+def build_image_wrapper(dockerfile_path: str, image_name: str, args: Optional[Dict[str, str]] = None, verbose: bool = False) -> bool:
     if not image_exists(image_name):
         if not image_building(image_name, dockerfile_path, args):
             raise ImageBuildException(f"Failed to build image: {image_name}")
     else:
-        print(f"Image {image_name} already exists. Skipping build.")
+        if verbose:
+            print(f"Image {image_name} already exists. Skipping build.")
     return True
 
 
-def extract_binary(image_name: str, tmp_binary_location: str, binary_name: str) -> tuple[str, str]:
+def extract_binary(image_name: str, tmp_binary_location: str, binary_name: str, verbose: bool = False) -> tuple[str, str]:
     client = docker.from_env()
     extracted_binary_path = None
     requested_name = binary_name
@@ -106,9 +107,9 @@ def extract_binary(image_name: str, tmp_binary_location: str, binary_name: str) 
                 tar_stream = io.BytesIO(b"".join(archive_bytes))
                 with tarfile.open(fileobj=tar_stream, mode='r:*') as tar:
                     tar.extractall(path=tmp_binary_location)
-                print(f"Binary extracted successfully from /usr/local/bin to {tmp_binary_location}")
+                if verbose:
+                    print(f"Binary extracted successfully from /usr/local/bin to {tmp_binary_location}")
                 extracted_binary_path = tmp_binary_location
-                print(extracted_binary_path)
                 binary_name = requested_name
 
                 if os.path.exists(f"{tmp_binary_location}/bin"):
@@ -137,9 +138,11 @@ def extract_binary(image_name: str, tmp_binary_location: str, binary_name: str) 
                                     extracted_binary_path = dst_path
                                     binary_name = os.path.basename(dst_path)
                             except OSError as e:
-                                print(f"Warning: Failed to extract {member.name}: {e}")
+                                if verbose:
+                                    print(f"Warning: Failed to extract {member.name}: {e}")
                                 continue
-                print(f"Binary extracted successfully from root to {tmp_binary_location}")
+                if verbose:
+                    print(f"Binary extracted successfully from root to {tmp_binary_location}")
         finally:
             container.remove(force=True)
     except APIError as e:
