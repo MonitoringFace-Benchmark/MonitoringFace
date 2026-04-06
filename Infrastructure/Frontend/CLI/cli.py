@@ -5,13 +5,14 @@ import os
 from datetime import datetime
 from typing import List, Any, AnyStr
 
+from Infrastructure.Analysis.AutomatedAnalysis import run_analysis
 from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.Frontend.Parser.YamlParser import YamlParser, ExperimentSuiteParser, YamlParserException
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
 from Infrastructure.constants import LENGTH, PATH_TO_PROJECT, PATH_TO_BUILD, PATH_TO_EXPERIMENTS, PATH_TO_ARCHIVE, \
-    PATH_TO_BENCHMARK, PATH_TO_RESULTS, PATH_TO_FOLDER
+    PATH_TO_BENCHMARK, PATH_TO_RESULTS, PATH_TO_FOLDER, PATH_TO_NAMED_EXPERIMENT, PATH_TO_INFRA
 
 
 class CLI:
@@ -28,6 +29,7 @@ class CLI:
         self.benchmark_folder = f"{self.archive_folder}/Benchmarks"
 
         self.result_base_folder = f"{self.infra_folder}/results"
+        self.result_analysis_folder = f"{self.infra_folder}/analysis"
 
         self.path_manager.add_path(PATH_TO_PROJECT, self.path_to_module)
         self.path_manager.add_path(PATH_TO_BUILD, self.build_folder)
@@ -50,6 +52,9 @@ class CLI:
     def _clean_all(self):
         shutil.rmtree(self.result_base_folder, ignore_errors=True)
         os.makedirs(self.result_base_folder, exist_ok=True)
+
+        shutil.rmtree(self.result_analysis_folder, ignore_errors=True)
+        os.makedirs(self.result_analysis_folder, exist_ok=True)
 
     @staticmethod
     def _create_parser() -> argparse.ArgumentParser:
@@ -74,11 +79,14 @@ Examples:
   # Save transient and temporary data for debugging purposes
   python -m Infrastructure.main experiments/my_experiment.yaml --debug
   
-  # Keep only the latest result of an experiment (clean previous results)
+  # Keep only the latest result and analysis of an experiment (clean previous results)
   python -m Infrastructure.main experiments/my_experiment.yaml --clean
   
-  # Clean all results before running
+  # Clean all results and analysis before running
   python -m Infrastructure.main experiments/my_experiment.yaml --clean-all
+  
+  # Analyze results after running (saves analysis output to a timestamped folder in the analysis directory)
+  python -m Infrastructure.main experiments/my_experiment.yaml --analyze
             """
         )
         
@@ -129,6 +137,12 @@ Examples:
             '--clean-all',
             action='store_true',
             help='Force the clean-up of the entire results folder'
+        )
+
+        parser.add_argument(
+            '--analyze',
+            action='store_true',
+            help='Run automated analysis on the results after execution'
         )
 
         return parser
@@ -222,6 +236,24 @@ Examples:
                 print(f"Running experiment with {len(monitors)} monitor(s)...")
 
             results = benchmark.run(monitors)
+            if getattr(cli_args, "analyze", False):
+                analysis_base = os.path.join(self.path_manager.get_path(PATH_TO_INFRA), "analysis")
+                os.makedirs(analysis_base, exist_ok=True)
+
+                run_name = experiment_name if not is_suite else f"suite_{experiment_name}"
+                analysis_run_folder = os.path.join(
+                    analysis_base,
+                    f"{run_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                )
+                os.makedirs(analysis_run_folder, exist_ok=True)
+
+                analysis_results = run_analysis(results)
+                for analysis_name, analysis_df in analysis_results.items():
+                    analysis_df.to_csv(
+                        os.path.join(analysis_run_folder, f"{analysis_name}.csv"),
+                        index=False
+                    )
+
             if not is_suite:
                 if cli_args.clean_all:
                     self._clean_all()
@@ -229,6 +261,9 @@ Examples:
                     for folder in os.listdir(self.result_base_folder):
                         if folder.startswith(experiment_name):
                             shutil.rmtree(os.path.join(self.result_base_folder, folder), ignore_errors=True)
+                    for folder in os.listdir(self.result_analysis_folder):
+                        if folder.startswith(experiment_name):
+                            shutil.rmtree(os.path.join(self.result_analysis_folder, folder), ignore_errors=True)
 
             if result_folder is None:
                 result_folder = self._create_timestamped_result_folder(experiment_name)

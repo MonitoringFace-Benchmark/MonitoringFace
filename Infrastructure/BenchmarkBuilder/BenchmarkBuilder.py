@@ -2,7 +2,7 @@ import os.path
 from enum import Enum
 from typing import AnyStr, List, Optional
 
-from Infrastructure.Analysis.Aggregators.AbstractAggregator import dispatch_aggregator
+from Infrastructure.Analysis.Aggregators.AbstractAggregator import dispatch_aggregator, AbstractAggregator
 from Infrastructure.Analysis.Aggregators.ResultAggregatorOffline import ResultAggregatorOffline
 from Infrastructure.Analysis.Aggregators.ResultAggregatorOnline import ResultAggregatorOnline
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
@@ -19,8 +19,7 @@ from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
 from Infrastructure.Monitors.BaseMonitorTemplate import run_monitor_offline, run_monitor_online
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
-from Infrastructure.constants import LENGTH, PATH_TO_NAMED_EXPERIMENT, PATH_TO_INFRA, PATH_TO_EXPERIMENTS, \
-    PATH_TO_DEBUG, PATH_TO_PROJECT
+from Infrastructure.constants import LENGTH, PATH_TO_NAMED_EXPERIMENT, PATH_TO_INFRA, PATH_TO_EXPERIMENTS, PATH_TO_DEBUG, PATH_TO_PROJECT
 from Infrastructure.printing import print_headline, print_footline, normal_line
 
 
@@ -72,7 +71,7 @@ class BenchmarkBuilder:
         except Exception as e:
             raise BenchmarkCreationFailed(e)
 
-    def run(self, tools: List[GetMonitorsReturnType]) -> ResultAggregatorOffline:
+    def run(self, tools: List[GetMonitorsReturnType]) -> AbstractAggregator:
         print("\n" + "-" * LENGTH)
         normal_line("Run Experiments")
         print("-" * LENGTH)

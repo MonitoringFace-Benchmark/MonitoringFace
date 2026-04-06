@@ -1,0 +1,2 @@
+from Infrastructure.Analysis.AutomatedAnalysis.AbstractAnalysis import dispatch_analysis, run_analysis
+
