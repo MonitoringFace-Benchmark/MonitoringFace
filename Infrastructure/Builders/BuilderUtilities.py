@@ -166,6 +166,7 @@ def run_online_image(
         tool_command: List[str],
         online_experiment_contract: OnlineExperimentContractGeneral,
         tool_online_experiment_contract: OnlineExperimentContractTool,
+        verbose=False
 ):
     client = docker.from_env()
     workdir = "/app"
@@ -186,6 +187,9 @@ def run_online_image(
 
     command_driver = command_fixed + command_tool_specific + command_experiment_specific + ["--"] + tool_command_list
     command_driver = [str(x) for x in command_driver if x is not None]
+
+    if verbose:
+        print(" ".join(command_driver))
 
     container = None
     try:
@@ -211,6 +215,7 @@ def run_online_image(
 
         for chunk in container.logs(stream=True, follow=True, stdout=True, stderr=True):
             text = chunk.decode("utf-8", errors="ignore") if isinstance(chunk, (bytes, bytearray)) else str(chunk)
+            print(text)
             if text.startswith("[Error"):
                 unexpected_error = text.strip()
                 break

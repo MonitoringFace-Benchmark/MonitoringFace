@@ -181,6 +181,7 @@ def run_monitor_online(
         image_name=target_name, tool_command=tool_command,
         online_experiment_contract=online_experiment_contract,
         tool_online_experiment_contract=tool_online_experiment_contract,
+        verbose=cli_args.verbose
     )
 
     # todo post processing of results and latency extraction (future work)
