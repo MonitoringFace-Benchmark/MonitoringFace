@@ -9,7 +9,7 @@ from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineEx
     OnlineExperimentContractTool
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException
 from Infrastructure.constants import COMMAND_KEY, WORKDIR_KEY, VOLUMES_KEY, ENTRYPOINT_KEY
-from Infrastructure.printing import print_headline
+from Infrastructure.printing import print_headline, print_footline
 
 
 def to_prop_file(path, name, content: dict):
@@ -185,6 +185,7 @@ def run_online_image(
         tool_command_list = [str(tool_command)]
 
     command_driver = command_fixed + command_tool_specific + command_experiment_specific + ["--"] + tool_command_list
+    command_driver = [str(x) for x in command_driver if x is not None]
 
     container = None
     try:
@@ -210,7 +211,6 @@ def run_online_image(
 
         for chunk in container.logs(stream=True, follow=True, stdout=True, stderr=True):
             text = chunk.decode("utf-8", errors="ignore") if isinstance(chunk, (bytes, bytearray)) else str(chunk)
-
             if text.startswith("[Error"):
                 unexpected_error = text.strip()
                 break
@@ -265,18 +265,17 @@ def run_online_image(
 
         result = container.wait()
         exit_code = result.get("StatusCode", 1) if isinstance(result, dict) else 1
-
         if unexpected_error:
             raise ToolException(f"Unexpected failure with exit code ({exit_code}) {unexpected_error}")
         return parsed_blocks, footer_acc_elapsed_s, footer_total_count, final_error, exit_code
     except docker.errors.ContainerError as e:
         stderr_text = e.stderr.decode("utf-8", errors="ignore") if isinstance(e.stderr, (bytes, bytearray)) else str(
             e.stderr)
-        return stderr_text, e.exit_status, [], (None, None)
+        return stderr_text, e.exit_status, [], None, None
     except docker.errors.APIError as e:
-        return f"Docker API error: {e}", 125, [], (None, None)
+        return f"Docker API error: {e}", 125, [], None, None
     except docker.errors.ImageNotFound:
-        return "Error: Image not found", 127, [], (None, None)
+        return "Error: Image not found", 127, [], None, None
     finally:
         if container is not None:
             try:

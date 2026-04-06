@@ -71,7 +71,7 @@ class OnlineExperimentContractTool:
     def get_input_aggregations(self) -> List[str]:
         if self.input_aggregations is None:
             return []
-        return ["--input-aggregations", self.input_aggregations]
+        return ["--input-aggregation", self.input_aggregations]
 
     def get_latency_marker(self) -> List[str]:
         if self.latency_marker is None:

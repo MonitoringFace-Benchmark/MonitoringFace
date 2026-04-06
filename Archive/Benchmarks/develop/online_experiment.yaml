@@ -15,19 +15,20 @@ monitors:
       OnlineExperimentContractTool:
         format: log
         response_mode: current-timepoint
-  #- identifier: TimelyMon
-  #  name: TimelyMon
-  #  branch: simplify_approximation
-  #  params:
-  #    worker: 1
-  #    output_mode: 1
-  #    OnlineExperimentContractTool:
-  #      format: csv
-  #      response_mode: event-count
+  - identifier: TimelyMon
+    name: TimelyMon
+    branch: simplify_approximation
+    params:
+      worker: 1
+      output_mode: 1
+      OnlineExperimentContractTool:
+        format: csv
+        response_mode: event-count
+        input_aggregations: 1000
 
 tools_to_build:
   - MonPoly
-  #- TimelyMon
+  - TimelyMon
 
 data_setup:
   type: SignatureContract
