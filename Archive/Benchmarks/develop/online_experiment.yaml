@@ -7,18 +7,27 @@ OnlineExperimentContractGeneral:
   mode: accelerated
 
 monitors:
-  - identifier: TimelyMon
-    name: TimelyMon
-    branch: simplify_approximation
+  - identifier: MonPoly
+    name: MonPoly
+    branch: main
+    release: release
     params:
-      worker: 1
-      output_mode: 1
       OnlineExperimentContractTool:
-        format: csv
-        response_mode: event-count
+        format: log
+        response_mode: current-timepoint
+  #- identifier: TimelyMon
+  #  name: TimelyMon
+  #  branch: simplify_approximation
+  #  params:
+  #    worker: 1
+  #    output_mode: 1
+  #    OnlineExperimentContractTool:
+  #      format: csv
+  #      response_mode: event-count
 
 tools_to_build:
-  - TimelyMon
+  - MonPoly
+  #- TimelyMon
 
 data_setup:
   type: SignatureContract
