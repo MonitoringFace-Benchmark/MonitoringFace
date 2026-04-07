@@ -64,4 +64,4 @@ class ScriptCoordinator(Coordinator):
         return self.online_settings.accumulated_latency
 
     def iterate_settings(self) -> List[Tuple[int, str, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
-        return [(0, self.path_to_data_folder, self.script_name, None, None, self.signature, None, None)]
+        return [((0, None), self.path_to_data_folder, self.script_name, None, None, self.signature, None, None)]

@@ -253,14 +253,8 @@ Examples:
 
                 analysis = dispatch_analysis(results)
                 analysis_results = analysis.run(results)
-                if hasattr(analysis, "save_report"):
-                    analysis.save_report(analysis_run_folder, run_name, analysis_results)
-                else:
-                    for analysis_name, analysis_df in analysis_results.items():
-                        analysis_df.to_csv(
-                            os.path.join(analysis_run_folder, f"{analysis_name}.csv"),
-                            index=False
-                        )
+                for analysis_name, analysis_df in analysis_results.items():
+                    analysis_df.to_csv(os.path.join(analysis_run_folder, f"{analysis_name}.csv"), index=False)
 
             if not is_suite:
                 if cli_args.clean_all:

@@ -81,15 +81,11 @@ class BenchmarkBuilder:
         if os.path.exists(path_to_debug):
             ScratchFolderHandler(path_to_debug).remove_folder()
 
-        for (index, path_to_folder, data_file, data_type, policy_file, policy_type, signature, result) in self.coordinator.iterate_settings():
+        for ((identifier, data_set_size), path_to_folder, data_file, data_type, policy_file, policy_type, signature, result) in self.coordinator.iterate_settings():
             sfh = ScratchFolderHandler(path_to_folder)
 
-            data_file_name = str(path_to_folder.removeprefix(path_to_folder))
-            policy_file_name = str(path_to_folder.removeprefix(path_to_folder))
-
-            tmp_setting = f"index_{index}_{data_file_name}_{policy_file_name}"
             for i in range(0, self.repeat_runs):
-                tmp_setting_id = f"{tmp_setting}_{i}"
+                tmp_setting_id = f"{identifier}_{i}" if data_set_size is None else f"{identifier}_{data_set_size}_{i}"
                 for tool in tools:
                     if isinstance(tool, InvalidReturnType):
                         print_headline(f"Missing {tool.name}")

@@ -130,13 +130,39 @@ class AnalysisOffline(AbstractAnalysis):
         if "Setting" not in out.columns:
             out["setting_prefix"] = None
             out["dataset_size"] = pd.NA
+            out["repeat_idx"] = pd.NA
             return out
 
-        setting_str = out["Setting"].astype(str)
-        split_parts = setting_str.str.rsplit("_", n=1)
-        out["setting_prefix"] = split_parts.str[0]
-        dataset_raw = split_parts.str[1]
-        out["dataset_size"] = pd.to_numeric(dataset_raw, errors="coerce").astype("Int64")
+        def _parse_setting(raw):
+            s = str(raw) if pd.notna(raw) else ""
+            parts = s.split("_") if s else []
+
+            # Always: last token is repetition index.
+            repeat_idx = pd.to_numeric(parts[-1], errors="coerce") if len(parts) >= 1 else pd.NA
+
+            # Remove repetition token for semantic interpretation.
+            core = parts[:-1]
+
+            # Rule from benchmark format:
+            # - if core length is 4, second-to-last token is dataset size
+            # - otherwise, no dataset size
+            if len(core) == 4:
+                dataset_size = pd.to_numeric(core[-2], errors="coerce")
+                setting_prefix = "_".join(core[:-2])
+            else:
+                dataset_size = pd.NA
+                setting_prefix = "_".join(core) if core else s
+
+            return pd.Series({
+                "setting_prefix": setting_prefix if setting_prefix != "" else None,
+                "dataset_size": dataset_size,
+                "repeat_idx": repeat_idx,
+            })
+
+        parsed = out["Setting"].apply(_parse_setting)
+        out = pd.concat([out, parsed], axis=1)
+        out["dataset_size"] = pd.to_numeric(out["dataset_size"], errors="coerce").astype("Int64")
+        out["repeat_idx"] = pd.to_numeric(out["repeat_idx"], errors="coerce").astype("Int64")
         return out
 
     @staticmethod

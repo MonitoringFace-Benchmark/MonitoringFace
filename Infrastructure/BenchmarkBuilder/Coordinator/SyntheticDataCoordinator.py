@@ -60,7 +60,6 @@ class SyntheticDataCoordinator(Coordinator):
 
     def build(self):
         self.fresh_build = True
-        index = 0
         for num_ops in self.experiment.num_operators:
             ops_path = f"{self.path_to_folder}/operators_{num_ops}"
             os.makedirs(ops_path, exist_ok=True)
@@ -103,14 +102,12 @@ class SyntheticDataCoordinator(Coordinator):
                             data_set_size=data_set_size, oracle=self.oracle,
                             constraints=constraint, path_manager=self.path_manager
                         )
-                        self.instructions.append((index, num_path, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
-                        index += 1
+                        self.instructions.append(((f"{num_ops}_{num_fv}_{num_set}", data_set_size), num_path, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
 
     def iterate_settings(self) -> List[Tuple[int, str, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
         if self.fresh_build:
             return self.instructions
 
-        index = 0
         for num_ops in self.experiment.num_operators:
             ops_path = f"{self.path_to_folder}/operators_{num_ops}"
             for num_fv in self.experiment.num_fvs:
@@ -125,8 +122,7 @@ class SyntheticDataCoordinator(Coordinator):
                         sig_file = f"{SIGNATURE_FILE}.{SIGNATURE_FILE_ENDING}"
                         policy_file = f"{POLICY_FILE}.{POLICY_FILE_ENDING}"
                         result_file = f"{num_path}/result/result_{data_set_size}.res"
-                        self.instructions.append((index, num_path, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
-                        index += 1
+                        self.instructions.append(((f"{num_ops}_{num_fv}_{num_set}", data_set_size), num_path, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
         return self.instructions
 
     def short_cutting(self):

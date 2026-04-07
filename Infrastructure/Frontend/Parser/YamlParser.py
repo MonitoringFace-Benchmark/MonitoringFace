@@ -268,7 +268,7 @@ class YamlParser:
         experiment_dict = OmegaConf.to_container(experiment_config, resolve=True)
         experiment = SyntheticExperiment(
             num_operators=experiment_dict.get('num_operators', [5]),
-            num_fvs=experiment_dict.get('num_fvs', [2]),
+            num_fvs=experiment_dict.get('num_fvs', [0]),
             num_setting=experiment_dict.get('num_setting', [0]),
             num_data_set_sizes=experiment_dict.get('num_data_set_sizes', [50])
         )

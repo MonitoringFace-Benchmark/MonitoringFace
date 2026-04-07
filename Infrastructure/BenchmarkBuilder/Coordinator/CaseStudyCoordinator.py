@@ -165,7 +165,7 @@ class CaseStudyCoordinator(Coordinator):
             (policy_file, policy_type) = setting[POLICY_KEY]
             sig = setting.get(SIGNATURE_KEY, None)
             result = self.results.get(i, None)
-            res.append((i, path_to_data, data_file, data_type, policy_file, policy_type, sig, result))
+            res.append(((i, None), path_to_data, data_file, data_type, policy_file, policy_type, sig, result))
         return res
 
     def short_cutting(self):
