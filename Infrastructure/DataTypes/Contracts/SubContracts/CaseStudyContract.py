@@ -18,5 +18,3 @@ class CaseStudySetupContract(AbstractContract):
 
     def instantiate_contract(self, params):
         pass
-
-
