@@ -1,3 +1,4 @@
+import json
 import os.path
 from enum import Enum
 from typing import AnyStr, List, Optional
@@ -177,9 +178,21 @@ def run_tools_online(
             script_name=(coordinator.script_name if hasattr(coordinator, "script_name") and coordinator.script_name is not None else None)
         )
 
+        processed_elapsed_pairs = []
+        if isinstance(output, list):
+            for block in output:
+                if isinstance(block, dict):
+                    processed = block.get("processed")
+                    elapsed_ns = block.get("elapsed_ns")
+                    if processed is not None and elapsed_ns is not None:
+                        processed_elapsed_pairs.append([processed, elapsed_ns])
+
+        output_pairs_json = json.dumps(processed_elapsed_pairs)
+
         if code == 0:
             result_aggregator.add_valid(
-                tool.name, setting_id, preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count
+                tool.name, setting_id, preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count,
+                output_pairs_json
             )
             return RunToolResult.OK
         elif code == 200:
@@ -187,6 +200,7 @@ def run_tools_online(
                 sfh.copy_to_debug(debug_path, setting_id, tool.name)
             result_aggregator.add_timeout_accumulative_latency(
                 tool.name, setting_id, preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count,
+                output_pairs_json
             )
             return RunToolResult.TIMEOUT
         else:  # code == 250:
@@ -194,6 +208,7 @@ def run_tools_online(
                 sfh.copy_to_debug(debug_path, setting_id, tool.name)
             result_aggregator.add_timeout_maximum_latency(
                 tool.name, setting_id, preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count,
+                output_pairs_json
             )
             return RunToolResult.TIMEOUT
     except ToolException as e:

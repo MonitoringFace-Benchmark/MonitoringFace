@@ -19,15 +19,15 @@ class Status(Enum):
 class ResultAggregatorOnline(AbstractAggregator):
     def __init__(self):
         self.valid_results = pd.DataFrame(columns=[
-            "Status", "Name", "Setting", "pre", "build", "total_elapsed", "total_count"
+            "Status", "Name", "Setting", "pre", "build", "total_elapsed", "total_count", "output_pairs"
         ])
 
         self.timeout_maximum_latency_results = pd.DataFrame(columns=[
-            "Status", "Name", "Setting", "pre", "build", "total_elapsed", "total_count"
+            "Status", "Name", "Setting", "pre", "build", "total_elapsed", "total_count", "output_pairs"
         ])
 
         self.timeout_accumulative_latency_results = pd.DataFrame(columns=[
-            "Status", "Name", "Setting", "pre", "build", "total_elapsed", "total_count"
+            "Status", "Name", "Setting", "pre", "build", "total_elapsed", "total_count", "output_pairs"
         ])
 
         self.tool_error_results = pd.DataFrame(columns=[
@@ -47,10 +47,11 @@ class ResultAggregatorOnline(AbstractAggregator):
             prep: float,
             build: float,
             total_elapsed: Optional[float],
-            total_count: Optional[int]
+            total_count: Optional[int],
+            output_pairs: Optional[str] = None
     ) -> None:
         self.valid_results.loc[len(self.valid_results)] = [
-            Status.OK, tool_name, setting_id, prep, build, total_elapsed, total_count
+            Status.OK, tool_name, setting_id, prep, build, total_elapsed, total_count, output_pairs
         ]
 
     def add_timeout_accumulative_latency(
@@ -60,10 +61,11 @@ class ResultAggregatorOnline(AbstractAggregator):
             prep: float,
             build: float,
             total_elapsed: Optional[float],
-            total_count: Optional[int]
+            total_count: Optional[int],
+            output_pairs: Optional[str] = None
     ) -> None:
         self.timeout_accumulative_latency_results.loc[len(self.timeout_accumulative_latency_results)] = [
-            Status.ATO, tool_name, setting_id, prep, build, total_elapsed, total_count
+            Status.ATO, tool_name, setting_id, prep, build, total_elapsed, total_count, output_pairs
         ]
 
     def add_timeout_maximum_latency(
@@ -73,10 +75,11 @@ class ResultAggregatorOnline(AbstractAggregator):
             prep: float,
             build: float,
             total_elapsed: Optional[float],
-            total_count: Optional[int]
+            total_count: Optional[int],
+            output_pairs: Optional[str] = None
     ) -> None:
         self.timeout_maximum_latency_results.loc[len(self.timeout_maximum_latency_results)] = [
-            Status.MTO, tool_name, setting_id, prep, build, total_elapsed, total_count
+            Status.MTO, tool_name, setting_id, prep, build, total_elapsed, total_count, output_pairs
         ]
 
     def add_tool_error(

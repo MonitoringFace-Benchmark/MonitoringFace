@@ -1,6 +1,6 @@
+import json
 import re
 from typing import Dict, List
-
 import pandas as pd
 
 from Infrastructure.Analysis.Aggregators.ResultAggregatorOnline import ResultAggregatorOnline
@@ -9,9 +9,48 @@ from Infrastructure.Analysis.AutomatedAnalysis.BaseAnalysis import AbstractAnaly
 
 class AnalysisOnline(AbstractAnalysis):
     @staticmethod
+    def _expand_output_pairs(df: pd.DataFrame, prefix: str) -> pd.DataFrame:
+        out = df.copy()
+        if "output_pairs" not in out.columns:
+            return out
+
+        def _parse_pairs(raw):
+            if pd.isna(raw):
+                return []
+            try:
+                parsed = json.loads(raw) if isinstance(raw, str) else raw
+            except Exception:
+                return []
+            if not isinstance(parsed, list):
+                return []
+            cleaned = []
+            for pair in parsed:
+                if isinstance(pair, (list, tuple)) and len(pair) >= 2:
+                    cleaned.append((pair[0], pair[1]))
+            return cleaned
+
+        vectors = out["output_pairs"].apply(_parse_pairs)
+        max_len = int(vectors.map(len).max()) if not vectors.empty else 0
+
+        for i in range(max_len):
+            out[f"{prefix}_processed_{i}"] = vectors.apply(lambda v: v[i][0] if i < len(v) else pd.NA)
+            out[f"{prefix}_elapsed_ns_{i}"] = vectors.apply(lambda v: v[i][1] if i < len(v) else pd.NA)
+
+        return out
+
+    @staticmethod
+    def _safe_numeric(df: pd.DataFrame, cols: List[str]) -> pd.DataFrame:
+        out = df.copy()
+        for col in cols:
+            if col in out.columns:
+                out[col] = pd.to_numeric(out[col], errors="coerce")
+        return out
+
+    @staticmethod
     def _extract_numeric_tokens(value) -> List[float]:
         if pd.isna(value):
             return []
+        # Extract all numeric tokens from the setting text.
         tokens = re.findall(r"-?\d+(?:\.\d+)?", str(value))
         out = []
         for t in tokens:
@@ -69,24 +108,35 @@ class AnalysisOnline(AbstractAnalysis):
     @staticmethod
     def _build_successful_runs_table(valid: pd.DataFrame) -> pd.DataFrame:
         if valid.empty:
-            return pd.DataFrame(columns=["Name", "Setting", "pre", "build", "total_elapsed", "total_count"])
+            return pd.DataFrame(
+                columns=["Name", "Setting", "pre", "build", "total_elapsed", "total_count", "output_pairs"])
 
-        out = valid[["Name", "Setting", "pre", "build", "total_elapsed", "total_count"]].copy()
+        cols = ["Name", "Setting", "pre", "build", "total_elapsed", "total_count"]
+        if "output_pairs" in valid.columns:
+            cols.append("output_pairs")
+
+        out = valid[cols].copy()
         out = AnalysisOnline._safe_numeric(out, ["pre", "build", "total_elapsed", "total_count"])
+        out = AnalysisOnline._expand_output_pairs(out, "ok")
         return out.sort_values(["Name", "Setting"])
 
     @staticmethod
     def _build_timeout_table(timeout_df: pd.DataFrame, prefix: str) -> pd.DataFrame:
         if timeout_df.empty:
-            return pd.DataFrame(columns=["Name", "Setting", "pre", "build", "total_elapsed", "total_count"])
+            return pd.DataFrame(
+                columns=["Name", "Setting", "pre", "build", "total_elapsed", "total_count", "output_pairs"])
 
-        out = timeout_df[["Name", "Setting", "pre", "build", "total_elapsed", "total_count"]].copy()
+        cols = ["Name", "Setting", "pre", "build", "total_elapsed", "total_count"]
+        if "output_pairs" in timeout_df.columns:
+            cols.append("output_pairs")
+
+        out = timeout_df[cols].copy()
         out = AnalysisOnline._safe_numeric(out, ["pre", "build", "total_elapsed", "total_count"])
-        out = AnalysisOnline._extract_latency_values_from_setting(out, prefix)
+        out = AnalysisOnline._expand_output_pairs(out, prefix)
         return out.sort_values(["Name", "Setting"])
 
     @staticmethod
-    def save_report(output_folder: str, report_name: str, analysis_results: Dict[str, pd.DataFrame]) -> str:
+    def save_report(output_folder: str, analysis_results: Dict[str, pd.DataFrame]) -> str:
         import os
         os.makedirs(output_folder, exist_ok=True)
         for name, df in analysis_results.items():
