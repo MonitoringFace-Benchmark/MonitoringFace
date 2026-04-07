@@ -5,14 +5,14 @@ import os
 from datetime import datetime
 from typing import List, Any, AnyStr
 
-from Infrastructure.Analysis.AutomatedAnalysis import run_analysis, dispatch_analysis
+from Infrastructure.Analysis.AutomatedAnalysis import dispatch_analysis
 from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.Frontend.Parser.YamlParser import YamlParser, ExperimentSuiteParser, YamlParserException
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilder import BenchmarkBuilder
 from Infrastructure.constants import LENGTH, PATH_TO_PROJECT, PATH_TO_BUILD, PATH_TO_EXPERIMENTS, PATH_TO_ARCHIVE, \
-    PATH_TO_BENCHMARK, PATH_TO_RESULTS, PATH_TO_FOLDER, PATH_TO_NAMED_EXPERIMENT, PATH_TO_INFRA
+    PATH_TO_BENCHMARK, PATH_TO_RESULTS, PATH_TO_FOLDER, PATH_TO_INFRA
 
 
 class CLI:

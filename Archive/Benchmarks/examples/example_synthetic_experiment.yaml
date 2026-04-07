@@ -13,12 +13,6 @@ monitors:
     params:
       worker: 6
       output_mode: 1
-  - identifier: TimelyMon
-    name: TimelyMon 6 simp
-    branch: simplify_approximation
-    params:
-      worker: 6
-      output_mode: 1
   - identifier: VeriMon
     name: VeriMon
     branch: master
