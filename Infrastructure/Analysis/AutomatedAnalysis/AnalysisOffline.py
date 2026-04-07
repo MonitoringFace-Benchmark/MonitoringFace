@@ -231,8 +231,11 @@ class AnalysisOffline(AbstractAnalysis):
                 ]
             )
 
+        work = valid.copy()
+        work = AnalysisOffline._safe_numeric(work, ["runtime", "wall_time", "max_mem", "cpu"])
+
         comp = (
-            valid.groupby(["Setting", "setting_prefix", "dataset_size", "Name"], as_index=False)
+            work.groupby(["Setting", "setting_prefix", "dataset_size", "Name"], as_index=False)
             .agg(
                 runtime_avg=("runtime", "mean"),
                 wall_time_avg=("wall_time", "mean"),

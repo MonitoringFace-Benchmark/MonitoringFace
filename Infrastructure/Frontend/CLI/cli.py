@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from typing import List, Any, AnyStr
 
-from Infrastructure.Analysis.AutomatedAnalysis import run_analysis
+from Infrastructure.Analysis.AutomatedAnalysis import run_analysis, dispatch_analysis
 from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader.Resolver import BenchmarkResolver, Location
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
@@ -29,7 +29,7 @@ class CLI:
         self.benchmark_folder = f"{self.archive_folder}/Benchmarks"
 
         self.result_base_folder = f"{self.infra_folder}/results"
-        self.result_analysis_folder = f"{self.infra_folder}/analysis"
+        self.result_analysis_folder = f"{self.infra_folder}/analysis_results"
 
         self.path_manager.add_path(PATH_TO_PROJECT, self.path_to_module)
         self.path_manager.add_path(PATH_TO_BUILD, self.build_folder)
@@ -37,6 +37,7 @@ class CLI:
         self.path_manager.add_path(PATH_TO_ARCHIVE, self.archive_folder)
         self.path_manager.add_path(PATH_TO_BENCHMARK, self.benchmark_folder)
         self.path_manager.add_path(PATH_TO_RESULTS, self.result_base_folder)
+        self.path_manager.add_path(PATH_TO_INFRA, self.infra_folder)
 
         os.makedirs(self.result_base_folder, exist_ok=True)
 
@@ -155,7 +156,8 @@ Examples:
             verbose=args.verbose,
             measure=(False if args.no_measure else True),
             clean=args.clean,
-            clean_all=args.clean_all
+            clean_all=args.clean_all,
+            analyze=args.analyze,
         )
 
         config_name = args.config.removeprefix(self.benchmark_folder)
@@ -237,7 +239,9 @@ Examples:
 
             results = benchmark.run(monitors)
             if getattr(cli_args, "analyze", False):
-                analysis_base = os.path.join(self.path_manager.get_path(PATH_TO_INFRA), "analysis")
+                print(f"Running automated analysis on results...")
+                analysis_base = os.path.join(self.path_manager.get_path(PATH_TO_INFRA), "analysis_results")
+                print(analysis_base)
                 os.makedirs(analysis_base, exist_ok=True)
 
                 run_name = experiment_name if not is_suite else f"suite_{experiment_name}"
@@ -247,12 +251,16 @@ Examples:
                 )
                 os.makedirs(analysis_run_folder, exist_ok=True)
 
-                analysis_results = run_analysis(results)
-                for analysis_name, analysis_df in analysis_results.items():
-                    analysis_df.to_csv(
-                        os.path.join(analysis_run_folder, f"{analysis_name}.csv"),
-                        index=False
-                    )
+                analysis = dispatch_analysis(results)
+                analysis_results = analysis.run(results)
+                if hasattr(analysis, "save_report"):
+                    analysis.save_report(analysis_run_folder, run_name, analysis_results)
+                else:
+                    for analysis_name, analysis_df in analysis_results.items():
+                        analysis_df.to_csv(
+                            os.path.join(analysis_run_folder, f"{analysis_name}.csv"),
+                            index=False
+                        )
 
             if not is_suite:
                 if cli_args.clean_all:
