@@ -101,7 +101,9 @@ def run_offline_image(image_name, generic_contract: Dict[AnyStr, Any], verbose=F
             container = client.containers.run(
                 image=image_name, command=command,
                 volumes=volumes, working_dir=workdir,
-                entrypoint=entrypoint
+                entrypoint=entrypoint,
+                detach=True, remove=False,
+                stdout=True, stderr=True,
             )
 
             start_time = time.time()
@@ -215,7 +217,6 @@ def run_online_image(
 
         for chunk in container.logs(stream=True, follow=True, stdout=True, stderr=True):
             text = chunk.decode("utf-8", errors="ignore") if isinstance(chunk, (bytes, bytearray)) else str(chunk)
-            print(text)
             if text.startswith("[Error"):
                 unexpected_error = text.strip()
                 break

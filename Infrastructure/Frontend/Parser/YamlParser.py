@@ -377,7 +377,7 @@ class YamlParser:
 
     def parse_online_experiment_contract(self) -> OnlineExperimentContractGeneral:
         if "OnlineExperimentContractGeneral" not in self.cfg:
-            raise YamlParserException("Missing 'online experiment' section for online experiment contract")
+            return None
 
         online_raw = self.cfg.get("OnlineExperimentContractGeneral", self.cfg)
         online_dict = OmegaConf.to_container(online_raw, resolve=True)
