@@ -1,4 +1,5 @@
-from typing import Dict
+import re
+from typing import Dict, List
 
 import pandas as pd
 
@@ -7,6 +8,91 @@ from Infrastructure.Analysis.AutomatedAnalysis.BaseAnalysis import AbstractAnaly
 
 
 class AnalysisOnline(AbstractAnalysis):
+    @staticmethod
+    def _extract_numeric_tokens(value) -> List[float]:
+        if pd.isna(value):
+            return []
+        tokens = re.findall(r"-?\d+(?:\.\d+)?", str(value))
+        out = []
+        for t in tokens:
+            try:
+                out.append(float(t))
+            except ValueError:
+                pass
+        return out
+
+    @staticmethod
+    def _extract_latency_values_from_setting(df: pd.DataFrame, prefix: str) -> pd.DataFrame:
+        out = df.copy()
+        if "Setting" not in out.columns:
+            return out
+
+        vectors = out["Setting"].apply(AnalysisOnline._extract_numeric_tokens)
+        max_len = int(vectors.map(len).max()) if not vectors.empty else 0
+
+        for idx in range(max_len):
+            col = f"{prefix}_latency_{idx}"
+            out[col] = vectors.apply(lambda vals: vals[idx] if idx < len(vals) else pd.NA)
+
+        return out
+
+    @staticmethod
+    def _build_tool_overview(valid, to_acc, to_max, tool_error, result_error, missing) -> pd.DataFrame:
+        frames = [valid, to_acc, to_max, tool_error, result_error, missing]
+        names = set()
+        for df in frames:
+            if "Name" in df.columns:
+                names.update(df["Name"].dropna().unique().tolist())
+
+        rows = []
+        for name in sorted(names):
+            ok = int((valid["Name"] == name).sum()) if "Name" in valid.columns else 0
+            ato = int((to_acc["Name"] == name).sum()) if "Name" in to_acc.columns else 0
+            mto = int((to_max["Name"] == name).sum()) if "Name" in to_max.columns else 0
+            te = int((tool_error["Name"] == name).sum()) if "Name" in tool_error.columns else 0
+            re = int((result_error["Name"] == name).sum()) if "Name" in result_error.columns else 0
+            mi = int((missing["Name"] == name).sum()) if "Name" in missing.columns else 0
+            total = ok + ato + mto + te + re + mi
+            rows.append({
+                "Name": name,
+                "total_runs": total,
+                "succeeded": ok,
+                "timeout_accumulative_latency": ato,
+                "timeout_maximum_latency": mto,
+                "tool_error": te,
+                "result_error": re,
+                "missing": mi,
+                "success_rate": (ok / total) if total else 0.0,
+            })
+        return pd.DataFrame(rows)
+
+    @staticmethod
+    def _build_successful_runs_table(valid: pd.DataFrame) -> pd.DataFrame:
+        if valid.empty:
+            return pd.DataFrame(columns=["Name", "Setting", "pre", "build", "total_elapsed", "total_count"])
+
+        out = valid[["Name", "Setting", "pre", "build", "total_elapsed", "total_count"]].copy()
+        out = AnalysisOnline._safe_numeric(out, ["pre", "build", "total_elapsed", "total_count"])
+        return out.sort_values(["Name", "Setting"])
+
+    @staticmethod
+    def _build_timeout_table(timeout_df: pd.DataFrame, prefix: str) -> pd.DataFrame:
+        if timeout_df.empty:
+            return pd.DataFrame(columns=["Name", "Setting", "pre", "build", "total_elapsed", "total_count"])
+
+        out = timeout_df[["Name", "Setting", "pre", "build", "total_elapsed", "total_count"]].copy()
+        out = AnalysisOnline._safe_numeric(out, ["pre", "build", "total_elapsed", "total_count"])
+        out = AnalysisOnline._extract_latency_values_from_setting(out, prefix)
+        return out.sort_values(["Name", "Setting"])
+
+    @staticmethod
+    def save_report(output_folder: str, report_name: str, analysis_results: Dict[str, pd.DataFrame]) -> str:
+        import os
+        os.makedirs(output_folder, exist_ok=True)
+        for name, df in analysis_results.items():
+            df.to_csv(os.path.join(output_folder, f"{name}.csv"), index=False)
+        return output_folder
+
     def run(self, aggregator: ResultAggregatorOnline) -> Dict[str, pd.DataFrame]:
         valid = aggregator.get_valid()
         to_acc = aggregator.get_timeout_accumulative_latency()
@@ -15,76 +101,14 @@ class AnalysisOnline(AbstractAnalysis):
         result_error = aggregator.get_result_error()
         missing = aggregator.get_missing()
 
-        all_frames = [valid, to_acc, to_max, tool_error, result_error, missing]
-        total_runs = sum(len(df) for df in all_frames)
-
-        status_overview = pd.DataFrame([
-            {"metric": "total", "value": total_runs},
-            {"metric": "ok", "value": len(valid)},
-            {"metric": "timeout_accumulative_latency", "value": len(to_acc)},
-            {"metric": "timeout_maximum_latency", "value": len(to_max)},
-            {"metric": "tool_error", "value": len(tool_error)},
-            {"metric": "result_error", "value": len(result_error)},
-            {"metric": "missing", "value": len(missing)},
-            {"metric": "ok_rate", "value": (len(valid) / total_runs) if total_runs > 0 else 0.0},
-        ])
-
-        per_tool = []
-        names = set()
-        for df in all_frames:
-            if "Name" in df.columns:
-                names.update(df["Name"].dropna().unique().tolist())
-
-        for name in sorted(names):
-            ok = len(valid[valid["Name"] == name])
-            ato = len(to_acc[to_acc["Name"] == name])
-            mto = len(to_max[to_max["Name"] == name])
-            te = len(tool_error[tool_error["Name"] == name])
-            re = len(result_error[result_error["Name"] == name])
-            mi = len(missing[missing["Name"] == name])
-            total = ok + ato + mto + te + re + mi
-
-            # Progress ratio quantifies partial processing in timeout scenarios.
-            timeout_events = pd.concat([
-                to_acc[to_acc["Name"] == name]["total_count"] if "total_count" in to_acc.columns else pd.Series(dtype=float),
-                to_max[to_max["Name"] == name]["total_count"] if "total_count" in to_max.columns else pd.Series(dtype=float),
-            ], ignore_index=True)
-            ok_events = valid[valid["Name"] == name]["total_count"] if "total_count" in valid.columns else pd.Series(dtype=float)
-
-            timeout_mean = pd.to_numeric(timeout_events, errors="coerce").mean() if not timeout_events.empty else None
-            ok_mean = pd.to_numeric(ok_events, errors="coerce").mean() if not ok_events.empty else None
-            progress_ratio = (float(timeout_mean) / float(ok_mean)) if (ok_mean not in [None, 0] and pd.notna(ok_mean) and pd.notna(timeout_mean)) else None
-
-            per_tool.append({
-                "Name": name,
-                "total": total,
-                "ok": ok,
-                "timeout_accumulative_latency": ato,
-                "timeout_maximum_latency": mto,
-                "tool_error": te,
-                "result_error": re,
-                "missing": mi,
-                "ok_rate": (ok / total) if total > 0 else 0.0,
-                "timeout_events_mean": timeout_mean,
-                "ok_events_mean": ok_mean,
-                "timeout_progress_ratio": progress_ratio,
-            })
-
-        per_tool_df = pd.DataFrame(per_tool)
-
-        runtime_summary = pd.DataFrame(columns=["metric", "value"])
-        merged_for_time = pd.concat([valid, to_acc, to_max], ignore_index=True)
-        if not merged_for_time.empty:
-            for col in ["pre", "build", "total_elapsed", "total_count"]:
-                if col in merged_for_time.columns:
-                    series = pd.to_numeric(merged_for_time[col], errors="coerce")
-                    if series.notna().any():
-                        runtime_summary.loc[len(runtime_summary)] = {"metric": f"{col}_mean", "value": float(series.mean())}
-                        runtime_summary.loc[len(runtime_summary)] = {"metric": f"{col}_median", "value": float(series.median())}
-                        runtime_summary.loc[len(runtime_summary)] = {"metric": f"{col}_max", "value": float(series.max())}
+        tool_overview = self._build_tool_overview(valid, to_acc, to_max, tool_error, result_error, missing)
+        successful_runs = self._build_successful_runs_table(valid)
+        timeout_accumulative_latency_details = self._build_timeout_table(to_acc, "acc")
+        timeout_maximum_latency_details = self._build_timeout_table(to_max, "max")
 
         return {
-            "status_overview": status_overview,
-            "per_tool_status": per_tool_df,
-            "online_runtime_progress_summary": runtime_summary,
+            "tool_overview": tool_overview,
+            "successful_runs": successful_runs,
+            "timeout_accumulative_latency_details": timeout_accumulative_latency_details,
+            "timeout_maximum_latency_details": timeout_maximum_latency_details,
         }
