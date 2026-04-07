@@ -1,0 +1,277 @@
+import copy
+import os
+from dataclasses import asdict
+from typing import List, Tuple, Optional, Dict
+
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.BenchmarkBuilder.Coordinator.CaseStudyCoordinator import RunOracleException, TimedOut
+from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
+from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
+from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
+from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, GenerationConstraints, TimeGuardingTool
+from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
+from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
+from Infrastructure.DataTypes.Types.custome_type import OnlineOffline
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate
+from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
+from Infrastructure.constants import ORACLE_KEY, SEEDS_KEY, PATH_KEY, SIZE_KEY, FREE_VARIABLES_KEY, PLACEHOLDER_EVENT, \
+    SIGNATURE_FILE, SIGNATURE_FILE_ENDING, POLICY_FILE, POLICY_FILE_ENDING, TRACE_LENGTH_KEY, SIGNATURE_KEY, \
+    FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, SIGNATURE_FILE_KEY, PATH_TO_FOLDER
+from Infrastructure.DataTypes.FileRepresenters.SeedHandler import SeedHandler
+from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
+from Infrastructure.Monitors.MonitorExceptions import ToolException
+from Infrastructure.AutoConversion.InputOutputTraceFormats import trace_inout_format_to_str
+
+
+class SyntheticDataCoordinator(Coordinator):
+    def __init__(
+        self, experiment: SyntheticExperiment, data_setup, data_source, policy_setup, policy_source,
+        constraints: TimeConstraints, path_manager: PathManager, runtime_settings: OnlineOffline,
+        online_settings: OnlineExperimentContractGeneral = None,
+        oracle: Optional[AbstractOracleTemplate] = None, seeds=None
+    ):
+        super().__init__(path_manager, runtime_settings, online_settings, oracle)
+        self.experiment = experiment
+        self.path_to_folder = self.path_manager.get_path(PATH_TO_FOLDER)
+
+        self.data_setup = asdict(copy.copy(data_setup))
+        self.data_source = data_source
+        self.policy_setup = asdict(copy.copy(policy_setup))
+        self.policy_source = policy_source
+
+        self.constraints = constraints
+        self.seeds = seeds
+        self.fresh_build = False
+
+        self.instructions = []
+
+    def finger_print(self) -> Dict[str, str]:
+        new_data_setup_fingerprint = data_class_to_finger_print(self.data_setup)
+        new_experiment_fingerprint = data_class_to_finger_print(self.experiment)
+        return {FINGERPRINT_EXPERIMENT: new_experiment_fingerprint, FINGERPRINT_DATA: new_data_setup_fingerprint}
+
+    def time_out(self) -> Optional[int]:
+        constraint = self.constraints.runtime_constraint()
+        if constraint is not None:
+            return constraint
+        return None
+
+    def build(self):
+        self.fresh_build = True
+        for num_ops in self.experiment.num_operators:
+            ops_path = f"{self.path_to_folder}/operators_{num_ops}"
+            os.makedirs(ops_path, exist_ok=True)
+
+            for num_fv in self.experiment.num_fvs:
+                fvs_path = f"{ops_path}/free_vars_{num_fv}"
+                os.makedirs(fvs_path, exist_ok=True)
+
+                for num_set in self.experiment.num_setting:
+                    num_path = f"{fvs_path}/num_{num_set}"
+                    self.data_setup[PATH_KEY] = num_path
+                    os.makedirs(num_path, exist_ok=True)
+
+                    if self.oracle is not None or self.data_setup.get(ORACLE_KEY):
+                        os.makedirs(f"{num_path}/result", exist_ok=True)
+
+                    print(f"    Build {num_path}")
+                    trace_format = self.data_source.output_format()
+                    policy_format = self.policy_source.output_format()
+                    constraint = self.constraints.generation_constraint()
+
+                    for data_set_size in self.experiment.num_data_set_sizes:
+                        print(f"    Build {data_set_size}")
+                        if self.seeds:
+                            gen_seed, policy_seed = retrieve_setting_seeds(key_list=[
+                                [num_ops, num_fv, num_set, data_set_size],
+                                [num_ops, num_fv, num_set],
+                                [num_ops, num_set, data_set_size]
+                            ], seed_dict=self.seeds)
+
+                            if gen_seed:
+                                self.data_setup[SEEDS_KEY] = gen_seed
+                            if policy_seed:
+                                self.policy_setup[SEEDS_KEY] = policy_seed
+
+                        constraint = constraint if constraint is None or (constraint.lower_bound is not None or constraint.upper_bound is not None) else None
+                        data_file, policy_file, sig_file, result_file = guarded_synthetic_experiment(
+                            num_path=num_path, num_ops=num_ops, num_fv=num_fv, policy_setup=self.policy_setup,
+                            policy_source=self.policy_source, data_setup=self.data_setup, data_source=self.data_source,
+                            data_set_size=data_set_size, oracle=self.oracle,
+                            constraints=constraint, path_manager=self.path_manager
+                        )
+                        self.instructions.append(((f"{num_ops}_{num_fv}_{num_set}", data_set_size), num_path, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
+
+    def iterate_settings(self) -> List[Tuple[int, str, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
+        if self.fresh_build:
+            return self.instructions
+
+        for num_ops in self.experiment.num_operators:
+            ops_path = f"{self.path_to_folder}/operators_{num_ops}"
+            for num_fv in self.experiment.num_fvs:
+                fvs_path = f"{ops_path}/free_vars_{num_fv}"
+                for num_set in self.experiment.num_setting:
+                    num_path = f"{fvs_path}/num_{num_set}"
+                    trace_format = self.data_source.output_format()
+                    policy_format = self.policy_source.output_format()
+                    for data_set_size in self.experiment.num_data_set_sizes:
+                        trace_ending = trace_inout_format_to_str(trace_format)
+                        data_file = f"data_{data_set_size}.{trace_ending}"
+                        sig_file = f"{SIGNATURE_FILE}.{SIGNATURE_FILE_ENDING}"
+                        policy_file = f"{POLICY_FILE}.{POLICY_FILE_ENDING}"
+                        result_file = f"{num_path}/result/result_{data_set_size}.res"
+                        self.instructions.append(((f"{num_ops}_{num_fv}_{num_set}", data_set_size), num_path, data_file, trace_format, policy_file, policy_format, sig_file, result_file))
+        return self.instructions
+
+    def short_cutting(self):
+        pass
+
+
+def retrieve_setting_seeds(key_list: List[List[int]], seed_dict: Dict) -> Tuple[Optional[int], Optional[int]]:
+    sorted_keys = sorted(key_list, key=len, reverse=True)
+    for key in sorted_keys:
+        str_key = str(key)
+        if str_key in seed_dict:
+            return seed_dict[str_key]
+    return None, None
+
+
+def guarded_synthetic_experiment(
+    num_path: str, num_ops: int, num_fv: int, policy_setup, policy_source, data_setup, data_source,
+    data_set_size: int, oracle: Optional[AbstractOracleTemplate], constraints: Optional[GenerationConstraints],
+    path_manager: PathManager
+):
+    lower_time_bound = None if constraints is None else constraints.lower_bound
+    upper_time_bound = None if constraints is None else constraints.upper_bound
+
+    guard_type = None if constraints is None else constraints.guard_type
+    guard = None if constraints is None else constraints.guard
+
+    trace_seed = data_setup.get(SEEDS_KEY, None)
+    policy_seed = policy_setup.get(SEEDS_KEY, None)
+
+    while True:
+        policy_file, sig_file = synthetic_policy_creation(
+            inner_path=num_path, num_ops=num_ops, num_fv=num_fv, policy_setup=policy_setup,
+            policy_source=policy_source, data_setup=data_setup, data_source=data_source
+        )
+
+        time_out_in_for_loop, data_file, result_file = synthetic_trace_creation(
+            num_path=num_path, signature_file=sig_file, policy_file=policy_file, data_source=data_source, data_setup=data_setup,
+            policy_format=policy_source.output_format(), num_len=data_set_size, oracle=oracle, path_manager=path_manager,
+            time_on=lower_time_bound, time_out=upper_time_bound, guard_type=guard_type, guard=guard
+        )
+
+        sfh = ScratchFolderHandler(num_path)
+        if not time_out_in_for_loop:
+            sfh.remove_folder()
+            return data_file, policy_file, sig_file, result_file
+        else:
+            sfh.clean_up_folder()
+            if trace_seed is not None and policy_seed is not None:
+                raise Exception("Error: The selected time constraints and seeds prevent the construction in time!")
+            elif trace_seed is not None or policy_seed is not None:
+                print("Warning: The selected time constraints and seeds may prevent the construction in time!")
+
+
+def synthetic_policy_creation(
+    inner_path: str, num_ops: int, num_fv: int, policy_setup, policy_source, data_setup, data_source,
+):
+    sh = SeedHandler(inner_path)
+    while True:
+        policy_setup[SIZE_KEY] = num_ops
+        policy_setup[FREE_VARIABLES_KEY] = num_fv
+
+        seed, policy, sig = policy_source.generate_policy(policy_setup)
+        sh.add_seed_policy(seed)
+
+        if sig is not None:
+            sig += f"\n{PLACEHOLDER_EVENT}"
+            to_file(inner_path, sig, SIGNATURE_FILE, SIGNATURE_FILE_ENDING)
+        to_file(inner_path, policy, POLICY_FILE, POLICY_FILE_ENDING)
+
+        signature = None if sig is None else f"{SIGNATURE_FILE}.{SIGNATURE_FILE_ENDING}"
+        if data_source.check_policy(inner_path, signature, f"{POLICY_FILE}.{POLICY_FILE_ENDING}"):
+            data_setup[SIGNATURE_KEY] = sig
+            return f"{POLICY_FILE}.{POLICY_FILE_ENDING}", signature
+
+
+def synthetic_trace_creation(
+        num_path: str, signature_file: Optional[str], policy_file: str, data_source, data_setup,
+        policy_format: InputOutputPolicyFormats, num_len: int,
+        oracle: Optional[AbstractOracleTemplate], path_manager: PathManager,
+        time_on: Optional[int], time_out: Optional[int], guard_type: TimeGuardingTool,
+        guard: Optional[BaseMonitorTemplate]
+):
+    data_file = None
+    result_file = None
+
+    data_setup[TRACE_LENGTH_KEY] = num_len
+    if signature_file is not None:
+        data_setup[SIGNATURE_FILE_KEY] = signature_file
+        with open(f"{num_path}/{signature_file}", "r") as sig_file:
+            sig = sig_file.read()
+            data_setup[SIGNATURE_KEY] = sig
+
+    sh = SeedHandler(num_path)
+    if guard_type is not None and guard_type == TimeGuardingTool.Generator:
+        try:
+            seed, result_csv = data_source.run_generator(data_setup, time_on, time_out)
+            sh.add_seed_generator(seed)
+        except TimedOut:
+            return True, data_file, result_file
+    else:
+        seed, result_csv = data_source.run_generator(data_setup)
+        sh.add_seed_generator(seed)
+
+    trace_format = data_source.output_format()
+    trace_ending = trace_inout_format_to_str(trace_format)
+    to_file(num_path, result_csv, f"data_{num_len}", trace_ending)
+    data_file = f"data_{num_len}.{trace_ending}"
+
+    if oracle is not None:
+        sfh = ScratchFolderHandler(num_path)
+        oracle.pre_process_data(
+            path_to_folder=num_path, data_file=data_file, policy_file=policy_file, signature_file=signature_file,
+            trace_source_format=trace_format, policy_source_format=policy_format, path_manager=path_manager
+        )
+        if guard_type is not None and guard_type == TimeGuardingTool.Oracle:
+            try:
+                out, code = oracle.compute_result(time_on, time_out)
+                if code != 0:
+                    if code == 124:
+                        raise TimedOut()
+                    else:
+                        raise RunOracleException(out)
+            except TimedOut:
+                return True, data_file, result_file
+        else:
+            out, code = oracle.compute_result()
+            if code != 0:
+                raise RunOracleException(out)
+        result_file = f"{num_path}/result/result_{num_len}.res"
+        oracle.post_process_data(out, result_file)
+        sfh.remove_folder()
+
+    if guard_type is not None and guard_type == TimeGuardingTool.Monitor and guard is not None:
+        guard.preprocessing(
+            path_to_folder=num_path, data_file=data_file, policy_file=policy_file, signature_file=signature_file,
+            trace_source_format=trace_format, policy_source_format=policy_format, path_manager=path_manager,
+            verbose=False
+        )
+        try:
+            cmd, name = guard.construct_offline_command()
+            out, code = guard.image.run_offline(parameters=cmd, path_to_data=num_path, time_on=time_on, timeout=time_out, name=name)
+            if code != 0:
+                if code == 124:
+                    raise TimedOut()
+                elif code == 137:
+                    raise ToolException("OOM Killer activated")
+                else:
+                    raise ToolException(code)
+        except TimedOut:
+            return True, data_file, result_file
+
+    return False, data_file, result_file

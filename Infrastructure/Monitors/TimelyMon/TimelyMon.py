@@ -1,57 +1,38 @@
 import os.path
 import re
+from typing import Dict, AnyStr, Any, Tuple, List, Optional
 
-from typing import Dict, AnyStr, Any, Tuple
-
-from Infrastructure.Builders.ProcessorBuilder.DataConverters.OutOfOrderConverter.OutOfOrderConverter import OutOfOrderConverter
-from Infrastructure.Builders.ProcessorBuilder.DataConverters.ReplayerConverter.ReplayerConverter import \
-    ReplayerConverter
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
-from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, VariableOrder, DefaultVariableOrder
-from Infrastructure.Monitors.AbstractMonitorTemplate import AbstractMonitorTemplate
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable, OnlineRunnable
+from Infrastructure.Monitors.SharedFunctions import parse_variable_order_timely
+from Infrastructure.constants import POLICY_KEY, TRACE_KEY, SIGNATURE_KEY
 
 
-class TimelyMon(AbstractMonitorTemplate):
+class TimelyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
-        self.replayer = ReplayerConverter("gen_data", self.params["path_to_project"])
 
-    def pre_processing(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
-        self.params["folder"] = path_to_folder
-        self.params["signature"] = signature_file
-        self.params["formula"] = formula_file
+    def preprocessing_data(
+            self, path_to_folder: AnyStr, data_file: AnyStr,
+            trace_source: InputOutputTraceFormats, path_manager: PathManager
+    ):
+        raise NotImplementedError("TimelyMon does not support non-automatic preprocessing for data")
 
-        if "preprocessing" in self.params:
-            if not self.params["preprocessing"]:
-                self.replayer.convert(
-                    path_to_folder=path_to_folder,
-                    data_file=data_file,
-                    tool="csv",
-                    name=os.path.basename(data_file),
-                    source="monpoly",
-                    dest=f"{path_to_folder}/scratch",
-                    params=["-a", "0"]
-                )
-                self.params["data"] = f"scratch/{data_file}.csv"
-                return
+    def preprocessing_policy(self, path_to_folder: AnyStr, policy_file: AnyStr, signature_file: AnyStr,
+                             policy_source: InputOutputPolicyFormats, path_manager: PathManager):
+        raise NotImplementedError("TimelyMon does not support non-automatic preprocessing for policies")
 
-        reordering = "mode" in self.params
-        trimmed_data_file = os.path.basename(data_file)
-        if reordering:
-            OutOfOrderConverter(None, None).convert(
-                path_to_folder, data_file, self.name.lower(),
-                os.path.basename(data_file), dest=f"{path_to_folder}/scratch", params=self.params
-            )
+    def construct_offline_command(self) -> Tuple[List[str], Optional[str]]:
+        cmd = [self.params[POLICY_KEY], self.params[TRACE_KEY]]
 
-        self.params["data"] = f"scratch/{trimmed_data_file}.{self.name.lower()}" if reordering else data_file
-
-    def run_offline(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
-        cmd = [self.params["formula"], self.params["data"]]
-        
         if not self.params.get("ignore_signature", False):
-           cmd += ["--sig-file", self.params["signature"]]
+            cmd += ["--sig-file", self.params[SIGNATURE_KEY]]
 
         if "worker" in self.params:
             cmd += ["-w", str(self.params["worker"])]
@@ -78,24 +59,12 @@ class TimelyMon(AbstractMonitorTemplate):
 
         if "relational_clean_up" in self.params:
             cmd += ["--relational-clean-up", str(self.params["relational_clean_up"])]
+        return cmd, None
 
-        return self.image.run(self.params["folder"], cmd, time_on, time_out)
-
-    def variable_order(self) -> VariableOrdering:
-        def parse_variable_order(text):
-            match = re.search(r"Order of free variables:\s*\((.*?)\)", text)
-            result = match.group(1).split(", ") if match and match.group(1) else []
-            return [v.strip() for v in result]
-
-        cmd = [self.params["formula"], "--check"]
-        logs, code = self.image.run(self.params["folder"], cmd, measure=False)
-        if code == 0:
-            return VariableOrder(parse_variable_order(logs))
-        else:
-            return DefaultVariableOrder()
-
-    def post_processing(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        variable_order = self.variable_order()
+    def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        cmd = [self.params[POLICY_KEY], "--check"]
+        logs, code = self.image.run_offline(self.params["folder"], cmd, measure=False)
+        variable_order = VariableOrder(parse_variable_order_timely(logs)) if code == 0 else DefaultVariableOrder()
         if self.params["output_mode"] == 0:
             res_file_path = self.params["folder"] + "/" + self.params["output_file"]
             if os.path.exists(res_file_path):
@@ -105,6 +74,35 @@ class TimelyMon(AbstractMonitorTemplate):
                 return OooVerdicts(variable_order=variable_order)
         else:
             return parse_output_structure(stdout_input, variable_order)
+
+    def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
+        cmd = ["additional/policy.policy"]
+        if not self.params.get("ignore_signature", False):
+            cmd += ["--sig-file", "additional/signature.sig"]
+
+        if "worker" in self.params:
+            cmd += ["-w", str(self.params["worker"])]
+
+        if "step" in self.params:
+            cmd += ["--step", str(self.params["step"])]
+
+        cmd += ["-m", "1", "-l"]
+        return cmd, None
+
+    @staticmethod
+    def latency_marker() -> Optional[str]:
+        return None
+
+    def post_processing_online(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        pass
+
+    @staticmethod
+    def supported_policy_formats() -> List[InputOutputPolicyFormats]:
+        return [InputOutputPolicyFormats.MFOTL, InputOutputPolicyFormats.NEGATED_MFOTL]
+
+    @staticmethod
+    def supported_trace_formats() -> List[InputOutputTraceFormats]:
+        return [InputOutputTraceFormats.CSV, InputOutputTraceFormats.OOO_CSV]
 
 
 def parse_output_structure(input_val: AnyStr, variable_ordering) -> AbstractOutputStructure:

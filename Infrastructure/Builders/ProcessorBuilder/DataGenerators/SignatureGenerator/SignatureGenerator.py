@@ -1,7 +1,11 @@
+from typing import List
+
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureContract import signature_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY
+from Infrastructure.Monitors.MonitorExceptions import GeneratorException
 
 # Initial Value taken from the original repository
 DEFAULT_SEED = 314159265
@@ -18,7 +22,11 @@ class SignatureGenerator(DataGeneratorTemplate):
         inner_contract[ENTRYPOINT_KEY] = ""
         seed_raw = contract_inner["seed"]
         seed = seed_raw if seed_raw else DEFAULT_SEED
+
         out, code = self.image.run(inner_contract, time_on=time_on, time_out=time_out)
+
+        if code != 0:
+            raise GeneratorException(f"Signature Generator Failed with code {code} and output: {out}")
 
         if contract_inner.get("watermarks"):
             out = out.strip()
@@ -35,10 +43,14 @@ class SignatureGenerator(DataGeneratorTemplate):
                     segments.append(line)
             out = "\n".join(segments)
 
-        return seed, out, code
+        return seed, out
 
     def check_policy(self, path_inner, signature, formula) -> bool:
         return True
+
+    @staticmethod
+    def output_format() -> List[InputOutputTraceFormats]:
+        return InputOutputTraceFormats.CSV
 
 
 def parse_tp(line):

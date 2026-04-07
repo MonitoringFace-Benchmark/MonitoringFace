@@ -1,25 +1,26 @@
+import json
 import os.path
-from dataclasses import asdict
 from enum import Enum
 from typing import AnyStr, List, Optional
 
-from Infrastructure.Analysis.ResultAggregator import ResultAggregator
+from Infrastructure.Analysis.Aggregators.AbstractAggregator import dispatch_aggregator, AbstractAggregator
+from Infrastructure.Analysis.Aggregators.ResultAggregatorOffline import ResultAggregatorOffline
+from Infrastructure.Analysis.Aggregators.ResultAggregatorOnline import ResultAggregatorOnline
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.BenchmarkBuilder.BenchmarkBuilderException import BenchmarkCreationFailed
-from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyGenerator import CaseStudyGenerator
-from Infrastructure.CLI.cli_args import CLIArgs
-from Infrastructure.DataTypes.Contracts.BenchmarkContract import CaseStudyBenchmarkContract
-from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import construct_case_study, CaseStudyMapper
-from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import construct_synthetic_experiment_sig, construct_synthetic_experiment_pattern, TimeGuarded
+from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
+from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
+from Infrastructure.DataTypes.Types.custome_type import OnlineOffline
+from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.FileRepresenters.FingerPrintHandler import FingerPrintHandler
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
-from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
-from Infrastructure.DataTypes.Types.custome_type import ExperimentType
 
-from Infrastructure.Monitors.AbstractMonitorTemplate import run_monitor
+from Infrastructure.Monitors.BaseMonitorTemplate import run_monitor_offline, run_monitor_online
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
-from Infrastructure.constants import FINGERPRINT_DATA, FINGERPRINT_EXPERIMENT, LENGTH
+from Infrastructure.constants import LENGTH, PATH_TO_NAMED_EXPERIMENT, PATH_TO_INFRA, PATH_TO_EXPERIMENTS, PATH_TO_DEBUG, PATH_TO_PROJECT
 from Infrastructure.printing import print_headline, print_footline, normal_line
 
 
@@ -31,104 +32,99 @@ class RunToolResult(Enum):
 
 
 class BenchmarkBuilder:
-    def __init__(self, contract, path_to_project, data_setup,
-        gen_mode: ExperimentType, time_guard: TimeGuarded,
-        tools_to_build, repeat_runs, cli_args: CLIArgs, oracle=None, seeds=None, short_cut=True
-    ):
+    def __init__(self, experiment_name, coordinator: Coordinator, tools_to_build, repeat_runs, cli_args: CLIArgs):
         print_headline("(Starting) Init Benchmark")
-        self.contract = contract
-        self.seeds = seeds
-        self.short_cut = short_cut
-        #self.debug_mode = cli_args.debug
+        self.coordinator = coordinator
+
+        self.experiment_name = experiment_name
         self.cli_args = cli_args
         self.repeat_runs = repeat_runs
-
-        self.path_to_build = path_to_project + "/Infrastructure/build"
-        self.path_to_experiment = path_to_project + "/Infrastructure/experiments"
-        self.path_to_named_experiment = self.path_to_experiment + "/" + self.contract.experiment_name
-        self.path_to_debug = self.path_to_named_experiment + "/debug"
-
-        self.oracle = None
-        self.oracle_name = None
-        if oracle:
-            self.oracle_name = oracle[1]
-            self.oracle = oracle[0].get_oracle(self.oracle_name)
-        self.gen_mode = gen_mode
-
-        self.time_guard = time_guard
-        self.time_out = self.time_guard.upper_bound if self.time_guard else None
         self.tools_to_build = tools_to_build
 
-        os.makedirs(self.path_to_experiment, exist_ok=True)
-        os.makedirs(self.path_to_named_experiment, exist_ok=True)
+        path_to_project = self.coordinator.get_path(PATH_TO_PROJECT)
+        path_to_infrastructure = path_to_project + "/Infrastructure"
+        self.coordinator.add_path(PATH_TO_INFRA, path_to_infrastructure)
+        named_experiment_path = path_to_infrastructure + "/experiments/" + experiment_name
+        self.coordinator.add_path(PATH_TO_EXPERIMENTS, f"{path_to_infrastructure}/experiments")
+        self.coordinator.add_path(PATH_TO_NAMED_EXPERIMENT, named_experiment_path)
+        self.coordinator.add_path(PATH_TO_DEBUG, named_experiment_path + "/debug")
 
-        data_setup = data_setup if data_setup else {}
-        self.data_setup = data_setup if isinstance(data_setup, dict) else asdict(data_setup)
-        fingerprint_location = self.path_to_named_experiment + "/fingerprint"
-        new_experiment_fingerprint = data_class_to_finger_print(contract)
-        if isinstance(contract, CaseStudyBenchmarkContract):
-            self.data_gen = CaseStudyGenerator(contract.case_study_name, path_to_project)
-            self.data_setup["path"] = f"{self.path_to_named_experiment}/{contract.experiment_name}"
-            print_footline("(Finished) Init Benchmark")
-            if os.path.exists(fingerprint_location):
-                fph = FingerPrintHandler.from_file(fingerprint_location)
-                old_experiment_fingerprint = fph.get_attr(FINGERPRINT_EXPERIMENT)
-                if not new_experiment_fingerprint == old_experiment_fingerprint:
-                    self._build()
-                else:
-                    self.data_setup["case_study_mapper"] = CaseStudyMapper(
-                        path_to_data=f"{self.path_to_named_experiment}/data",
-                        path_to_instructions=f"{self.path_to_named_experiment}/instructions.txt"
-                    )
-            else:
+        os.makedirs(self.coordinator.get_path(PATH_TO_EXPERIMENTS), exist_ok=True)
+        os.makedirs(self.coordinator.get_path(PATH_TO_NAMED_EXPERIMENT), exist_ok=True)
+
+        fingerprint_location = self.coordinator.get_path(PATH_TO_NAMED_EXPERIMENT) + "/fingerprint"
+        finger_print = self.coordinator.finger_print()
+
+        print_footline("(Finished) Init Benchmark")
+        if os.path.exists(fingerprint_location):
+            fph = FingerPrintHandler.from_file(fingerprint_location)
+            if not FingerPrintHandler.compare(fph, finger_print):
                 self._build()
-                fph = FingerPrintHandler({FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
-                fph.to_file(fingerprint_location)
         else:
-            self.data_gen = contract.data_source
-            self.policy_gen = contract.policy_source
-            self.policy_setup = asdict(contract.policy_setup)
-            self.experiment = contract.experiment
-            print_footline("(Finished) Init Benchmark")
-            if os.path.exists(fingerprint_location):
-                fph = FingerPrintHandler.from_file(fingerprint_location)
-                old_data_setup_fingerprint = fph.get_attr(FINGERPRINT_DATA)
-                old_experiment_fingerprint = fph.get_attr(FINGERPRINT_EXPERIMENT)
-                new_data_setup_fingerprint = data_class_to_finger_print(data_setup)
-                if not (old_experiment_fingerprint == new_experiment_fingerprint and old_data_setup_fingerprint == new_data_setup_fingerprint):
-                    self._build()
-                    fph = FingerPrintHandler({FINGERPRINT_DATA: new_data_setup_fingerprint, FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
-                    fph.to_file(fingerprint_location)
-
-            else:
-                self._build()
-                new_data_setup_fingerprint = data_class_to_finger_print(data_setup)
-                fph = FingerPrintHandler({FINGERPRINT_DATA: new_data_setup_fingerprint, FINGERPRINT_EXPERIMENT: new_experiment_fingerprint})
-                fph.to_file(fingerprint_location)
+            self._build()
+            FingerPrintHandler(finger_print).to_file(fingerprint_location)
 
     def _build(self):
         print_headline("(Starting) building Benchmark")
         try:
-            if self.gen_mode == ExperimentType.Signature:
-                print(" ... Build Signature-based Setup")
-                construct_synthetic_experiment_sig(
-                    self.experiment, self.path_to_named_experiment, self.data_setup, self.data_gen,
-                    self.policy_setup, self.policy_gen, self.oracle, self.time_guard, self.seeds
-                )
-            elif self.gen_mode == ExperimentType.Pattern:
-                print(" ... Build Pattern-based Setup")
-                construct_synthetic_experiment_pattern(
-                    self.experiment, self.path_to_named_experiment,
-                    self.data_setup, self.data_gen, self.oracle, self.time_guard, self.seeds
-                )
-            elif self.gen_mode == ExperimentType.CaseStudy:
-                print(" ... Build Case Study Setup")
-                construct_case_study(self.data_gen, self.data_setup, self.path_to_named_experiment, self.oracle, self.time_out)
-            else:
-                raise BenchmarkCreationFailed("Not implemented")
+            self.coordinator.build()
             print_footline("(Finished) building Benchmark")
-        except (BaseException, FileNotFoundError):
-            raise BenchmarkCreationFailed()
+        except Exception as e:
+            raise BenchmarkCreationFailed(e)
+
+    def run(self, tools: List[GetMonitorsReturnType]) -> AbstractAggregator:
+        print("\n" + "-" * LENGTH)
+        normal_line("Run Experiments")
+        print("-" * LENGTH)
+        result_aggregator = dispatch_aggregator(self.coordinator.get_runtime_settings())
+
+        path_to_debug = self.coordinator.get_path(PATH_TO_DEBUG)
+        if os.path.exists(path_to_debug):
+            ScratchFolderHandler(path_to_debug).remove_folder()
+
+        for ((identifier, data_set_size), path_to_folder, data_file, data_type, policy_file, policy_type, signature, result) in self.coordinator.iterate_settings():
+            sfh = ScratchFolderHandler(path_to_folder)
+
+            for i in range(0, self.repeat_runs):
+                tmp_setting_id = f"{identifier}_{i}" if data_set_size is None else f"{identifier}_{data_set_size}_{i}"
+                for tool in tools:
+                    if isinstance(tool, InvalidReturnType):
+                        print_headline(f"Missing {tool.name}")
+                        result_aggregator.add_missing(tool.name, tmp_setting_id)
+                        print_footline()
+                    elif isinstance(tool, ValidReturnType):
+                        if self.cli_args.short_cut:
+                            # todo short cutting must be done by the coordinator
+                            """if tool.tool.name in time_out_dict and self.short_cut:
+                                  print_headline(f"Short cutting {tool.tool.name}")
+                                  result_aggregator.add_timeout(tool.tool.name, tmp_setting_id, self.time_guard.upper_bound)
+                                  print_footline()
+                               else:
+                                  res = run_tools(...)
+                                  if res == RunToolResult.TIMEOUT:
+                                     time_out_dict.add(tool.tool.name)"""
+                            pass
+
+                        if self.coordinator.get_runtime_settings() == OnlineOffline.Online:
+                            run_tools_online(
+                                result_aggregator=result_aggregator, path_to_folder=path_to_folder, tool=tool.tool,
+                                _result_file=result, setting_id=tmp_setting_id, data_file=data_file,
+                                signature_file=signature, policy_file=policy_file, sfh=sfh, cli_args=self.cli_args,
+                                coordinator=self.coordinator, policy_type=policy_type, data_type=data_type,
+                                online_experiment_contract=self.coordinator.get_online_settings()
+                            )
+                        else:
+                            run_tools_offline(
+                                result_aggregator=result_aggregator, path_to_folder=path_to_folder, tool=tool.tool,
+                                result_file=result, setting_id=tmp_setting_id, data_file=data_file, signature_file=signature,
+                                policy_file=policy_file, sfh=sfh, cli_args=self.cli_args,
+                                coordinator=self.coordinator, policy_type=policy_type, data_type=data_type
+                            )
+                    else:
+                        raise NotImplemented(f"Not implemented for object {tool}")
+
+            sfh.remove_folder()
+        return result_aggregator
 
     def seed_retriever(self):
         operator_prefix = "operators_"
@@ -150,100 +146,100 @@ class BenchmarkBuilder:
                 return None
 
         seed_dict = dict()
-        for path in path_generator(self.gen_mode, self.experiment, self.path_to_named_experiment):
-            gen_seed = _read_file(f"{path}/Seeds/generator.seed")
-            policy_seed = _read_file(f"{path}/Seeds/policy.seed")
+        path_to_named_experiment = self.path_manager.get_path(PATH_TO_NAMED_EXPERIMENT)
+        for (_, path_to_data, _, _, _, _, _, _) in self.coordinator.iterate_settings():
+            gen_seed_path = f"{path_to_data}/Seeds/generator.seed"
+            policy_seed_path = f"{path_to_data}/Seeds/policy.seed"
+            gen_seed = _read_file(gen_seed_path) if os.path.exists(gen_seed_path) else None
+            policy_seed = _read_file(policy_seed_path) if os.path.exists(policy_seed_path) else None
 
-            clean_path = path.removeprefix(self.path_to_named_experiment)
+            if gen_seed is None and policy_seed is None:
+                continue
+
+            clean_path = path_to_data.removeprefix(path_to_named_experiment)
             clean_list = list(filter(None, clean_path.split("/")))
             setting_raw = list(filter(lambda x: x is not None, map(lambda x: _apply_decoders(x), clean_list)))
             setting_key = str(setting_raw)
             seed_dict[setting_key] = (gen_seed, policy_seed)
-        return seed_dict
-
-    def run(self, tools: List[GetMonitorsReturnType]) -> ResultAggregator:
-        print("\n" + "-" * LENGTH)
-        normal_line("Run Experiments")
-        print("-" * LENGTH)
-        result_aggregator = ResultAggregator()
-
-        if os.path.exists(self.path_to_debug):
-            sfh_debug = ScratchFolderHandler(self.path_to_debug)
-            sfh_debug.remove_folder()
-
-        if self.gen_mode == ExperimentType.CaseStudy:
-            path_to_folder = f"{self.path_to_named_experiment}/data"
-            sfh = ScratchFolderHandler(path_to_folder)
-            # honor repeat_runs for case-study experiments as well
-            case_study_mapper = self.data_setup["case_study_mapper"]
-            for (num, (data, formula, sig)) in  case_study_mapper.iterate_settings():
-                setting_id = f"{num} -> Data: {data}, Formula: {formula}, Signature: {sig}"
-                for i in range(0, self.repeat_runs):
-                    tmp_setting_id = f"{setting_id}_{i}"
-                    for tool in tools:
-                        if isinstance(tool, InvalidReturnType):
-                            print_headline(f"Missing {tool.name}")
-                            result_aggregator.add_missing(tool.name, tmp_setting_id)
-                            print_footline()
-                        elif isinstance(tool, ValidReturnType):
-                            run_tools(result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
-                                oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
-                                data_file=data, signature_file=sig, formula_file=formula,
-                                sfh=sfh, cli_args=self.cli_args, debug_path=self.path_to_debug,
-                                case_study_mapper=case_study_mapper)
-                        else:
-                            raise NotImplemented(f"Not implemented for object {tool}")
-                        sfh.clean_up_folder()
-            sfh.remove_folder()
-            return result_aggregator
-
-        signature_file = f"signature.sig"
-        formula_file = f"formula.mfotl"
-
-        for path_to_folder in path_generator(self.gen_mode, self.experiment, self.path_to_named_experiment):
-            sfh = ScratchFolderHandler(path_to_folder)
-            time_out_dict = set()
-            for num_len in self.experiment.num_data_set_sizes:
-                setting_id = str(path_to_folder.removeprefix(self.path_to_named_experiment)) + f"/{num_len}"
-                data_file = f"data_{num_len}.csv"
-                for i in range(0, self.repeat_runs):
-                    tmp_setting_id = f"{setting_id}_{i}"
-                    for tool in tools:
-                        if isinstance(tool, InvalidReturnType):
-                            print_headline(f"Missing {tool.name}")
-                            result_aggregator.add_missing(tool.name, tmp_setting_id)
-                            print_footline()
-                        elif isinstance(tool, ValidReturnType):
-                            if tool.tool.name in time_out_dict and self.short_cut:
-                                print_headline(f"Short cutting {tool.tool.name}")
-                                result_aggregator.add_timeout(tool.tool.name, tmp_setting_id, self.time_guard.upper_bound)
-                                print_footline()
-                            else:
-                                res = run_tools(
-                                    result_aggregator=result_aggregator, tool=tool.tool, time_guard=self.time_guard,
-                                    oracle=self.oracle, path_to_folder=path_to_folder, setting_id=tmp_setting_id,
-                                    data_file=data_file, signature_file=signature_file, formula_file=formula_file,
-                                    sfh=sfh, cli_args=self.cli_args, debug_path=self.path_to_debug
-                                )
-                                if res == RunToolResult.TIMEOUT:
-                                    time_out_dict.add(tool.tool.name)
-                        else:
-                            raise NotImplemented(f"Not implemented for object {tool}")
-                        sfh.clean_up_folder()
-            sfh.remove_folder()
-        return result_aggregator
 
 
-def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_folder,
-              data_file, signature_file, formula_file,
-              cli_args: CLIArgs, sfh=None, debug_path=None, case_study_mapper=None) -> RunToolResult:
+def run_tools_online(
+        result_aggregator: ResultAggregatorOnline, tool, setting_id: str, path_to_folder: str,
+        data_file: str, data_type: InputOutputTraceFormats, policy_file: str, policy_type: InputOutputPolicyFormats,
+        signature_file: str, _result_file: str, cli_args: CLIArgs, coordinator: Coordinator,
+        online_experiment_contract: OnlineExperimentContractGeneral, sfh=None
+):
+    debug_path = coordinator.get_path(PATH_TO_DEBUG)
     try:
-        prep, compiled, runtime, prop = run_monitor(
-            tool, time_guard, path_to_folder, data_file,
-            signature_file, formula_file, oracle, case_study_mapper
+        preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count, output, code = run_monitor_online(
+            mon=tool, path_to_folder=path_to_folder, data_file=data_file, signature_file=signature_file,
+            policy_file=policy_file, cli_args=cli_args, trace_source_format=data_type, policy_source_format=policy_type,
+            path_manager=coordinator.get_path_manager(), online_experiment_contract=online_experiment_contract,
+            script_name=(coordinator.script_name if hasattr(coordinator, "script_name") and coordinator.script_name is not None else None)
         )
 
-        if cli_args.debug and sfh is not None and debug_path is not None:
+        processed_elapsed_pairs = []
+        if isinstance(output, list):
+            for block in output:
+                if isinstance(block, dict):
+                    processed = block.get("processed")
+                    elapsed_ns = block.get("elapsed_ns")
+                    if processed is not None and elapsed_ns is not None:
+                        processed_elapsed_pairs.append([processed, elapsed_ns])
+
+        output_pairs_json = json.dumps(processed_elapsed_pairs)
+
+        if code == 0:
+            result_aggregator.add_valid(
+                tool.name, setting_id, preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count,
+                output_pairs_json
+            )
+            return RunToolResult.OK
+        elif code == 200:
+            if cli_args.debug and sfh is not None:
+                sfh.copy_to_debug(debug_path, setting_id, tool.name)
+            result_aggregator.add_timeout_accumulative_latency(
+                tool.name, setting_id, preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count,
+                output_pairs_json
+            )
+            return RunToolResult.TIMEOUT
+        else:  # code == 250:
+            if cli_args.debug and sfh is not None:
+                sfh.copy_to_debug(debug_path, setting_id, tool.name)
+            result_aggregator.add_timeout_maximum_latency(
+                tool.name, setting_id, preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count,
+                output_pairs_json
+            )
+            return RunToolResult.TIMEOUT
+    except ToolException as e:
+        print(f"ToolException for monitor {tool.name}: {e}")
+        if cli_args.debug and sfh is not None:
+            sfh.copy_to_debug(debug_path, setting_id, tool.name)
+        result_aggregator.add_tool_error(tool.name, setting_id, str(e))
+        return RunToolResult.TOOL_ERROR
+    except Exception as e:
+        if cli_args.debug and sfh is not None:
+            sfh.copy_to_debug(debug_path, setting_id, tool.name)
+        result_aggregator.add_tool_error(tool.name, setting_id, str(e))
+        return RunToolResult.TOOL_ERROR
+
+
+def run_tools_offline(
+        result_aggregator: ResultAggregatorOffline, tool, setting_id: str, path_to_folder: str,
+        data_file: str, data_type: InputOutputTraceFormats, policy_file: str, policy_type: InputOutputPolicyFormats,
+        signature_file: str, result_file: str, cli_args: CLIArgs, coordinator: Coordinator, sfh=None
+) -> RunToolResult:
+    debug_path = coordinator.get_path(PATH_TO_DEBUG)
+    timeout_value = coordinator.time_out()
+    try:
+        prep, compiled, runtime, prop = run_monitor_offline(
+            mon=tool, path_to_folder=path_to_folder, data_file=data_file, signature_file=signature_file,
+            policy_file=policy_file, cli_args=cli_args, trace_source_format=data_type, policy_source_format=policy_type,
+            result_file=result_file, timeout_value=timeout_value,
+            oracle=coordinator.get_oracle(), path_manager=coordinator.get_path_manager()
+        )
+
+        if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
 
         stats = StatsHandler(path_to_folder).get_stats()
@@ -261,20 +257,19 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
         return RunToolResult.OK
     except TimedOut as e:
         print(f"Monitor {tool.name} timed out: {e}")
-        if cli_args.debug and sfh is not None and debug_path is not None:
+        if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
-        timeout_value = time_guard.upper_bound if time_guard else None
         result_aggregator.add_timeout(tool.name, setting_id, timeout_value)
         return RunToolResult.TIMEOUT
     except ToolException as e:
         print(f"ToolException for monitor {tool.name}: {e}")
-        if cli_args.debug and sfh is not None and debug_path is not None:
+        if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
         result_aggregator.add_tool_error(tool.name, setting_id, str(e))
         return RunToolResult.TOOL_ERROR
     except ResultErrorException as e:
         print(f"ResultErrorException for monitor {tool.name}: {e.args[1]}")
-        if cli_args.debug and sfh is not None and debug_path is not None:
+        if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
         stats = StatsHandler(path_to_folder).get_stats()
         if stats is not None:
@@ -291,21 +286,7 @@ def run_tools(result_aggregator, tool, setting_id, time_guard, oracle, path_to_f
         )
         return RunToolResult.VALIDATION_ERROR
     except Exception as e:
-        if cli_args.debug and sfh is not None and debug_path is not None:
+        if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
         result_aggregator.add_tool_error(tool.name, setting_id, str(e))
         return RunToolResult.TOOL_ERROR
-
-
-def path_generator(mode: ExperimentType, experiment, path_to_named_experiment: AnyStr) -> list[AnyStr]:
-    paths = []
-    if mode == ExperimentType.Pattern:
-        for num_ops in experiment.num_operators:
-            for num_set in experiment.num_setting:
-                paths += [f"{path_to_named_experiment}/operators_{num_ops}/num_{num_set}"]
-    elif mode == ExperimentType.Signature:
-        for num_ops in experiment.num_operators:
-            for num_fv in experiment.num_fvs:
-                for num_set in experiment.num_setting:
-                    paths += [f"{path_to_named_experiment}/operators_{num_ops}/free_vars_{num_fv}/num_{num_set}"]
-    return paths

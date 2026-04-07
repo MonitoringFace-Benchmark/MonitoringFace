@@ -26,7 +26,6 @@ class ScratchFolderHandler:
                 print(f'Failed to delete {path}. Reason: {e}')
 
     def copy_to_debug(self, debug_base_path: str, setting_id: str, tool_name: str) -> str:
-        # Sanitize setting_id for use as folder name
         safe_setting_id = setting_id.replace("/", "_").replace(" ", "_").replace(":", "_").replace(">", "")
         safe_tool_name = tool_name.replace("/", "_").replace(" ", "_")
 
@@ -34,7 +33,6 @@ class ScratchFolderHandler:
         print(f"Debug information are available at:\n{debug_folder}")
         os.makedirs(debug_folder, exist_ok=True)
 
-        # Copy all files from scratch to debug folder
         for f in os.listdir(self.folder):
             src = os.path.join(self.folder, f)
             dst = os.path.join(debug_folder, f)

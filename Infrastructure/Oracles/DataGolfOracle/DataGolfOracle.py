@@ -2,6 +2,9 @@ import re
 from pathlib import Path
 from typing import AnyStr, Optional, Tuple
 
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Compare.Comparing import comparing
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.DatagolfVerdicts import DatagolfVerdicts
@@ -10,39 +13,51 @@ from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 
 
 class DataGolfOracle(AbstractOracleTemplate):
-    def pre_process_data(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
+    def pre_process_data(
+            self, path_to_folder: str, trace_source_format: InputOutputTraceFormats,
+            policy_source_format: InputOutputPolicyFormats, data_file: str, signature_file: str, policy_file: str,
+            path_manager: PathManager
+    ):
         pass
 
     def compute_result(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
-        pass
+        return "", 0
 
     def post_process_data(self, std_out_str, output_file_name):
         pass
 
-    def verify(self, path_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure, sig_file, formula_file, case_study_maper=None) -> tuple[bool, AnyStr]:
+    def verify(self, path_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure, sig_file, formula_file, result_file) -> tuple[bool, AnyStr]:
         oracle_verdicts = get_oracle_verdicts(path_to_result_folder, data_file)
         return comparing(oracle_verdicts, tool_verdicts)
 
 
 def get_oracle_verdicts(path_to_result_folder, data_file) -> AbstractOutputStructure:
     data_file_size = extract_data_number(data_file)
-    prefix = path_to_result_folder + f"/prefix_{data_file_size}"
-    result = path_to_result_folder + f"/result_{data_file_size}.res"
+    prefix = path_to_result_folder + f"/result/prefix_{data_file_size}"
+    result = path_to_result_folder + f"/result/result_{data_file_size}.res"
 
     if Path(prefix).exists() and Path(result).exists():
         with open(result, "r") as f:
             output = f.read()
 
+        with open(prefix, "r") as f:
+            time_increment = time_shift(f.read())
+
         lines = [ln for ln in (l.rstrip() for l in output.splitlines()) if ln != ""]
-        variable_order = VariableOrder(lines[0].strip().split(","))
+        vo = lines[0].strip().replace("(", "").replace(")", "").split(",")
+        variable_order = VariableOrder(vo)
         verdicts = DatagolfVerdicts(variable_order)
 
         current_ts = None
-        time_point_counter = 0
+        time_point_counter = None
         for line in lines[1:]:
             if line.startswith("@"):
                 m = re.match(r"^@\s*(\d+)", line)
                 current_ts = int(m.group(1)) if m else None
+                if time_point_counter is None:
+                    time_point_counter = time_increment
+                else:
+                    time_point_counter += 1
                 continue
 
             if line.startswith('pos'):
@@ -57,6 +72,11 @@ def get_oracle_verdicts(path_to_result_folder, data_file) -> AbstractOutputStruc
 def extract_data_number(path: str) -> Optional[int]:
     m = re.compile(r"^data_(\d+)\.csv$", re.IGNORECASE).match(Path(path).name)
     return int(m.group(1)) if m else None
+
+
+def time_shift(line: str) -> int:
+    l = line.split("shifted ")[1]
+    return int(l.split(" ")[0])
 
 
 def _parse_assignment_values(line: str):

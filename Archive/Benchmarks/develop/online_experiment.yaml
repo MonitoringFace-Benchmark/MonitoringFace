@@ -1,0 +1,57 @@
+experiment_name: online_experiment
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  timestamp_unit: seconds
+  mode: accelerated
+
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    branch: main
+    release: release
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        response_mode: current-timepoint
+  - identifier: TimelyMon
+    name: TimelyMon
+    branch: simplify_approximation
+    params:
+      worker: 1
+      output_mode: 1
+      OnlineExperimentContractTool:
+        format: csv
+        response_mode: event-count
+        input_aggregations: 1000
+
+tools_to_build:
+  - MonPoly
+  - TimelyMon
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    event_rate: 1000
+
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_eand: 0
+    prob_rand: 0
+    prob_let: 0
+    prob_matchF: 0
+    prob_matchP: 0
+
+synthetic_config:
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [0]
+    num_data_set_sizes: [50]
+
+seeds:
+  '[5, 2, 0]': [314159265,87006]

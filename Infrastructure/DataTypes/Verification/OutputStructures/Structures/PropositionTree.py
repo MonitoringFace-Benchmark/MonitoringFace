@@ -122,6 +122,23 @@ class PDTTree:
 
         return _inner_walk_tree(self.tree, term_assignment)
 
+    def is_false_leave(self) -> bool:
+        if isinstance(self.tree, PDTLeaf):
+            return not self.tree.value
+        return False
+
+    def has_satisfaction(self) -> bool:
+        def _walk(node: PDTComponents):
+            if isinstance(node, PDTLeaf):
+                return node.value
+            if isinstance(node, PDTNode):
+                flag = False
+                for (_, v) in node.values:
+                    flag += _walk(v)
+                return flag
+            raise ValueError(f"Not well-formed PDT Node")
+        return _walk(self.tree)
+
 
 class PropositionTree(AbstractOutputStructure):
     def __init__(self, variable_order: VariableOrdering):
@@ -132,10 +149,17 @@ class PropositionTree(AbstractOutputStructure):
     def retrieve_order(self):
         return self.variable_order.retrieve_order()
 
+    def as_oracle(self, other: 'AbstractOutputStructure') -> Tuple[bool, str]:
+        from Infrastructure.DataTypes.Verification.OutputStructures.Compare.PropositionTreeComparator import as_oracle
+        return as_oracle(self, other)
+
     def retrieve(self, time_point: int):
         if time_point in self.forest:
             return self.forest[time_point]
         return None
+
+    def time_points(self) -> Dict[int, int]:
+        return self.tp_to_ts
 
     def insert(self, value, time_point: int, time_stamp: int):
         self.tp_to_ts[time_point] = time_stamp

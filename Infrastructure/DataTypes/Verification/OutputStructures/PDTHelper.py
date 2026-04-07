@@ -65,12 +65,10 @@ def single_level_tree(left_tree: PDTComponents, right_tree: PDTComponents) -> bo
     elif isinstance(left_tree, PDTNode) and isinstance(right_tree, PDTNode):
         l_comp = None
         for x in left_tree.values:
-            if isinstance(x[1], PDTComplementSet):
-                l_comp = x[1]
+            if isinstance(x[1], PDTComplementSet): l_comp = x[1]
         r_comp = None
         for x in right_tree.values:
-            if isinstance(x[1], PDTComplementSet):
-                r_comp = x[1]
+            if isinstance(x[1], PDTComplementSet): r_comp = x[1]
         return l_comp == r_comp
     else:
          return False
@@ -116,12 +114,9 @@ def setc_diff(set1: PDTSets, set2: PDTSets) -> PDTSets:
 
 
 def setc_is_empty(s: PDTSets) -> bool:
-    if isinstance(s, PDTSet):
-        return len(s.set) == 0
-    elif isinstance(s, PDTComplementSet):
-        return False
-    else:
-        raise PDTCompareError("Unknown PDTSets type in setc_is_empty")
+    if isinstance(s, PDTSet): return len(s.set) == 0
+    elif isinstance(s, PDTComplementSet): return False
+    else: raise PDTCompareError("Unknown PDTSets type in setc_is_empty")
 
 
 def _map_dedup(part: list, f) -> list:
@@ -145,14 +140,11 @@ def _merge2_dedup_iter(f, part1: list, part2: list) -> list:
 
 
 def _dedup_part(part: list) -> list:
-    if not part:
-        return []
+    if not part: return []
 
     result = []
     for s, v in part:
-
         if result:
-            # Check if we can merge with any existing entry
             merged = False
             for i in range(len(result)):
                 t, u = result[i]

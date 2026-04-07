@@ -8,14 +8,15 @@ RUN git clone https://github.com/havelund/dejavu.git /tmp/dejavu_case_study && \
 
 CMD mkdir -p data/ && \
     cp -r /tmp/dejavu_case_study/out/examples/* data/ && \
+    echo "Trace, Policy" > instructions.txt && \
     find data/ -type d | while read dir; do \
       qtls=$(ls "$dir"/*.qtl 2>/dev/null); \
       csvs=$(ls "$dir"/*.csv 2>/dev/null); \
       if [ -n "$qtls" ] && [ -n "$csvs" ]; then \
         for csv in $csvs; do \
           for qtl in $qtls; do \
-            echo "$dir/$(basename "$csv"), $dir/$(basename "$qtl")"; \
+            echo "/$csv: dejavu-encoded, /$qtl: qtl"; \
           done; \
         done; \
       fi; \
-    done > instructions.txt
+    done >> instructions.txt

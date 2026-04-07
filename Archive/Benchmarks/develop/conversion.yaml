@@ -1,0 +1,39 @@
+experiment_name: multi_conv
+
+monitors:
+  - identifier: VeriMon
+    name: VeriMon
+    branch: master
+  - identifier: TimelyMon
+    name: TimelyMon 1
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+  - identifier: TimelyMon
+    name: TimelyMon 6
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+
+# repeats: 3
+
+oracles:
+  - identifier: VeriMonOracle
+    name: VeriMonOracle
+    monitor_name: VeriMon
+
+oracle:
+  enabled: true
+  name: VeriMonOracle
+
+data_setup:
+  type: casestudy
+  fixed: true
+  name: MultiConversion
+
+tools_to_build:
+  - VeriMon
+  - TimelyMon 1
+  - TimelyMon 6

@@ -1,0 +1,39 @@
+#!/bin/bash
+
+#
+# DejaVu - a tool for checking past time temporal logic properties in QTL against traces in CSV format.
+#
+# To use, call (after making executable with: chmod +x dejavu) as follows:
+#
+#   dejavu <specFile> <traceFile> [<bitsPerVariable> [debug]]
+
+# SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+# CALLING_DIR="$(pwd)"
+# echo "DejaVu called from: $CALLING_DIR"
+# echo "DejaVu script path: $SCRIPT_PATH"
+
+
+if [ "$#" -lt 2 ]; then
+    echo "Usage: run <specFile> <traceFile> [<outputDir>] [<bitsPerVariable> [debug]]"
+    exit 1
+fi
+SPEC=$1
+LOG=$2
+OUTDIR=${3:-.}
+BDDSIZE=${4:-20} # default number of bits per variable = 20
+DEBUG=${5:-} # default is no debugging
+
+DEJAVU=/home/dejavu
+
+SPECHASH=$(cat $SPEC | md5sum | cut -d' ' -f1)
+SPECFOLDER=${OUTDIR}/$(basename $SPEC)-$SPECHASH
+
+# Run the compiled monitor on trace:
+exec /usr/bin/time -v -o scratch/stats.txt scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG | egrep "\*\*\*"
+
+res=${PIPESTATUS[0]}
+if [ $res -ne 0 ]; then
+    echo "DejaVu: Error during trace monitoring."
+    exit $res
+fi
+rm -rf dejavu-results

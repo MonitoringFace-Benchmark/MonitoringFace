@@ -1,5 +1,6 @@
-from typing import AnyStr
+from typing import AnyStr, List
 
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 
 
@@ -11,7 +12,11 @@ class PatternPolicyGenerator(PolicyGeneratorTemplate):
         sig = "A(x0:int,x1:int)\nB(x0:int,x1:int)\nC(x0:int,x1:int)"
         policy = patterns_to_policy(policy_contract)
         seed = 1
-        return (seed, sig, policy), 0  # Return tuple and exit code like MfotlPolicyGenerator
+        return seed, policy, sig
+
+    @staticmethod
+    def output_format() -> InputOutputPolicyFormats:
+        return InputOutputPolicyFormats.MFOTL
 
 
 def patterns_to_policy(pat) -> AnyStr:

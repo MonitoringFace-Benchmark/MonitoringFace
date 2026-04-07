@@ -1,19 +1,5 @@
 experiment_name: timely_version_comparison_signature
 
-benchmark_type: synthetic
-experiment_type: Signature
-
-tools:
-  - name: TimelyMon
-    branch: old_timely_version
-    release: branch
-  - name: TimelyMon
-    branch: version_update
-    release: branch
-  - name: VeriMon
-    branch: master
-    release: branch
-
 monitors:
   - identifier: TimelyMon
     name: TimelyMon 1

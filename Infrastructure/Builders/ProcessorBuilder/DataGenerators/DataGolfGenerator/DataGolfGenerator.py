@@ -5,6 +5,7 @@ from typing import AnyStr
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfContract import DataGolfContract
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException
 from Infrastructure.constants import DATAGOLF_POLICY_CHECK, COMMAND_KEY, WORKDIR_KEY, WORKDIR_VAL, VOLUMES_KEY
 
@@ -44,7 +45,7 @@ class DataGolfGenerator(DataGeneratorTemplate):
                 try:
                     with open(f"{data_golf_contract.path}/result/prefix_{str(data_golf_contract.trace_length)}", "w") as file:
                         file.write(prefix)
-                except Exception():
+                except Exception:
                     pass
 
             remove_prefix = "@" + raw_split[1]
@@ -52,7 +53,7 @@ class DataGolfGenerator(DataGeneratorTemplate):
                 raise ValueError("missing 'Trace:' marker in datagolf output")
 
             csv = stdout_to_csv(remove_prefix.split("Trace:")[0].rstrip())
-            return seed, csv, code
+            return seed, csv
         except Exception as e:
             cmd = inner_contract.get(COMMAND_KEY) if 'inner_contract' in locals() else None
             msg = (
@@ -75,6 +76,10 @@ class DataGolfGenerator(DataGeneratorTemplate):
         else:
             out = out.strip()
             return out.__eq__(DATAGOLF_POLICY_CHECK)
+
+    @staticmethod
+    def output_format():
+        return InputOutputTraceFormats.CSV
 
 
 def stdout_to_csv(in_str: AnyStr):
@@ -111,7 +116,7 @@ def data_golf_contract_to_command(contract) -> list[AnyStr]:
         contract.sig_file = "signature.sig"
 
     if contract.formula == "":
-        contract.formula = "formula.mfotl"
+        contract.formula = "policy.policy"
 
     args = ["-sig", contract.sig_file, "-formula", contract.formula]
     if hasattr(contract, 'no_rewrite') and contract.no_rewrite is not None:

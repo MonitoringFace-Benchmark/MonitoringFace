@@ -1,4 +1,7 @@
 from enum import Enum
+from typing import Optional
+
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate
 
 
 class TimeGuardingTool(Enum):
@@ -7,16 +10,28 @@ class TimeGuardingTool(Enum):
     Monitor = 3
 
 
-class TimeGuarded:
-    def __init__(self, time_guarded, guard_type, monitor_manager, guard_name=None, lower_bound=None, upper_bound=None):
-        self.time_guarded = time_guarded
-        self.guard_type = guard_type
-
+class GenerationConstraints:
+    def __init__(self, guarding_tool: Optional[TimeGuardingTool] = None, guard: Optional[BaseMonitorTemplate] = None, lower_bound: int = None, upper_bound: int = None):
+        self.guard_type = guarding_tool
+        self.guard = guard
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
-        self.guard_name = guard_name
-        if guard_type == TimeGuardingTool.Monitor:
-            self.guard = monitor_manager.get_monitor(self.guard_name)
-        else:
-            self.guard = None
+
+class RunTimeConstraints:
+    def __init__(self, upper_bound=None):
+        self.upper_bound = upper_bound
+
+
+class TimeConstraints:
+    def __init__(self, run_time_constraints: Optional[RunTimeConstraints] = None, generation_constraints: Optional[GenerationConstraints] = None):
+        self.run_time_constraints = run_time_constraints
+        self.generation_constraints = generation_constraints
+
+    def runtime_constraint(self):
+        if self.run_time_constraints is None:
+            return None
+        return self.run_time_constraints.upper_bound
+
+    def generation_constraint(self):
+        return self.generation_constraints

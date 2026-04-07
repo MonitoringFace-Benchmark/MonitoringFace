@@ -6,7 +6,7 @@ from typing import Optional
 from Infrastructure.DataLoader.DataLoader import DataLoader
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
-from Infrastructure.DataTypes.Types.custome_type import Processor
+from Infrastructure.DataTypes.Types.custome_type import Processor, OnlineOffline
 
 
 class Location(Enum):
@@ -17,7 +17,7 @@ class Location(Enum):
 
 class Resolver(ABC):
     @abstractmethod
-    def resolve(self):
+    def resolve(self, runtime_setting: Optional[OnlineOffline] = None) -> Optional[Location]:
         pass
 
 
@@ -37,7 +37,7 @@ class ToolResolver(Resolver):
             return os.path.basename(link_target)
         return None
 
-    def resolve(self) -> Optional[Location]:
+    def resolve(self, runtime_setting: Optional[OnlineOffline] = None) -> Optional[Location]:
         symbolic_link_file = f"{self.path_named_archive}/symbolic_link"
         symbolic_link_exists = os.path.exists(symbolic_link_file)
         if symbolic_link_exists:
@@ -49,7 +49,7 @@ class ToolResolver(Resolver):
             name = self.name
             path_archive = self.path_named_archive
 
-        docker_file_exists = os.path.exists(f"{path_archive}/Dockerfile")
+        docker_file_exists = os.path.exists(f"{path_archive}/{runtime_setting.to_string()}/Dockerfile")
         prop_file_exists = os.path.exists(f"{path_archive}/tool.properties")
         if docker_file_exists and prop_file_exists:
             return Location.Local
@@ -67,7 +67,7 @@ class BenchmarkResolver(Resolver):
         self.path_to_infra = path_to_infra
         self.data_loader = DataLoader(Processor.Benchmark, path_to_infra=self.path_to_infra)
 
-    def resolve(self) -> Optional[Location]:
+    def resolve(self, runtime_setting=None) -> Optional[Location]:
         file_exists = os.path.exists(f"{self.path_to_archive}/Benchmarks/{self.name}")
         if file_exists:
             return Location.Local
@@ -103,7 +103,7 @@ class ProcessorResolver(Resolver):
             return os.path.basename(link_target)
         return None
 
-    def resolve(self) -> Optional[Location]:
+    def resolve(self, runtime_setting=None) -> Optional[Location]:
         symbolic_link_file = f"{self.path_named_archive}/symbolic_link"
         symbolic_link_exists = os.path.exists(symbolic_link_file)
         if symbolic_link_exists:

@@ -1,13 +1,12 @@
 import hashlib
 import json
-import sys
 from enum import Enum
 
-import yaml
 from dataclasses import is_dataclass, asdict
 
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
+from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
 
 
 def normalize(obj):
@@ -23,13 +22,15 @@ def normalize(obj):
         return f"{obj.__class__.__name__}"
     elif isinstance(obj, PolicyGeneratorTemplate):
         return f"{obj.__class__.__name__}"
+    elif isinstance(obj, AbstractContract):
+        return {k: normalize(v) for k, v in obj.__dict__.items()}
+    elif hasattr(obj, '__dict__') and not isinstance(obj, type):
+        return {k: normalize(v) for k, v in obj.__dict__.items()}
     else:
         return obj
 
 
 def data_class_to_finger_print(data_class_instance):
-    if not is_dataclass(data_class_instance):
-        raise NotImplemented("Not a dataclass")
     normalized = normalize(data_class_instance)
     serialized = json.dumps(normalized, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()

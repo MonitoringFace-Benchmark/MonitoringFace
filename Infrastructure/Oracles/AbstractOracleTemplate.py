@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import AnyStr, Tuple
+from typing import AnyStr, Tuple, Optional
 
+from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
+from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 
 
@@ -9,7 +12,11 @@ class AbstractOracleTemplate(ABC):
         pass
 
     @abstractmethod
-    def pre_process_data(self, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, formula_file: AnyStr):
+    def pre_process_data(
+            self, path_to_folder: str, trace_source_format: InputOutputTraceFormats,
+            policy_source_format: InputOutputPolicyFormats, data_file: str, signature_file: str, policy_file: str,
+            path_manager: PathManager
+    ):
         pass
 
     @abstractmethod
@@ -21,5 +28,7 @@ class AbstractOracleTemplate(ABC):
         pass
 
     @abstractmethod
-    def verify(self, path_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure, sig_file, formula_file, case_study_mapper=None) -> Tuple[bool, AnyStr]:
+    def verify(
+            self, path_to_result_folder: str, data_file: str, tool_verdicts: AbstractOutputStructure,
+            sig_file: Optional[str], policy_file: str, result_file: str) -> Tuple[bool, AnyStr]:
         pass
