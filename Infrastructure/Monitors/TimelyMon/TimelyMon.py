@@ -106,7 +106,21 @@ class TimelyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
 
 
 def parse_output_structure(input_val: AnyStr, variable_ordering) -> AbstractOutputStructure:
-    def parse_pattern(pattern_str: str):
+    def new_pattern(pattern_str: str):
+        match = re.match(r'^\(([^)]*)\):\s*Time point\(s\)\s*(\d+)(?:-(\d+(?:-\d+)*))?\s*$', pattern_str)
+        if not match:
+            raise ValueError()
+
+        first_num = int(match.group(2))
+        second_num = match.group(3)
+        if second_num is None:
+            num_range = range(first_num, first_num + 1)
+        else:
+            num_range = range(first_num, int(second_num)+1)
+        tuples_list = [[t for t in match.group(1).split(",")]]
+        return num_range, tuples_list
+
+    def old_pattern(pattern_str: str):
         match = re.match(r'@(\d+)\s*\(time point (\d+)\):\s*(.*)', pattern_str)
         if not match:
             raise ValueError()
@@ -119,8 +133,16 @@ def parse_output_structure(input_val: AnyStr, variable_ordering) -> AbstractOutp
 
     for line in input_val.strip().split("\n"):
         try:
-            ts, tp, tuples = parse_pattern(line)
-            verdicts.insert(tuples, tp, ts)
+            line = line.strip()
+            if line.startswith("("):
+                tp_range, tuples = new_pattern(line)
+                for tp in tp_range:
+                    verdicts.insert(tuples, tp, None)
+            elif line.startswith("@"):
+                ts, tp, tuples = old_pattern(line)
+                verdicts.insert(tuples, tp, ts)
+            else:
+                raise ValueError()
         except Exception:
             pass
     return verdicts

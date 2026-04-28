@@ -7,8 +7,9 @@ from Infrastructure.Frontend.CLI.cli import main as cli_main
 
 def validate_setup():
     try:
-        urllib.request.urlopen('https://www.google.com', timeout=3).getcode()
-    except Exception:
+        urllib.request.urlopen('https://www.overleaf.com', timeout=10).getcode()
+    except Exception as error:
+        print(error)
         raise RuntimeError("Network connection is not available!")
 
     docker_ok = subprocess.call(['docker', 'info'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
