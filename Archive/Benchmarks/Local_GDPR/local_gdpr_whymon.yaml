@@ -1,0 +1,18 @@
+experiment_name: GDPR_case_study
+
+monitors:
+  - identifier: WhyMon
+    name: WhyMon
+    branch: main
+
+runtime_constraints:
+  upper_bound: 30
+
+repeats: 3
+
+data_setup:
+  type: CaseStudy
+  name: Local_GDPR_WhyMon
+
+tools_to_build:
+  - WhyMon
