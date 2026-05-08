@@ -13,7 +13,12 @@ monitors:
     params:
       worker: 6
       output_mode: 1
-      ignore_signature: true
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
+  - identifier: VeriMon
+    name: VeriMon
+    branch: master
 
 repeats: 3
 
@@ -27,3 +32,4 @@ data_setup:
 tools_to_build:
   - TimelyMon 1
   - TimelyMon 6
+  - MonPoly
