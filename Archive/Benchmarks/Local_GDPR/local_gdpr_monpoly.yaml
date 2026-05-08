@@ -13,6 +13,15 @@ monitors:
     params:
       worker: 6
       output_mode: 1
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
+  - identifier: VeriMon
+    name: VeriMon
+    branch: master
+  - identifier: DejaVu
+    name: DejaVu
+    branch: master
 
 repeats: 3
 
@@ -27,3 +36,6 @@ data_setup:
 tools_to_build:
   - TimelyMon 1
   - TimelyMon 6
+  - MonPoly
+  - VeriMon
+  - DejaVu

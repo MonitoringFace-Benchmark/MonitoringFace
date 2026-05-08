@@ -36,3 +36,5 @@ tools_to_build:
   - TimelyMon 1
   - TimelyMon 6
   - MonPoly
+  - VeriMon
+  - DejaVu
