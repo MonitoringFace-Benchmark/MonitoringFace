@@ -3,11 +3,6 @@ experiment_name: timely_version_comparison_signature
 benchmark_type: synthetic
 experiment_type: Signature
 
-tools:
-  - name: TimelyMon
-    branch: development
-    release: branch
-
 monitors:
   - identifier: TimelyMon
     name: TimelyMon 1 S1

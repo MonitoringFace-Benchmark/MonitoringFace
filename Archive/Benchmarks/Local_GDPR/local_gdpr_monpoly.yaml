@@ -13,7 +13,6 @@ monitors:
     params:
       worker: 6
       output_mode: 1
-      ignore_signature: true
 
 repeats: 3
 
@@ -22,6 +21,7 @@ runtime_constraints:
 
 data_setup:
   type: CaseStudy
+  fixed: true
   name: Local_GDPR_MonPoly
 
 tools_to_build:

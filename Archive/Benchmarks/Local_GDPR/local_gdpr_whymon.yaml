@@ -12,6 +12,7 @@ repeats: 3
 
 data_setup:
   type: CaseStudy
+  fixed: true
   name: Local_GDPR_WhyMon
 
 tools_to_build:
