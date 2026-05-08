@@ -19,6 +19,9 @@ monitors:
   - identifier: VeriMon
     name: VeriMon
     branch: master
+  - identifier: DejaVu
+    name: DejaVu
+    branch: master
 
 repeats: 3
 
