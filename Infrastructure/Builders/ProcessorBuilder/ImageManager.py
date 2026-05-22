@@ -33,8 +33,8 @@ class ImageManager(AbstractImageManager):
         self.path = path_to_project_inner + "/Infrastructure/build"
         self.path_to_infra = path_to_project_inner + "/Infrastructure"
         self.downloader = DataLoader(proc, self.path_to_infra)
-        self.path_to_archive = f"{path_to_project_inner}/Archive/{self.identifier}"
-        self.path_named_archive = path_to_project_inner + f"/Archive/{self.identifier}/{self.name}"
+        self.path_to_archive = f"{path_to_project_inner}/Archive/Docker/{self.identifier}"
+        self.path_named_archive = path_to_project_inner + f"/Archive/Docker/{self.identifier}/{self.name}"
 
         pr = ProcessorResolver(self.name, self.proc, self.path_to_archive, self.path_to_infra)
         self.location = pr.resolve()

@@ -114,7 +114,7 @@ class YamlParser:
     @staticmethod
     def _parse_data_generators(path_to_module, name: str) -> DataGeneratorTemplate:
         print(f"-> Attempting to initialize Policy Generator {name}")
-        available = _discover_names(f"{path_to_module}/Archive/Implementations", "DataGenerators")
+        available = _discover_names(f"{path_to_module}/Archive", "DataGenerators")
         if name in available:
             cls = _retrieve_module("DataGenerators", name)
             build_cls = cls(name=name, path_to_build=f"{path_to_module}")
@@ -172,7 +172,7 @@ class YamlParser:
         policy_setup = self.cfg.policy_setup
         data_contract_name = policy_setup.get('type')
 
-        folder_files = _discover_contract_names(self.path_to_project + "/Infrastructure", "PolicyGenerators")
+        folder_files = _discover_contract_names(self.path_to_project + "/Archive/Implementations", "PolicyGenerators")
         if _contract_names(folder_files, data_contract_name):
             folder = _folder_name_from_contract(folder_files, data_contract_name)
             config = OmegaConf.to_container(policy_setup.get(data_contract_name, {}), resolve=True)
@@ -201,7 +201,7 @@ class YamlParser:
                 params['path_to_project'] = self.path_to_project
             monitors_to_build.append((identifier, name, branch, commit, params))
 
-        return MonitorManager(tool_manager=tool_manager, monitors_to_build=monitors_to_build)
+        return MonitorManager(tool_manager=tool_manager, monitors_to_build=monitors_to_build, path_to_archive=f"{self.path_to_project}/Archive")
 
     def parse_tool_params(self, monitor_dict):
         params = monitor_dict.get('params', {})

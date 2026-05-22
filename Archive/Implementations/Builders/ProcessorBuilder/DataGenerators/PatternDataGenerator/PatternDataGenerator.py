@@ -1,7 +1,8 @@
 from typing import AnyStr, List
 
+from Archive.Implementations.Builders.ProcessorBuilder.DataGenerators.PatternDataGenerator.PatternDataContract import \
+    pattern_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.PatternDataGenerator.PatternDataContract import pattern_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException

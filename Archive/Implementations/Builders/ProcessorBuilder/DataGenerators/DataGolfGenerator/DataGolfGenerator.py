@@ -2,8 +2,8 @@ import re
 from dataclasses import fields
 from typing import AnyStr
 
+from Archive.Implementations.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfContract import DataGolfContract
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGolfGenerator.DataGolfContract import DataGolfContract
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException

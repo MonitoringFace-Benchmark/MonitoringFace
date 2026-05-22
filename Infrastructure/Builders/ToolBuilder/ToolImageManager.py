@@ -47,8 +47,8 @@ class IndirectToolImageManager(AbstractToolImageManager):
         self.commit = commit
         self.args = {BUILD_ARG_GIT_BRANCH: branch, BUILD_ARG_GIT_COMMIT: commit} if commit else {BUILD_ARG_GIT_BRANCH: branch}
 
-        self.named_archive = f"{path_to_archive}/Tools/{self.original_name}"
-        self.linked_named_archive = f"{path_to_archive}/Tools/{self.linked_name}"
+        self.named_archive = f"{path_to_archive}/Docker/Tools/{self.original_name}"
+        self.linked_named_archive = f"{path_to_archive}/Docker/Tools/{self.linked_name}"
         self.image_name = f"{self.linked_name.lower()}_{commit}_{runtime_setting.to_string()}{IMAGE_POSTFIX}" if commit else f"{self.linked_name.lower()}_{self.branch.lower()}_{runtime_setting.to_string()}{IMAGE_POSTFIX}"
 
         self.path_to_infra = path_to_infra
@@ -127,7 +127,7 @@ class DirectToolImageManager(AbstractToolImageManager):
         self.args = {BUILD_ARG_GIT_BRANCH: branch, BUILD_ARG_GIT_COMMIT: commit} if commit else {BUILD_ARG_GIT_BRANCH: branch}
         self.image_name = f"{name.lower()}_{commit}_{runtime_setting.to_string()}{IMAGE_POSTFIX}" if commit else f"{name.lower()}_{branch.lower()}_{runtime_setting.to_string()}{IMAGE_POSTFIX}"
 
-        self.named_archive = f"{path_to_archive}/Tools/{name}"
+        self.named_archive = f"{path_to_archive}/Docker/Tools/{name}"
         self.path_to_infra = path_to_infra
         self.parent_path = f"{path_to_build}/Monitor/{self.name}"
         self.path = f"{self.parent_path}/{commit}" if commit else f"{self.parent_path}/{branch}"

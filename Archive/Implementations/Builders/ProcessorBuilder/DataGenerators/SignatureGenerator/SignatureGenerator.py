@@ -1,6 +1,7 @@
 from typing import List
 
-from Infrastructure.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureContract import signature_contract_to_commands
+from Archive.Implementations.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureContract import \
+    signature_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats

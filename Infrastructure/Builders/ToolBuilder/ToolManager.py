@@ -28,7 +28,7 @@ class ToolManager:
                     print(f"\n-> Attempting to build Image {tool} - {branch} @ {commit}")
                 else:
                     print(f"\n-> Attempting to build Image {tool} - {branch}")
-                path_to_named_archive = f"{path_to_archive}/Tools/{tool}"
+                path_to_named_archive = f"{path_to_archive}/Docker/Tools/{tool}"
                 tl = ToolResolver(tool, path_to_archive, path_to_named_archive, path_to_infra)
                 location = tl.resolve(runtime_setting)
 
@@ -40,7 +40,7 @@ class ToolManager:
 
                 linked = tl.symbolic_linked()
                 if linked:
-                    new_path_to_named_archive = f"{path_to_archive}/Tools/{linked}"
+                    new_path_to_named_archive = f"{path_to_archive}/Docker/Tools/{linked}"
                     new_tl = ToolResolver(linked, path_to_archive, new_path_to_named_archive, path_to_infra)
                     new_location = new_tl.resolve(runtime_setting)
                     if location == Location.Unavailable:

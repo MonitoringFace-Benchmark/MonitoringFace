@@ -2,7 +2,7 @@ from dataclasses import dataclass, fields
 from typing import Optional, Dict, Any
 
 from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
-from Infrastructure.constants import PLACEHOLDER_EVENT, SIGNATURE_KEY
+from Infrastructure.constants import PLACEHOLDER_EVENT
 
 
 @dataclass

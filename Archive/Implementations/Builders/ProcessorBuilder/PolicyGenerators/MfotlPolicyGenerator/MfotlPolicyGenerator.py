@@ -1,10 +1,9 @@
 from dataclasses import fields
-from typing import AnyStr, List
+from typing import AnyStr
 
+from Archive.Implementations.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import MfotlPolicyContract, policy_contract_to_commands
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import MfotlPolicyContract
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.MfotlPolicyGenerator.MfotlPolicyContract import policy_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException
 from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY, FREE_VARIABLES_KEY

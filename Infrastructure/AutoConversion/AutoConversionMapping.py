@@ -111,4 +111,4 @@ def _discover_converters(path_to_archive_: str, ttype: str) -> List[str]:
 
 
 def _retrieve_module(ttype: str, name: str):
-    return getattr(importlib.import_module(f"Infrastructure.Builders.ProcessorBuilder.{ttype}.{name}.{name}"), name)
+    return getattr(importlib.import_module(f"Archive.Implementations.Builders.ProcessorBuilder.{ttype}.{name}.{name}"), name)

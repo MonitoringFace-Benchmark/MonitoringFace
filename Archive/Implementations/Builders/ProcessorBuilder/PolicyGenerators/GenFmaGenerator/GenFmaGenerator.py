@@ -1,8 +1,9 @@
 from typing import AnyStr, Tuple, List
 
+from Archive.Implementations.Builders.ProcessorBuilder.PolicyGenerators.GenFmaGenerator.GenFmaContract import \
+    GenFmaContract
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager
-from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.GenFmaGenerator.GenFmaContract import GenFmaContract
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
 from Infrastructure.DataTypes.Types.custome_type import Processor
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException

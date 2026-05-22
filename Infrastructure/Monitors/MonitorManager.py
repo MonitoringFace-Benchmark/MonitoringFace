@@ -7,9 +7,10 @@ from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate
 from Infrastructure.printing import print_headline, print_footline
 
 
-def _discover_monitors():
+def _discover_monitors(path_to_monitors):
     monitors = {}
-    for item in Path(__file__).parent.iterdir():
+    print(__file__)
+    for item in Path(path_to_monitors).iterdir():
         if not item.is_dir() or item.name.startswith('_') or item.name == '__pycache__':
             continue
 
@@ -28,8 +29,8 @@ def _discover_monitors():
     return monitors
 
 
-def identifier_to_monitor(tool_manager, identifier, branch, name, commit, params):
-    available_monitors = _discover_monitors()
+def identifier_to_monitor(tool_manager, identifier, branch, name, commit, params, path_to_monitors):
+    available_monitors = _discover_monitors(path_to_monitors)
     if identifier not in available_monitors:
         available = ', '.join(available_monitors.keys())
         raise ValueError(
@@ -62,7 +63,7 @@ class InvalidReturnType(GetMonitorsReturnType):
 
 
 class MonitorManager:
-    def __init__(self, tool_manager, monitors_to_build):
+    def __init__(self, tool_manager, monitors_to_build, path_to_archive):
         print_headline("(Starting) Building MonitorManager")
         self.monitors = {}
         failed_builds = []
@@ -74,7 +75,8 @@ class MonitorManager:
                     print(f"-> Attempting to construct Monitor {identifier} - {branch}")
                 self.monitors[name] = identifier_to_monitor(
                     tool_manager=tool_manager, identifier=identifier,
-                    branch=branch, name=name, commit=commit, params=params
+                    branch=branch, name=name, commit=commit, params=params,
+                    path_to_monitors=f"{path_to_archive}/Implementations/Monitors"
                 )
                 print(f"    -> (Success)")
             except Exception as e:
