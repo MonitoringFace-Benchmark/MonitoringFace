@@ -114,7 +114,7 @@ class YamlParser:
     @staticmethod
     def _parse_data_generators(path_to_module, name: str) -> DataGeneratorTemplate:
         print(f"-> Attempting to initialize Policy Generator {name}")
-        available = _discover_names(f"{path_to_module}/Infrastructure", "DataGenerators")
+        available = _discover_names(f"{path_to_module}/Archive/Implementations", "DataGenerators")
         if name in available:
             cls = _retrieve_module("DataGenerators", name)
             build_cls = cls(name=name, path_to_build=f"{path_to_module}")
@@ -144,7 +144,7 @@ class YamlParser:
             script_name = data_setup.get('script_name')
             return ScriptSetupContract(name=data_setup.get('name'), fixed=fixed, script_name=script_name)
         else:
-            folder_files = _discover_contract_names(self.path_to_project + "/Infrastructure", "DataGenerators")
+            folder_files = _discover_contract_names(self.path_to_project + "/Archive/Implementations", "DataGenerators")
             if _contract_names(folder_files, data_contract_name):
                 folder = _folder_name_from_contract(folder_files, data_contract_name)
                 config = OmegaConf.to_container(data_setup.get(data_contract_name, {}), resolve=True)
@@ -156,7 +156,7 @@ class YamlParser:
     @staticmethod
     def _parse_policy_generators(path_to_module, name: str) -> PolicyGeneratorTemplate:
         print(f"-> Attempting to initialize Policy Generator {name}")
-        available = _discover_names(f"{path_to_module}/Infrastructure", "PolicyGenerators")
+        available = _discover_names(f"{path_to_module}/Archive", "PolicyGenerators")
         if name in available:
             cls = _retrieve_module("PolicyGenerators", name)
             build_cls = cls(name=name, path_to_build=f"{path_to_module}")
@@ -417,9 +417,9 @@ class ExperimentSuiteParser:
     def __init__(self, path_to_project: str, config_name: str):
         relative_dir = os.path.dirname(config_name)
         if relative_dir:
-            self.config_dir = f"{path_to_project}/Archive/Benchmarks/{relative_dir}"
+            self.config_dir = f"{path_to_project}/Archive/Settings/{relative_dir}"
         else:
-            self.config_dir = f"{path_to_project}/Archive/Benchmarks"
+            self.config_dir = f"{path_to_project}/Archive/Settings"
         self.config_name = os.path.basename(config_name)
         self.cfg = self._load_config()
 
@@ -449,7 +449,7 @@ class ExperimentSuiteParser:
 
 def _discover_names(path_to_infra_, category):
     names = []
-    for item in Path(f"{path_to_infra_}/Builders/ProcessorBuilder/{category}").iterdir():
+    for item in Path(f"{path_to_infra_}/Implementations/Builders/ProcessorBuilder/{category}").iterdir():
         if not item.is_dir() or item.name.startswith('_') or item.name == '__pycache__':
             continue
         names.append(item.name)
@@ -457,7 +457,7 @@ def _discover_names(path_to_infra_, category):
 
 
 def _retrieve_module(category, name):
-    return getattr(importlib.import_module(f"Infrastructure.Builders.ProcessorBuilder.{category}.{name}.{name}"), name)
+    return getattr(importlib.import_module(f"Archive.Implementations.Builders.ProcessorBuilder.{category}.{name}.{name}"), name)
 
 
 def _discover_contract_names(path_to_infra_: str, category: str) -> List[str]:
@@ -485,5 +485,5 @@ def _folder_name_from_contract(folder_file_tuples, contract_name) -> Optional[st
 
 def _retrieve_contract(category: str, folder_name: str, contract_class_name: str):
     module = importlib.import_module(
-        f"Infrastructure.Builders.ProcessorBuilder.{category}.{folder_name}.{contract_class_name}")
+        f"Archive.Implementations.Builders.ProcessorBuilder.{category}.{folder_name}.{contract_class_name}")
     return getattr(module, contract_class_name)

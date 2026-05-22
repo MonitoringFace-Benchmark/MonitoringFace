@@ -18,7 +18,7 @@ def _discover_monitors():
 
         if module_file.exists():
             try:
-                module_path = f"Infrastructure.Monitors.{folder_name}.{folder_name}"
+                module_path = f"Archive.Implementations.Monitors.{folder_name}.{folder_name}"
                 module = importlib.import_module(module_path)
                 if hasattr(module, folder_name):
                     monitor_class = getattr(module, folder_name)

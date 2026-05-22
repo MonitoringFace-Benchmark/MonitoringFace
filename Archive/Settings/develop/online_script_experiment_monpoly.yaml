@@ -1,0 +1,26 @@
+experiment_name: online_script_experiment
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: script
+  timestamp_unit: seconds
+  mode: accelerated
+  accumulative_time: 1
+
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    branch: main
+    release: release
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        response_mode: current-timepoint
+
+tools_to_build:
+  - MonPoly
+
+data_setup:
+  type: script
+  name: TestScript
+  script_name: TestScriptLOG.py

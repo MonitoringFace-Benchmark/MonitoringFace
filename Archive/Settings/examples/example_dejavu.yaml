@@ -1,0 +1,41 @@
+# Example YAML configuration for a synthetic benchmark experiment
+experiment_name: test_dejavu
+
+# Monitors configuration
+monitors:
+  - identifier: DejaVu
+    name: DejaVu
+    branch: master
+    release: release
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    event_rate: 10
+
+# Policy setup
+policy_setup:
+  type: GenFmaContract
+  GenFmaContract:
+    size: 3
+    past_only: True
+    max_lb: -1
+
+
+# Synthetic benchmark specific configuration
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: GenFmaGenerator
+  experiment:
+    num_operators: [2]
+    num_fvs: [2]
+    num_setting: [0, 1]
+    num_data_set_sizes: [50]
+
+# Tools to build and run (list of monitor names)
+tools_to_build:
+  - DejaVu
+
+seeds:
+  '[2, 2, 0]': [314159265,87006]
+  '[2, 2, 1]': [314159265,54252]

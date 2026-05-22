@@ -1,0 +1,28 @@
+experiment_name: online_script_experiment
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: script
+  timestamp_unit: seconds
+  mode: accelerated
+  accumulative_time: 1
+
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon
+    branch: simplify_approximation
+    params:
+      worker: 1
+      output_mode: 1
+      OnlineExperimentContractTool:
+        format: csv
+        response_mode: event-count
+        input_aggregations: 1
+
+tools_to_build:
+  - TimelyMon
+
+data_setup:
+  type: script
+  name: TestScript
+  script_name: TestScriptCSV.py

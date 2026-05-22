@@ -1,0 +1,67 @@
+experiment_name: test_synthetic_experiment
+
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 1
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+  - identifier: TimelyMon
+    name: TimelyMon 6
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+  - identifier: VeriMon
+    name: VeriMon
+    branch: master
+  - identifier: WhyMon
+    name: WhyMon
+    branch: main
+    release: branch
+
+oracles:
+  - identifier: VeriMonOracle
+    name: VeriMonOracle
+    monitor_name: VeriMon
+
+oracle:
+  enabled: true
+  name: VeriMonOracle
+
+runtime_constraints:
+  upper_bound: 200
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    event_rate: 1000
+
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_eand: 0
+    prob_rand: 0
+    prob_let: 0
+    prob_matchF: 0
+    prob_matchP: 0
+
+synthetic_config:
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [0, 1]
+    num_data_set_sizes: [50, 100]
+
+tools_to_build:
+  - TimelyMon 1
+  - TimelyMon 6
+  - VeriMon
+  - WhyMon
+
+seeds:
+  '[5, 2, 0]': [314159265,87006]
+  '[5, 2, 1]': [314159265,53339]

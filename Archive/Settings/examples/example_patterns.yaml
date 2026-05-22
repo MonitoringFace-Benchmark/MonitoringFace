@@ -1,0 +1,56 @@
+experiment_name: patterns_experiment
+
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 4
+    branch: development
+    params:
+      worker: 4
+      output_mode: 1
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
+
+runtime_constraints:
+  upper_bound: 150
+
+generation_constraints:
+  lower_bound: null
+  upper_bound: 150
+  guard_type: Monitor
+  guard_name: TimelyMon 4
+
+data_setup:
+  type: PatternDataContract
+  PatternDataContract:
+    trace_length: 1000
+    event_rate: 1000
+    linear: 1
+    violations: 1.0
+    zipf: "x=1.5+3,z=2"
+    prob_a: 0.2
+    prob_b: 0.3
+    prob_c: 0.5
+
+policy_setup:
+  type: PatternPolicyContract
+  PatternPolicyContract:
+    interval: "[0,10)"
+    policy: "Star"
+
+synthetic_config:
+  data_source: PatternDataGenerator
+  policy_source: PatternPolicyGenerator
+  experiment:
+    num_operators: [3, 5, 7]
+    num_setting: [0]
+    num_data_set_sizes: [10, 50]
+
+tools_to_build:
+  - TimelyMon 4
+  - MonPoly
+
+seeds:
+  '[3, 0]': [314159265, 1]
+  '[5, 0]': [314159265, 1]
+  '[7, 0]': [314159265, 1]

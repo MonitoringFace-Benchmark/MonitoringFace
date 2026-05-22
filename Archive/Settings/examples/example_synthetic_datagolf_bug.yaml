@@ -1,0 +1,67 @@
+# Example YAML configuration for a synthetic benchmark experiment
+experiment_name: test_synthetic_datagolf
+
+# Monitors configuration
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 6
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
+    params:
+      replayer: gen_data
+
+# Time guard configuration
+runtime_constraints:
+  upper_bound: 200
+
+# Data setup - Hydra structured format
+data_setup:
+  type: DataGolfContract
+  DataGolfContract:
+    trace_length: 10
+    oracle: true
+    tup_ts: [0,1,2,3,4,5]
+    tup_amt: 10
+    tup_val: 0
+
+# Policy setup
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_eand: 0
+    prob_rand: 0
+    prob_let: 0
+    prob_matchF: 0
+    prob_matchP: 0
+
+# Synthetic benchmark specific configuration
+synthetic_config:
+  data_source: DataGolfGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [0, 1]
+    num_data_set_sizes: [5]
+
+oracles:
+  - identifier: DataGolfOracle
+    name: DataGolfOracle
+
+oracle:
+  enabled: true
+  name: DataGolfOracle
+
+tools_to_build:
+  - TimelyMon 6
+  - MonPoly
+
+seeds:
+  '[5, 2, 0]': [-1, 52660]
+  '[5, 2, 1]': [-1, 99974]

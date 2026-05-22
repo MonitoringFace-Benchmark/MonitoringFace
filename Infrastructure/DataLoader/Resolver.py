@@ -65,10 +65,10 @@ class BenchmarkResolver(Resolver):
         self.name = name
         self.path_to_archive = path_to_archive
         self.path_to_infra = path_to_infra
-        self.data_loader = DataLoader(Processor.Benchmark, path_to_infra=self.path_to_infra)
+        self.data_loader = DataLoader(Processor.Benchmark, path_to_infra=self.path_to_archive)
 
     def resolve(self, runtime_setting=None) -> Optional[Location]:
-        file_exists = os.path.exists(f"{self.path_to_archive}/Benchmarks/{self.name}")
+        file_exists = os.path.exists(f"{self.path_to_archive}/Settings/{self.name}")
         if file_exists:
             return Location.Local
 
@@ -121,7 +121,7 @@ class ProcessorResolver(Resolver):
         if docker_file_exists and prop_file_exists:
             return Location.Local
 
-        if any(tool == name for tool in DataLoader(self.processor_type, self.path_to_infra).get_all_names()):
+        if any(tool == name for tool in DataLoader(self.processor_type, self.path_archive).get_all_names()):
             return Location.Remote
 
         return Location.Unavailable

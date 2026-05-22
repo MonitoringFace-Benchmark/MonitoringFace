@@ -1,0 +1,70 @@
+# Example YAML configuration using Patterns data generator
+experiment_name: mdg_pattern_linear
+
+benchmark_type: synthetic
+experiment_type: Pattern
+
+tools:
+  - name: TimelyMon
+    branch: development
+    release: branch
+  - name: MonPoly
+    branch: master
+    release: branch
+  - name: VeriMon
+    branch: master
+    release: branch
+
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 1
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
+    params:
+      replayer: gen_data
+  - identifier: VeriMon
+    name: VeriMon
+    branch: master
+    params:
+      replayer: gen_data
+
+data_setup:
+  type: PatternContract
+  PatternContract:
+    event_rate: 1000
+    linear: 1
+    violations: 1.0
+    watermarks: true
+    zipf: "x=1.5+3,z=2"
+    prob_a: 0.2
+    prob_b: 0.3
+    prob_c: 0.5
+
+# Policy setup
+policy_setup:
+  type: PatternPolicyContract
+  PatternPolicyContract:
+    interval: "[0,50)"
+    policy: "linear"
+
+# Synthetic benchmark configuration
+synthetic_config:
+  data_source: PatternGenerator
+  policy_source: PatternPolicyGenerator
+  experiment:
+    num_operators: [5]
+    num_setting: [0]
+    num_data_set_sizes: [100, 250, 500]
+
+tools_to_build:
+  - TimelyMon 1
+  - MonPoly
+  - VeriMon
+
+seeds:
+  '[5, 0]': [314159265, 1]

@@ -1,1 +1,0 @@
-ONCE [0,100) ((A(x,y) AND B(y,x)) OR C(x,y))

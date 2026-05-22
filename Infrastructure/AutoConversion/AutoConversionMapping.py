@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import List, Dict, TypeVar, Generic, Tuple
 
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
-from Infrastructure.constants import PATH_TO_INFRA
+from Infrastructure.constants import PATH_TO_ARCHIVE
 
 F = TypeVar('F')
 T = TypeVar('T')
@@ -17,10 +17,10 @@ class AutoConversionMapping(Generic[F, T]):
         self._build_mapping()
 
     def _build_mapping(self):
-        infra_path = self.path_manager.get_path(PATH_TO_INFRA)
-        if infra_path is None:
-            raise ValueError(f"AutoConversionMapping: path_to_infra not found in PathManager")
-        for (name_conv, _) in _discover_converters(infra_path, self.ttype):
+        archive_path = self.path_manager.get_path(PATH_TO_ARCHIVE)
+        if archive_path is None:
+            raise ValueError(f"AutoConversionMapping: path_to_archive not found in PathManager")
+        for (name_conv, _) in _discover_converters(archive_path, self.ttype):
             for (_from, _to) in _retrieve_module(self.ttype, name_conv).conversion_scheme():
                 if (_from, _to) in self.mappings:
                     self.mappings[(_from, _to)].append(name_conv)
@@ -99,9 +99,9 @@ class AutoConversionReachabilityGraph:
         return bfs(self.graph, source, target)
 
 
-def _discover_converters(path_to_infra_: str, ttype: str) -> List[str]:
+def _discover_converters(path_to_archive_: str, ttype: str) -> List[str]:
     converters = []
-    for item in Path(f"{path_to_infra_}/Builders/ProcessorBuilder/{ttype}").iterdir():
+    for item in Path(f"{path_to_archive_}/Implementations/Builders/ProcessorBuilder/{ttype}").iterdir():
         if not item.is_dir() or item.name.startswith('_') or item.name == '__pycache__':
             continue
         for file in item.iterdir():

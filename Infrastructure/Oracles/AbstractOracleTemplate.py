@@ -8,7 +8,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 
 
 class AbstractOracleTemplate(ABC):
-    def __init__(self):
+    def __init__(self, monitor, params):
         pass
 
     @abstractmethod

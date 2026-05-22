@@ -1,0 +1,20 @@
+experiment_name: TeSSLa_case_study
+
+benchmark_type: case_study
+experiment_type: CaseStudy
+
+tools:
+  - name: TeSSLa
+    branch: master
+    release: branch
+
+monitors:
+  - identifier: TeSSLa
+    name: TeSSLa
+    branch: master
+
+case_study_config:
+  case_study_name: TeSSLa
+
+tools_to_build:
+  - TeSSLa

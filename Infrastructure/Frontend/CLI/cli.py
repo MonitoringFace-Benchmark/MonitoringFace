@@ -26,7 +26,7 @@ class CLI:
         self.experiment_folder = f"{self.infra_folder}/experiments"
 
         self.archive_folder = f"{self.path_to_module}/Archive"
-        self.benchmark_folder = f"{self.archive_folder}/Benchmarks"
+        self.benchmark_settings_folder = f"{self.archive_folder}/Settings"
 
         self.result_base_folder = f"{self.infra_folder}/results"
         self.result_analysis_folder = f"{self.infra_folder}/analysis_results"
@@ -35,7 +35,7 @@ class CLI:
         self.path_manager.add_path(PATH_TO_BUILD, self.build_folder)
         self.path_manager.add_path(PATH_TO_EXPERIMENTS, self.experiment_folder)
         self.path_manager.add_path(PATH_TO_ARCHIVE, self.archive_folder)
-        self.path_manager.add_path(PATH_TO_BENCHMARK, self.benchmark_folder)
+        self.path_manager.add_path(PATH_TO_BENCHMARK, self.benchmark_settings_folder)
         self.path_manager.add_path(PATH_TO_RESULTS, self.result_base_folder)
         self.path_manager.add_path(PATH_TO_INFRA, self.infra_folder)
 
@@ -160,15 +160,15 @@ Examples:
             analyze=args.analyze,
         )
 
-        config_name = args.config.removeprefix(self.benchmark_folder)
+        config_name = args.config.removeprefix(self.benchmark_settings_folder)
         br = BenchmarkResolver(name=config_name, path_to_infra=self.infra_folder, path_to_archive=self.archive_folder)
         location = br.resolve()
         if location == Location.Unavailable:
             raise ValueError(f"The configuration File {config_name} is unavailable local and remote")
         elif location == Location.Remote:
-            br.get_remote_config(path_to_archive_benchmark=self.benchmark_folder, name=config_name)
+            br.get_remote_config(path_to_archive_benchmark=self.benchmark_settings_folder, name=config_name)
 
-        is_suite = args.suite or self._is_suite_config(f"{self.benchmark_folder}/{config_name}")
+        is_suite = args.suite or self._is_suite_config(f"{self.benchmark_settings_folder}/{config_name}")
         os.makedirs(self.result_base_folder, exist_ok=True)
 
         if is_suite:
@@ -199,7 +199,7 @@ Examples:
             return False
     
     def run_single_experiment(self, config_name: AnyStr, cli_args: CLIArgs, dry_run: bool = False, result_folder: str = None, is_suite: bool = False) -> Any:
-        yaml_file = f"{self.benchmark_folder}{config_name}"
+        yaml_file = f"{self.benchmark_settings_folder}{config_name}"
 
         if cli_args.verbose:
             print(f"Loading experiment configuration from: {yaml_file}")

@@ -1,2 +1,0 @@
-Trace, Policy, Signature
-OOOTrace.csv: ooo-csv, unicode.policy: unicode-mfotl, sig.sig
