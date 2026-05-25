@@ -19,7 +19,7 @@ class ReplayerConverter(DataConverterTemplate):
         cmd_params = params["cmd_params"] if "cmd_params" in params else ["-a", "0"]
         cast_source = trace_inout_format_to_str(source)
         cast_target = trace_inout_format_to_str(target)
-        command = ["docker", "run", "--rm", "--entrypoint", "java", "-iv", f"{path_to_folder}:/work",
+        command = ["docker", "run", "--rm", "--entrypoint", "java", "-i",
                    f"{self.image.image_name.lower()}", "-cp", "classes:libs/*",
                    "org.entry.Dispatcher", "Replayer", "-i", f"{cast_source}", "-f", f"{cast_target}"] + cmd_params
 
@@ -37,8 +37,7 @@ class ReplayerConverter(DataConverterTemplate):
             self, path_to_folder: AnyStr, data_file: AnyStr,
             tool: AnyStr, name: AnyStr, dest: AnyStr, params, source=None
     ):
-        command = ["docker", "run", "--rm", "--entrypoint", "java",
-                   "-iv", f"{path_to_folder}:/work",
+        command = ["docker", "run", "--rm", "--entrypoint", "java", "-i",
                    f"{self.image.image_name.lower()}", "-cp", "classes:libs/*",
                    "org.entry.Dispatcher", "Replayer"]
         if source:

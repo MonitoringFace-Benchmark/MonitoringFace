@@ -38,13 +38,13 @@ class ToolResolver(Resolver):
         return None
 
     def resolve(self, runtime_setting: Optional[OnlineOffline] = None) -> Optional[Location]:
-        symbolic_link_file = f"{self.path_named_archive}/symbolic_link"
+        symbolic_link_file = f"{self.path_named_archive}/{runtime_setting.to_string()}/symbolic_link"
         symbolic_link_exists = os.path.exists(symbolic_link_file)
         if symbolic_link_exists:
             with open(symbolic_link_file, "r") as f:
                 link_target = f.read().strip()
             name = os.path.basename(link_target)
-            path_archive = f"{self.path_to_archive}/{link_target}"
+            path_archive = f"{self.path_to_archive}/Docker/{link_target}"
         else:
             name = self.name
             path_archive = self.path_named_archive
