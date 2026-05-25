@@ -28,8 +28,8 @@ class ToolResolver(Resolver):
         self.path_named_archive = path_to_named_archive
         self.path_to_infra = path_to_infra
 
-    def symbolic_linked(self) -> Optional[str]:
-        symbolic_link_file = f"{self.path_named_archive}/symbolic_link"
+    def symbolic_linked(self, online_offline: OnlineOffline) -> Optional[str]:
+        symbolic_link_file = f"{self.path_named_archive}/{online_offline.to_string()}/symbolic_link"
         symbolic_link_exists = os.path.exists(symbolic_link_file)
         if symbolic_link_exists:
             with open(symbolic_link_file, "r") as f:

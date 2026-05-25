@@ -29,7 +29,7 @@ SPECHASH=$(cat $SPEC | md5sum | cut -d' ' -f1)
 SPECFOLDER=${OUTDIR}/$(basename $SPEC)-$SPECHASH
 
 # Run the compiled monitor on trace:
-exec /usr/bin/time -v -o scratch/stats.txt scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG
+exec /usr/bin/time -v -o scratch/stats.txt scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG | egrep "\*\*\*"
 
 res=${PIPESTATUS[0]}
 if [ $res -ne 0 ]; then

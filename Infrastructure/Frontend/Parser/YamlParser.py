@@ -256,7 +256,7 @@ class YamlParser:
 
             oracles_to_build.append((name, identifier, monitor_name, params))
 
-        return OracleManager(oracles_to_build=oracles_to_build, monitor_manager=monitor_manager)
+        return OracleManager(oracles_to_build=oracles_to_build, monitor_manager=monitor_manager, path_to_archive=f"{self.path_to_project}/Archive")
 
     def parse_synthetic_experiment(self):
         if 'synthetic_config' not in self.cfg:

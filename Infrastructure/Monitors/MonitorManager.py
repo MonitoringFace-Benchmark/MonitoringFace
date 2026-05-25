@@ -9,7 +9,6 @@ from Infrastructure.printing import print_headline, print_footline
 
 def _discover_monitors(path_to_monitors):
     monitors = {}
-    print(__file__)
     for item in Path(path_to_monitors).iterdir():
         if not item.is_dir() or item.name.startswith('_') or item.name == '__pycache__':
             continue

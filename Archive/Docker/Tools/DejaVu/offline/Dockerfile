@@ -15,12 +15,14 @@ ENV WDIR=/home/dejavu/work
 WORKDIR /home/dejavu
 
 # DejaVu
-COPY --chown=dejavu:dejavu dejavu.jar /home/dejavu/dejavu.jar
+RUN git clone https://github.com/havelund/dejavu.git
+RUN cp /home/dejavu/dejavu/out/artifacts/dejavu_jar/dejavu.jar /home/dejavu/dejavu.jar
+
 COPY --chown=dejavu:dejavu build.sh /home/dejavu/build.sh
 COPY --chown=dejavu:dejavu run.sh /home/dejavu/run.sh
 
 USER root
-RUN chmod 755 /home/dejavu/build.sh /home/dejavu/run.sh /home/dejavu/dejavu.jar && \
+RUN chmod 755 /home/dejavu/build.sh /home/dejavu/run.sh && \
     ln -s /home/dejavu/build.sh /usr/local/bin/build && \
     ln -s /home/dejavu/run.sh /usr/local/bin/run
 

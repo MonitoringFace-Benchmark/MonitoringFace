@@ -38,7 +38,7 @@ class ToolManager:
                 elif location == Location.Remote:
                     remote_content_handler(path_to_named_archive, path_to_infra, tool, runtime_setting)
 
-                linked = tl.symbolic_linked()
+                linked = tl.symbolic_linked(runtime_setting)
                 if linked:
                     new_path_to_named_archive = f"{path_to_archive}/Docker/Tools/{linked}"
                     new_tl = ToolResolver(linked, path_to_archive, new_path_to_named_archive, path_to_infra)

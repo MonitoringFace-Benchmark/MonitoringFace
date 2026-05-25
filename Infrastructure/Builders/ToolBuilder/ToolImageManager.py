@@ -26,12 +26,12 @@ def remote_content_handler(path_to_named_archive, path_to_infra, name, interacti
 
     os.makedirs(path_to_named_archive, exist_ok=True)
 
-    docker_file_location = f"{path_to_named_archive}/{interaction}" if interaction else path_to_named_archive
+    docker_file_location = f"{path_to_named_archive}/{interaction.to_string()}" if interaction else path_to_named_archive
     if PROP_FILES_KEY in content and DOCKERFILE_KEY in content:
         to_file(path_to_named_archive, PROP_FILES_VALUE, content[PROP_FILES_KEY])
         to_file(docker_file_location, DOCKERFILE_VALUE, content[DOCKERFILE_KEY])
     elif SYMLINK_KEY in content:
-        to_file(docker_file_location, DOCKERFILE_VALUE, content[DOCKERFILE_KEY])
+        to_file(docker_file_location, SYMLINK_KEY, content[SYMLINK_KEY])
     else:
         raise ImageBuildException("Incomplete data fetched from Repository")
 

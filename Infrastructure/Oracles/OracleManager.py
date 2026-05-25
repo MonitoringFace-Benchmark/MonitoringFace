@@ -1,12 +1,13 @@
 import importlib
 from pathlib import Path
 
+from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.printing import print_headline, print_footline
 
 
-def _discover_oracles():
+def _discover_oracles(path_to_oracles):
     oracles = {}
-    for item in Path(__file__).parent.iterdir():
+    for item in Path(path_to_oracles).iterdir():
         if not item.is_dir() or item.name.startswith('_') or item.name == '__pycache__':
             continue
 
@@ -25,8 +26,8 @@ def _discover_oracles():
     return oracles
 
 
-def identifier_to_oracle(monitor, identifier, params):
-    available_oracles = _discover_oracles()
+def identifier_to_oracle(monitor, identifier, params, path_to_oracles):
+    available_oracles = _discover_oracles(path_to_oracles)
     if identifier not in available_oracles:
         available = ', '.join(available_oracles.keys())
         raise ValueError(
@@ -38,14 +39,16 @@ def identifier_to_oracle(monitor, identifier, params):
 
 
 class OracleManager:
-    def __init__(self, monitor_manager, oracles_to_build):
+    def __init__(self, monitor_manager: MonitorManager, oracles_to_build, path_to_archive):
         print_headline("(Starting) Building OracleManager")
         self.oracles = {}
         failed_builds = []
         for (oracle_name, identifier, monitor_name, params) in oracles_to_build:
             try:
                 print(f"-> Attempting to construct Oracle {identifier}")
-                self.oracles[oracle_name] = identifier_to_oracle(monitor_manager, identifier, monitor_name, params)
+                self.oracles[oracle_name] = identifier_to_oracle(
+                    monitor_manager.get_monitor(monitor_name), identifier,
+                    params, f"{path_to_archive}/Implementations/Oracles")
                 print(f"    -> (Success)")
             except Exception:
                 print(f"-> (Failure)")

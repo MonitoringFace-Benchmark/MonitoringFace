@@ -17,7 +17,6 @@ def from_file(path: AnyStr):
 
 def get_auth_token(path_to_infra: AnyStr) -> Optional[AnyStr]:
     environment_path = f"{path_to_infra}/environment"
-    print(f"Getting auth token from {environment_path}")
     if not os.path.exists(environment_path):
         os.mkdir(environment_path)
         return None
