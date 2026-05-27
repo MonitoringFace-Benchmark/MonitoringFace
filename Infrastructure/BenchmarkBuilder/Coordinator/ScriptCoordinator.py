@@ -22,7 +22,7 @@ class ScriptCoordinator(Coordinator):
         self.script_name = self.contract.script_name
 
         # Archive/CaseStudies/ExperimentName
-        self.path_to_script_folder = f"{self.path_manager.get_path(PATH_TO_ARCHIVE)}/CaseStudies/{self.contract.name}"
+        self.path_to_script_folder = f"{self.path_manager.get_path(PATH_TO_ARCHIVE)}/Docker/CaseStudies/{self.contract.name}"
         self.script_org_path = f"{self.path_to_script_folder}/{self.script_name}"
         self.signature_org_path = f"{self.path_to_script_folder}/{Signature_File()}"
         self.policy_org_path = f"{self.path_to_script_folder}/{Policy_File()}"

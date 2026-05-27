@@ -7,12 +7,12 @@ from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
-from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable, OnlineRunnable
 from Archive.Implementations.Monitors.SharedFunctions import parse_variable_order_monpoly, parse_monpoly_output
 from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
 
 
-class VeriMon(BaseMonitorTemplate, OfflineRunnable):
+class VeriMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 
@@ -75,3 +75,35 @@ class VeriMon(BaseMonitorTemplate, OfflineRunnable):
     @staticmethod
     def supported_trace_formats() -> List[InputOutputTraceFormats]:
         return [InputOutputTraceFormats.MONPOLY, InputOutputTraceFormats.MONPOLY_LINEAR]
+
+    def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
+        cmd = [
+            "-sig", "additional/signature.sig",
+            "-formula", "additional/policy.policy",
+            "-verified"
+        ]
+
+        if "negate" in self.params: cmd += ["-negate"]
+        if "no_trigger" in self.params: cmd += ["-no_trigger"]
+
+        if "unfold_let" in self.params:
+            val = self.params["unfold_let"]
+            cmd += ["-unfold_let"]
+            if val == "full":
+                cmd += ["full"]
+            elif val == "smart":
+                cmd += ["smart"]
+            else:
+                cmd += ["no"]
+
+        if "nonewlastts" in self.params: cmd += ["-nonewlastts"]
+        if "no_rw" in self.params: cmd += ["-no_rw"]
+        cmd += ["-verbose"]
+        return cmd, None
+
+    @staticmethod
+    def latency_marker() -> Optional[str]:
+        pass
+
+    def post_processing_online(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        pass

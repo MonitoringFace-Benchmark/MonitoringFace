@@ -23,7 +23,7 @@ def build_pipeline(
         shutil.rmtree(path)
     os.makedirs(path, exist_ok=True)
 
-    driver_docker = f"{path_to_archive}/Utilities/OnlineExperimentDriver"
+    driver_docker = f"{path_to_archive}/Docker/Utilities/OnlineExperimentDriver"
     driver_tool_name = "online_experiment_driver"
     build_stage(
         temporary_build_folder=path, tool_image_manager=tool_image_manager,
@@ -33,7 +33,7 @@ def build_pipeline(
     )
 
     # build the final image with the copied dockerfile and the copied data
-    shutil.copy(f"{path_to_archive}/Utilities/OnlineExperimentTemplate/Dockerfile", path)
+    shutil.copy(f"{path_to_archive}/Docker/Utilities/OnlineExperimentTemplate/Dockerfile", path)
     image_building(image_name=target_image_name, build_dir=path)
 
 

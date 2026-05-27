@@ -4,11 +4,10 @@ RUN sudo apk add --update --no-cache gmp-dev libffi-dev m4 perl pkgconfig git ba
 
 WORKDIR /home/opam
 
-ARG GIT_BRANCH=main
+ARG GIT_BRANCH=master
 ARG GIT_COMMIT=""
-
-RUN git clone --branch "$GIT_BRANCH" https://github.com/LennardEc/monpoly_fork.git /home/opam/monpoly && \
-    if [ -n "$GIT_COMMIT" ]; then cd /home/opam/monpoly && git checkout "$GIT_COMMIT"; fi
+RUN git clone --branch "$GIT_BRANCH" https://bitbucket.org/jshs/monpoly.git /home/opam/monpoly \
+    && if [ -n "$GIT_COMMIT" ]; then cd /home/opam/monpoly && git checkout "$GIT_COMMIT"; fi
 
 WORKDIR /home/opam/monpoly
 

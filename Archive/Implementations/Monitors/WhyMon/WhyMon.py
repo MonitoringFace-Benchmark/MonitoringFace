@@ -8,11 +8,11 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PropositionTree
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
 from Infrastructure.DataTypes.Verification.PDTParser import str_to_proposition_tree
-from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable, OnlineRunnable
 from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
 
 
-class WhyMon(BaseMonitorTemplate, OfflineRunnable):
+class WhyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 
@@ -74,3 +74,17 @@ class WhyMon(BaseMonitorTemplate, OfflineRunnable):
     @staticmethod
     def supported_trace_formats() -> List[InputOutputTraceFormats]:
         return [InputOutputTraceFormats.MONPOLY, InputOutputTraceFormats.MONPOLY_LINEAR]
+
+    def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
+        cmd = [
+            "-sig", str(self.params[SIGNATURE_KEY]),
+            "-formula", str(self.params[POLICY_KEY]),
+        ]
+        return cmd, None
+
+    @staticmethod
+    def latency_marker() -> Optional[str]:
+        pass
+
+    def post_processing_online(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        pass
