@@ -8,22 +8,20 @@ OnlineExperimentContractGeneral:
   accumulative_time: 1
 
 monitors:
-  - identifier: TimelyMon
-    name: TimelyMon
-    branch: simplify_approximation
+  - identifier: WhyMon
+    name: WhyMon
+    branch: main
+    release: release
     params:
-      worker: 1
-      output_mode: 1
       OnlineExperimentContractTool:
-        format: csv
-        response_mode: event-count
-        input_aggregations: 1
+        format: log
+        response_mode: current-timepoint
         output_collection_mode: before-delimiter
 
 tools_to_build:
-  - TimelyMon
+  - WhyMon
 
 data_setup:
   type: script
   name: TestScript
-  script_name: TestScriptCSV.py
+  script_name: TestScriptLOG.py

@@ -16,6 +16,9 @@ monitors:
   - identifier: VeriMon
     name: VeriMon
     branch: master
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
   - identifier: WhyMon
     name: WhyMon
     branch: main
@@ -31,7 +34,7 @@ oracle:
   name: VeriMonOracle
 
 runtime_constraints:
-  upper_bound: 200
+  upper_bound: 20
 
 data_setup:
   type: SignatureContract
@@ -54,12 +57,13 @@ synthetic_config:
     num_operators: [5]
     num_fvs: [2]
     num_setting: [0, 1]
-    num_data_set_sizes: [50, 100]
+    num_data_set_sizes: [50]
 
 tools_to_build:
   - TimelyMon 1
   - TimelyMon 6
   - VeriMon
+  - MonPoly
   - WhyMon
 
 seeds:

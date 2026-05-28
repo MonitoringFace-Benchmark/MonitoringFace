@@ -16,6 +16,7 @@ monitors:
       OnlineExperimentContractTool:
         format: log
         response_mode: current-timepoint
+        output_collection_mode: after-delimiter
 
 tools_to_build:
   - MonPoly

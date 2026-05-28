@@ -225,6 +225,10 @@ class YamlParser:
         else:
             response_mode = ResponseMode.EVENT_COUNT
 
+        output_collection = raw.pop("output_collection_mode", None)
+        if output_collection is None:
+            raise YamlParserException("Missing 'output_collection_mode' in OnlineExperimentContractTool configuration")
+
         input_aggregations = raw.pop("input_aggregations", None)
         latency_marker = raw.pop("latency_marker", None)
         warm_up_input = raw.pop("warm_up_input", None)
@@ -235,6 +239,7 @@ class YamlParser:
             response_mode=response_mode,
             input_aggregations=input_aggregations,
             latency_marker=latency_marker,
+            output_collection_mode=output_collection,
             warm_up_input=warm_up_input,
         )
         return params

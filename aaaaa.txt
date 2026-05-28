@@ -1,4 +1,0 @@
-Split archive into 3 components
-- yamls
-- docker files
-- third part code

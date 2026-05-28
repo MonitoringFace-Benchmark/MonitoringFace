@@ -55,18 +55,22 @@ class OnlineExperimentContractGeneral:
 
 
 class OnlineExperimentContractTool:
-    def __init__(self, formatting: FormatType, response_mode, input_aggregations, latency_marker: Optional[str] = None, warm_up_input: Optional[str] = None):
+    def __init__(self, formatting: FormatType, response_mode, input_aggregations, output_collection_mode, latency_marker: Optional[str] = None, warm_up_input: Optional[str] = None):
         self.formatting = formatting
         self.response_mode = response_mode
         self.input_aggregations = input_aggregations
         self.latency_marker = latency_marker
         self.warm_up_input = warm_up_input
+        self.output_collection_mode = output_collection_mode
 
     def get_format(self) -> List[str]:
         return ["--format", self.formatting.to_string()]
 
     def get_response_mode(self) -> List[str]:
         return ["--response-mode", self.response_mode.to_string()]
+
+    def get_output_collection_mode(self) -> List[str]:
+        return ["--output-collection-mode", self.output_collection_mode.to_string()]
 
     def get_input_aggregations(self) -> List[str]:
         if self.input_aggregations is None:
@@ -88,6 +92,7 @@ class OnlineExperimentContractTool:
         arguments += self.get_input_aggregations()
         arguments += self.get_format()
         arguments += self.get_response_mode()
+        arguments += self.get_output_collection_mode()
         arguments += self.get_latency_marker()
         arguments += self.get_warm_up_input()
         return arguments
