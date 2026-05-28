@@ -70,7 +70,7 @@ class OnlineExperimentContractTool:
         return ["--response-mode", self.response_mode.to_string()]
 
     def get_output_collection_mode(self) -> List[str]:
-        return ["--output-collection-mode", self.output_collection_mode.to_string()]
+        return ["--output-collection-mode", self.output_collection_mode]
 
     def get_input_aggregations(self) -> List[str]:
         if self.input_aggregations is None:

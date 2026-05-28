@@ -77,8 +77,9 @@ class WhyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
 
     def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = [
-            "-sig", str(self.params[SIGNATURE_KEY]),
-            "-formula", str(self.params[POLICY_KEY]),
+            "-sig", "additional/signature.sig",
+            "-formula", "additional/policy.policy",
+            "-latency"
         ]
         return cmd, None
 

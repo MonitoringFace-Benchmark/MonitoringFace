@@ -217,7 +217,6 @@ def run_online_image(
 
         for chunk in container.logs(stream=True, follow=True, stdout=True, stderr=True):
             text = chunk.decode("utf-8", errors="ignore") if isinstance(chunk, (bytes, bytearray)) else str(chunk)
-            print(text)
             if text.startswith("[Error"):
                 unexpected_error = text.strip()
                 break
