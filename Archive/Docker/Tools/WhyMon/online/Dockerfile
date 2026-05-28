@@ -6,7 +6,7 @@ RUN sudo mkdir -p /usr/src/app && sudo chown opam:opam /usr/src/app
 
 ARG GIT_BRANCH=main
 ARG GIT_COMMIT=""
-RUN git clone --branch "$GIT_BRANCH" https://github.com/LennardEc/whymon_online_fork.git /usr/src/app/whymon \
+RUN git clone --branch "$GIT_BRANCH" https://github.com/runtime-monitoring/whymon.git /usr/src/app/whymon \
     && if [ -n "$GIT_COMMIT" ]; then cd /usr/src/app/whymon && git checkout "$GIT_COMMIT"; fi
 
 WORKDIR /usr/src/app/whymon
