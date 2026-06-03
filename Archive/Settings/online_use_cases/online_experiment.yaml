@@ -1,0 +1,12 @@
+experiments:
+  - path: online_use_cases/timelymon_online_nokia.yaml
+    enabled: true
+    description: "Nokia case Online TimelyMon"
+
+  - path: online_use_cases/monpoly_verimon_online_nokia.yaml
+    enabled: true
+    description: "Nokia case Online WhyMon"
+
+  - path: online_use_cases/whymon_online_nokia.yaml
+    enabled: true
+    description: "Nokia case Online WhyMon"

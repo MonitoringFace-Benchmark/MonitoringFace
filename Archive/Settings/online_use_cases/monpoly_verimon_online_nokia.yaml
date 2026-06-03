@@ -1,0 +1,35 @@
+experiment_name: online_nokia_monpoly
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  mode: accelerated
+  accumulative_time: 120
+
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    branch: master
+    release: release
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        response_mode: current-timepoint
+        output_collection_mode: after-delimiter
+  - identifier: VeriMon
+    name: VeriMon
+    branch: master
+    release: release
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        response_mode: current-timepoint
+        output_collection_mode: after-delimiter
+
+tools_to_build:
+  - MonPoly
+  - VeriMon
+
+data_setup:
+  type: CaseStudy
+  name: NokiaLogOnline

@@ -229,7 +229,8 @@ class YamlParser:
         if output_collection is None:
             raise YamlParserException("Missing 'output_collection_mode' in OnlineExperimentContractTool configuration")
 
-        input_aggregations = raw.pop("input_aggregations", None)
+        input_aggregation_number = raw.pop("input_aggregation_number", None)
+        input_aggregation_pattern = raw.pop("input_aggregation_pattern", None)
         latency_marker = raw.pop("latency_marker", None)
         warm_up_input = raw.pop("warm_up_input", None)
 
@@ -237,7 +238,8 @@ class YamlParser:
         params["OnlineExperimentContractTool"] = OnlineExperimentContractTool(
             formatting=fmt,
             response_mode=response_mode,
-            input_aggregations=input_aggregations,
+            input_aggregation_number=input_aggregation_number,
+            input_aggregation_pattern=input_aggregation_pattern,
             latency_marker=latency_marker,
             output_collection_mode=output_collection,
             warm_up_input=warm_up_input,

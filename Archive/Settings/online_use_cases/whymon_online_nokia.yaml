@@ -1,0 +1,26 @@
+experiment_name: online_nokia_whymon
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  mode: accelerated
+  accumulative_time: 120
+
+
+monitors:
+  - identifier: WhyMon
+    name: WhyMon
+    branch: main
+    release: release
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        response_mode: current-timepoint
+        output_collection_mode: before-delimiter
+
+tools_to_build:
+  - WhyMon
+
+data_setup:
+  type: CaseStudy
+  name: NokiaLogOnline
