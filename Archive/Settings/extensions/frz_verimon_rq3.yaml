@@ -1,0 +1,74 @@
+experiment_name: frz_verimon
+
+monitors:
+  - identifier: VeriMon
+    name: VeriMon-correct
+    branch: freeze
+  - identifier: VeriMon
+    name: VeriMon-const-rel
+    commit: 76fd7ecdfe9eb3de63a3e1d6cc5815f8b00034ce
+    branch: const-relation-propagation
+  - identifier: VeriMon
+    name: VeriMon-caching
+    commit: 69dcbdb788b879cfb0c9db7b9d153be56dfe3bdb
+    branch: const-relation-propagation
+  - identifier: MonPoly
+    name: MonPoly-frz
+    commit: 548bad8fd7e59b296bdbab26b7badcfe871cac3c
+    branch: freeze-native
+    params:
+      nofilteremptytp: true
+
+oracles:
+  - identifier: VeriMonOracle
+    name: VeriMonOracle
+    monitor_name: VeriMon-correct
+
+oracle:
+  enabled: true
+  name: VeriMonOracle
+
+runtime_constraints:
+  upper_bound: 30
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 100
+    event_rate: 10
+
+policy_setup:
+  type: ImmediatePolicyContract
+  ImmediatePolicyContract:
+    format: MFOTL
+    delimiter: ;
+    eventually_rq3:     "a(x:int) b(x:int); EVENTUALLY[0,100] a(x) AND b(x)"
+    frz_rq3:            "a(x:int) b(x:int); FRZ q(x) = a(x) IN q(x) AND b(x)"
+    let_rq3:            "a(x:int) b(x:int); LET q(x) = a(x) IN q(x) AND b(x)"
+    letpast_rq3:        "a(x:int) b(x:int); LETPAST q(x) = a(x) IN q(x) AND b(x)"
+    once_bounded_rq3:   "a(x:int) b(x:int); ONCE[0,100] a(x) AND b(x)"
+    once_unbounded_rq3: "a(x:int) b(x:int); ONCE[0,*) a(x) AND b(x)"
+
+
+
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: GenFmaGenerator
+  experiment:
+    num_operators: [1,2,3,4,5,6]
+    num_data_set_sizes: [100, 200, 500, 1000, 2000]
+
+seeds:
+  '[1, 0, 0]': [0, 0]
+  '[2, 0, 0]': [0, 1]
+  '[3, 0, 0]': [0, 2]
+  '[4, 0, 0]': [0, 3]
+  '[5, 0, 0]': [0, 4]
+  '[6, 0, 0]': [0, 5]
+
+
+tools_to_build:
+  - VeriMon-correct
+  - VeriMon-const-rel
+  - VeriMon-caching
+  - MonPoly-frz
