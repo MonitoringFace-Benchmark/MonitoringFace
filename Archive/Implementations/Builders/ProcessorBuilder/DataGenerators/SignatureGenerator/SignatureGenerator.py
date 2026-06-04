@@ -21,8 +21,8 @@ class SignatureGenerator(DataGeneratorTemplate):
         inner_contract[COMMAND_KEY] = (["java", "-cp", "classes:libs/*", "org.entry.Dispatcher", "Generator"]
                                        + signature_contract_to_commands(contract_inner))
         inner_contract[ENTRYPOINT_KEY] = ""
-        seed_raw = contract_inner["seed"]
-        seed = seed_raw if seed_raw else DEFAULT_SEED
+        seed_raw = contract_inner.get("seed")
+        seed = seed_raw if seed_raw is not None else DEFAULT_SEED
 
         out, code = self.image.run(inner_contract, time_on=time_on, time_out=time_out)
 

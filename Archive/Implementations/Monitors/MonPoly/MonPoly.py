@@ -53,6 +53,9 @@ class MonPoly(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
 
         if "nonewlastts" in self.params:
             cmd += ["-nonewlastts"]
+        
+        if "nofilteremptytp" in self.params:
+            cmd += ["-nofilteremptytp"]
 
         if "no_rw" in self.params:
             cmd += ["-no_rw"]
