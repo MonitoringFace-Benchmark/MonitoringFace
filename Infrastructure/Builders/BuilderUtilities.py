@@ -272,6 +272,10 @@ def run_online_image(
         result = container.wait()
         exit_code = result.get("StatusCode", 1) if isinstance(result, dict) else 1
         if unexpected_error:
+            if exit_code == 200:
+                return parsed_blocks, footer_acc_elapsed_s, footer_total_count, final_error, exit_code
+            if exit_code == 250:
+                return parsed_blocks, footer_acc_elapsed_s, footer_total_count, final_error, exit_code
             raise ToolException(f"Unexpected failure with exit code ({exit_code}) {unexpected_error}")
         return parsed_blocks, footer_acc_elapsed_s, footer_total_count, final_error, exit_code
     except docker.errors.ContainerError as e:
