@@ -199,7 +199,7 @@ Examples:
             return False
     
     def run_single_experiment(self, config_name: AnyStr, cli_args: CLIArgs, dry_run: bool = False, result_folder: str = None, is_suite: bool = False) -> Any:
-        yaml_file = f"{self.benchmark_settings_folder}{config_name}"
+        yaml_file = f"{self.benchmark_settings_folder}/{config_name}"
 
         if cli_args.verbose:
             print(f"Loading experiment configuration from: {yaml_file}")
