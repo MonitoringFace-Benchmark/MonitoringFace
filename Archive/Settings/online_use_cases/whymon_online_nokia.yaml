@@ -3,8 +3,10 @@ runtime_setting: online
 
 OnlineExperimentContractGeneral:
   data_source_type: file
-  mode: accelerated
-  accumulative_time: 120
+  mode: real-time
+  timestamp_units: milliseconds
+  accumulative_time: 220
+  maximum_latency: 50000
 
 
 monitors:

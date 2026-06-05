@@ -185,6 +185,11 @@ def run_monitor_online(
         verbose=cli_args.verbose
     )
 
+    print(f"Prep:        {preprocessing_elapsed}\nBuilding: {build_comp_elapsed}")
+    print(f"Runtime:     {total_elapsed_s}\nTotal Count: {total_count}")
+    if latency_err_msg is not None:
+        print(f"Latency Extraction Error: {latency_err_msg}")
+
     # todo post processing of results and latency extraction (future work)
 
     # todo verify results with oracle (future work)
