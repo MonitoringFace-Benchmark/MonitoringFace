@@ -62,8 +62,10 @@ def unify_term(terms: List[AnyStr]) -> AnyStr:
 
 
 def time_extract(str_: AnyStr) -> Tuple[int, int]:
-    tmp = str_.split(":")
-    return int(tmp[0]), int(tmp[1])
+    tp_str, ts_str = str_.split(":")
+    tp = int(re.sub(r"\D", "", tp_str))
+    ts = int(re.sub(r"\D", "", ts_str))
+    return tp, ts
 
 
 def variable_ordering_tree(pt: PropositionTree) -> VariableOrdering:
@@ -78,7 +80,7 @@ def variable_ordering_tree(pt: PropositionTree) -> VariableOrdering:
 def file_to_proposition_tree(file: AnyStr) -> PropositionTree:
     with open(file, "r") as raw:
         clean = "\n".join(line for line in raw.read().splitlines() if line.strip())
-        diff_explanations = list(filter(None, re.split(r"(\d+:\d+)", clean)))
+        diff_explanations = list(filter(None, re.split(r"((?:tp=)?\d+:(?:ts=)?\d+)", clean)))
         tree = PropositionTree(DefaultVariableOrder())
         for pair in [(diff_explanations[i], diff_explanations[i + 1]) for i in range(0, len(diff_explanations), 2)]:
             (tp, ts) = time_extract(pair[0])
@@ -89,7 +91,7 @@ def file_to_proposition_tree(file: AnyStr) -> PropositionTree:
 
 def str_to_proposition_tree(raw_string: AnyStr) -> PropositionTree:
     clean = "\n".join(line for line in raw_string.splitlines() if line.strip())
-    diff_explanations = list(filter(None, re.split(r"(\d+:\d+)", clean)))
+    diff_explanations = list(filter(None, re.split(r"((?:tp=)?\d+:(?:ts=)?\d+)", clean)))
     tree = PropositionTree(DefaultVariableOrder())
     for pair in [(diff_explanations[i], diff_explanations[i + 1]) for i in range(0, len(diff_explanations), 2)]:
         (tp, ts) = time_extract(pair[0])
@@ -99,8 +101,10 @@ def str_to_proposition_tree(raw_string: AnyStr) -> PropositionTree:
 
 
 if __name__ == "__main__":
-    with open("/Users/krq770/Desktop/PastedText1.txt", "r") as f:
+    print("Whymon output check:")
+    with open("/Users/krq770/Desktop/tmp/whymon.txt", "r") as f:
         print(str_to_proposition_tree(f.read()))
 
-    with open("/Users/krq770/Desktop/PastedText.txt", "r") as f:
+    print("WhyMyMon output check:")
+    with open("/Users/krq770/Desktop/tmp/whymymon.txt", "r") as f:
         print(str_to_proposition_tree(f.read()))

@@ -56,7 +56,6 @@ class WhyMyMon(BaseMonitorTemplate, OfflineRunnable):
         return cmd, None
 
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        print(f"Raw output: {stdout_input}")
         if not stdout_input:
             return PropositionTree(DefaultVariableOrder())
         else:
