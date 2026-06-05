@@ -160,7 +160,13 @@ Examples:
             analyze=args.analyze,
         )
 
-        config_name = args.config.removeprefix(self.benchmark_settings_folder)
+        config_name = args.config
+        if os.path.isabs(config_name):
+            config_name = os.path.relpath(config_name, self.benchmark_settings_folder)
+        elif config_name.startswith(self.benchmark_settings_folder):
+            config_name = config_name.removeprefix(self.benchmark_settings_folder)
+        config_name = config_name.lstrip("/\\")
+
         br = BenchmarkResolver(name=config_name, path_to_infra=self.infra_folder, path_to_archive=self.archive_folder)
         location = br.resolve()
         if location == Location.Unavailable:
@@ -168,7 +174,8 @@ Examples:
         elif location == Location.Remote:
             br.get_remote_config(path_to_archive_benchmark=self.benchmark_settings_folder, name=config_name)
 
-        is_suite = args.suite or self._is_suite_config(f"{self.benchmark_settings_folder}/{config_name}")
+        config_path = os.path.join(self.benchmark_settings_folder, config_name)
+        is_suite = args.suite or self._is_suite_config(config_path)
         os.makedirs(self.result_base_folder, exist_ok=True)
 
         if is_suite:
@@ -199,7 +206,7 @@ Examples:
             return False
     
     def run_single_experiment(self, config_name: AnyStr, cli_args: CLIArgs, dry_run: bool = False, result_folder: str = None, is_suite: bool = False) -> Any:
-        yaml_file = f"{self.benchmark_settings_folder}/{config_name}"
+        yaml_file = os.path.join(self.benchmark_settings_folder, config_name)
 
         if cli_args.verbose:
             print(f"Loading experiment configuration from: {yaml_file}")

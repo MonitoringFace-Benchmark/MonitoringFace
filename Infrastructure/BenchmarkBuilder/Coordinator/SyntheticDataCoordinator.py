@@ -18,7 +18,7 @@ from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import ORACLE_KEY, SEEDS_KEY, PATH_KEY, SIZE_KEY, FREE_VARIABLES_KEY, PLACEHOLDER_EVENT, \
     SIGNATURE_FILE, SIGNATURE_FILE_ENDING, POLICY_FILE, POLICY_FILE_ENDING, TRACE_LENGTH_KEY, SIGNATURE_KEY, \
-    FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, SIGNATURE_FILE_KEY, PATH_TO_FOLDER
+    FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, FINGERPRINT_POLICY, SIGNATURE_FILE_KEY, PATH_TO_FOLDER
 from Infrastructure.DataTypes.FileRepresenters.SeedHandler import SeedHandler
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
 from Infrastructure.Monitors.MonitorExceptions import ToolException
@@ -50,7 +50,15 @@ class SyntheticDataCoordinator(Coordinator):
     def finger_print(self) -> Dict[str, str]:
         new_data_setup_fingerprint = data_class_to_finger_print(self.data_setup)
         new_experiment_fingerprint = data_class_to_finger_print(self.experiment)
-        return {FINGERPRINT_EXPERIMENT: new_experiment_fingerprint, FINGERPRINT_DATA: new_data_setup_fingerprint}
+        new_policy_fingerprint = data_class_to_finger_print({
+            "policy_setup": self.policy_setup,
+            "seeds": self.seeds,
+        })
+        return {
+            FINGERPRINT_EXPERIMENT: new_experiment_fingerprint,
+            FINGERPRINT_DATA: new_data_setup_fingerprint,
+            FINGERPRINT_POLICY: new_policy_fingerprint,
+        }
 
     def time_out(self) -> Optional[int]:
         constraint = self.constraints.runtime_constraint()
@@ -90,9 +98,9 @@ class SyntheticDataCoordinator(Coordinator):
                                 [num_ops, num_set, data_set_size]
                             ], seed_dict=self.seeds)
 
-                            if gen_seed:
+                            if gen_seed is not None:
                                 self.data_setup[SEEDS_KEY] = gen_seed
-                            if policy_seed:
+                            if policy_seed is not None:
                                 self.policy_setup[SEEDS_KEY] = policy_seed
 
                         constraint = constraint if constraint is None or (constraint.lower_bound is not None or constraint.upper_bound is not None) else None

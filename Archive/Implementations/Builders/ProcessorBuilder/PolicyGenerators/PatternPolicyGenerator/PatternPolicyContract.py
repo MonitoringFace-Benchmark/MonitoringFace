@@ -10,17 +10,17 @@ class PatternPolicyContract(AbstractContract):
         pass
 
     def default_contract(self):
-        return PatternPolicyContract()
+        return self
 
     def instantiate_contract(self, params):
         if not params:
-            self.default_contract()
+            return self.default_contract()
         else:
             valid_field_names = {f.name for f in fields(self)}
             for key, value in params.items():
                 if key in valid_field_names:
                     setattr(self, key, value)
-        return self
+            return self
 
     interval: Optional[str] = None
     policy: Optional[str] = None

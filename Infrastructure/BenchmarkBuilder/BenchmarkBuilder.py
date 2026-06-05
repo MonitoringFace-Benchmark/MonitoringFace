@@ -60,6 +60,7 @@ class BenchmarkBuilder:
             fph = FingerPrintHandler.from_file(fingerprint_location)
             if not FingerPrintHandler.compare(fph, finger_print):
                 self._build()
+                FingerPrintHandler(finger_print).to_file(fingerprint_location)
         else:
             self._build()
             FingerPrintHandler(finger_print).to_file(fingerprint_location)
