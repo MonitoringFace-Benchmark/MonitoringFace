@@ -8,7 +8,7 @@ from Infrastructure.constants import PATH_KEY
 class CaseStudyCopyGenerator(CaseStudyTemplate):
     def __init__(self, name, path_to_project):
         self.name = name
-        self.path_to_archive = f"{path_to_project}/Archive/CaseStudies/{name}"
+        self.path_to_archive = f"{path_to_project}/Archive/Docker/CaseStudies/{name}"
         if not os.path.exists(self.path_to_archive):
             raise FileNotFoundError(f"{self.path_to_archive} does not exist, locally.")
 

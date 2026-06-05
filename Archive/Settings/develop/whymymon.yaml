@@ -1,0 +1,21 @@
+experiment_name: whymymon
+
+monitors:
+  - identifier: WhyMyMon
+    name: WhyMyMon
+    branch: main
+    params:
+      monitor: timelymon
+      pref: sat
+      mode: verified
+
+
+# Case study specific configuration
+data_setup:
+  type: CaseStudy
+  fixed: true
+  name: WhyMyMonDebug
+
+# Tools to build and run
+tools_to_build:
+  - WhyMyMon
