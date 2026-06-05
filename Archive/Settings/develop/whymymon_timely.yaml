@@ -1,4 +1,4 @@
-experiment_name: whymymon
+experiment_name: whymymon_timely
 
 monitors:
   - identifier: WhyMyMon
@@ -14,7 +14,7 @@ monitors:
 data_setup:
   type: CaseStudy
   fixed: true
-  name: WhyMyMonDebug
+  name: WhyMyMonTimely
 
 # Tools to build and run
 tools_to_build:

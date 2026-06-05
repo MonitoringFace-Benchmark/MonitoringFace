@@ -1,0 +1,21 @@
+experiment_name: whymymon_dejavu
+
+monitors:
+  - identifier: WhyMyMon
+    name: WhyMyMon
+    branch: main
+    params:
+      monitor: dejavu
+      pref: vio
+      mode: verified
+
+
+# Case study specific configuration
+data_setup:
+  type: CaseStudy
+  fixed: true
+  name: WhyMyMonDejaVu
+
+# Tools to build and run
+tools_to_build:
+  - WhyMyMon
