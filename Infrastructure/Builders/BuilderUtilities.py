@@ -204,6 +204,7 @@ def run_online_image(
         )
 
         footer_acc_elapsed_s = None
+        footer_wall_clock_s = None
         footer_total_count = None
 
         parsed_blocks = []
@@ -232,6 +233,13 @@ def run_online_image(
                 if payload.endswith("s"):
                     payload = payload[:-1].strip()
                 footer_acc_elapsed_s = float(payload)
+
+            if text.startswith("[Wall Clock]"):
+                payload = text.split("]")[1]
+                payload = payload.strip()
+                if payload.endswith("s"):
+                    payload = payload[:-1].strip()
+                footer_wall_clock_s = float(payload)
 
             if text.startswith("[Total Count]"):
                 payload = text.split("]")[1]
@@ -268,6 +276,12 @@ def run_online_image(
                 if payload.endswith("ns"):
                     payload = payload[:-2].strip()
                 current_block["elapsed_ns"] = int(payload)
+
+        # Wall-clock span of the replay (includes pacing sleeps). In real-time
+        # mode this tracks the trace's timestamp span; `total_elapsed` /
+        # "Runtime" is compute-only and intentionally excludes the sleeps.
+        if footer_wall_clock_s is not None:
+            print(f"Wall Clock:  {footer_wall_clock_s} s (real-time replay span)")
 
         result = container.wait()
         exit_code = result.get("StatusCode", 1) if isinstance(result, dict) else 1
