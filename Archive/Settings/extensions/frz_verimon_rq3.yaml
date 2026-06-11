@@ -14,7 +14,7 @@ monitors:
     branch: const-relation-propagation
   - identifier: MonPoly
     name: MonPoly-frz
-    commit: 28c82c68e9ba5b6a1a92b460fd8c0b9c9c82cc02
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
     branch: freeze-native
     params:
       nofilteremptytp: true
@@ -42,12 +42,12 @@ policy_setup:
   ImmediatePolicyContract:
     format: MFOTL
     delimiter: ;
-    eventually_rq3:     "a(x:int) b(x:int); EVENTUALLY[0,100] a(x) AND b(x)"
+    eventually_rq3:     "a(x:int) b(x:int); (EVENTUALLY[0,100] a(x)) AND b(x)"
     frz_rq3:            "a(x:int) b(x:int); FRZ q(x) = a(x) IN q(x) AND b(x)"
     let_rq3:            "a(x:int) b(x:int); LET q(x) = a(x) IN q(x) AND b(x)"
     letpast_rq3:        "a(x:int) b(x:int); LETPAST q(x) = a(x) IN q(x) AND b(x)"
-    once_bounded_rq3:   "a(x:int) b(x:int); ONCE[0,100] a(x) AND b(x)"
-    once_unbounded_rq3: "a(x:int) b(x:int); ONCE[0,*) a(x) AND b(x)"
+    once_bounded_rq3:   "a(x:int) b(x:int); (ONCE[0,100] a(x)) AND b(x)"
+    once_unbounded_rq3: "a(x:int) b(x:int); (ONCE[0,*) a(x)) AND b(x)"
 
 
 
