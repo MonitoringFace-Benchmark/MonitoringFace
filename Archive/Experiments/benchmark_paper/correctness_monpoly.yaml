@@ -32,7 +32,7 @@ oracle:
   name: VeriMonOracle
 
 runtime_constraints:
-  upper_bound: 300
+  upper_bound: 30
 
 data_setup:
   type: CaseStudy
