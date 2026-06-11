@@ -1,0 +1,20 @@
+experiment_name: GDPR_case_study
+
+monitors:
+  - identifier: WhyMon
+    name: WhyMon
+    commit: 86684beecbfc14ed3367eb5c042f610ca8a60119
+    branch: main
+
+runtime_constraints:
+  upper_bound: 30
+
+repeats: 3
+
+data_setup:
+  type: CaseStudy
+  fixed: true
+  name: Local_GDPR_WhyMon
+
+tools_to_build:
+  - WhyMon

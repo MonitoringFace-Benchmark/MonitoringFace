@@ -1,0 +1,31 @@
+experiment_name: GDPR_case_study
+
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 1
+    commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
+    branch: development
+    params:
+      worker: 1
+      output_mode: 1
+  - identifier: TimelyMon
+    name: TimelyMon 6
+    commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
+    branch: development
+    params:
+      worker: 6
+      output_mode: 1
+
+repeats: 3
+
+runtime_constraints:
+  upper_bound: 30
+
+data_setup:
+  type: CaseStudy
+  fixed: true
+  name: Local_GDPR_MonPoly
+
+tools_to_build:
+  - TimelyMon 1
+  - TimelyMon 6

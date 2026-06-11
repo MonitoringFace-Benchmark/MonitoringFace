@@ -26,7 +26,7 @@ class CLI:
         self.experiment_folder = f"{self.infra_folder}/experiments"
 
         self.archive_folder = f"{self.path_to_module}/Archive"
-        self.benchmark_settings_folder = f"{self.archive_folder}/Settings"
+        self.benchmark_settings_folder = f"{self.archive_folder}/Experiments"
 
         self.result_base_folder = f"{self.infra_folder}/results"
         self.result_analysis_folder = f"{self.infra_folder}/analysis_results"

@@ -1,0 +1,47 @@
+experiment_name: correctness_monpoly
+
+monitors:
+  - identifier: MonPoly
+    name: MonPoly Jun 11, 2026
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+    branch: master
+  - identifier: MonPoly
+    name: MonPoly Mar 25, 2026
+    commit: 78b74d6c6f427ca391a1aa8d54d3a680abb30fd7
+    branch: master
+  - identifier: VeriMon
+    name: VeriMon
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+    branch: master
+  - identifier: MonPoly
+    name: MonPoly Feb 15, 2023
+    commit: 23a655563715dc1e6dcd92fb7a641f404b7ac158
+    branch: master 
+  - identifier: MonPoly
+    name: MonPoly Jan 4, 2023
+    commit: 11c27e7e2c945e99553fbfe5a248397bf7a413b5
+    branch: master 
+
+oracles:
+  - identifier: VeriMonOracle
+    name: VeriMonOracle
+    monitor_name: VeriMon
+
+oracle:
+  enabled: true
+  name: VeriMonOracle
+
+runtime_constraints:
+  upper_bound: 300
+
+data_setup:
+  type: CaseStudy
+  fixed: true
+  name: Correctness
+
+tools_to_build:
+  - MonPoly Jun 11, 2026
+  - MonPoly Mar 25, 2026
+  - MonPoly Feb 15, 2023
+  - MonPoly Jan 4, 2023
+  - VeriMon

@@ -68,7 +68,7 @@ class BenchmarkResolver(Resolver):
         self.data_loader = DataLoader(Processor.Benchmark, path_to_infra=self.path_to_archive)
 
     def resolve(self, runtime_setting=None) -> Optional[Location]:
-        file_exists = os.path.exists(f"{self.path_to_archive}/Settings/{self.name}")
+        file_exists = os.path.exists(f"{self.path_to_archive}/Experiments/{self.name}")
         if file_exists:
             return Location.Local
 

@@ -424,9 +424,9 @@ class ExperimentSuiteParser:
     def __init__(self, path_to_project: str, config_name: str):
         relative_dir = os.path.dirname(config_name)
         if relative_dir:
-            self.config_dir = f"{path_to_project}/Archive/Settings/{relative_dir}"
+            self.config_dir = f"{path_to_project}/Archive/Experiments/{relative_dir}"
         else:
-            self.config_dir = f"{path_to_project}/Archive/Settings"
+            self.config_dir = f"{path_to_project}/Archive/Experiments"
         self.config_name = os.path.basename(config_name)
         self.cfg = self._load_config()
 

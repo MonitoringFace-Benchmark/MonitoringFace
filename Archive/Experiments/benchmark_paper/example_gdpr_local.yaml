@@ -1,0 +1,12 @@
+experiments:
+  - path: benchmark_paper/local_gdpr_enfguard.yaml
+    enabled: true
+    description: "GDPR benchmarks for EnfGuard (enforcer + monitor)"
+  
+  - path: benchmark_paper/local_gdpr_monpoly.yaml
+    enabled: true
+    description: "GDPR benchmarks for MonPoly, VeriMon, and TimelyMon (1 + 6 workers)"
+  
+  - path: benchmark_paper/local_gdpr_whymon.yaml
+    enabled: true
+    description: "GDPR benchmarks for WhyMon"

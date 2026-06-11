@@ -1,0 +1,28 @@
+experiment_name: online_nokia_whymon
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  mode: real-time
+  timestamp_units: milliseconds
+  accumulative_time: 220
+  maximum_latency: 50000
+
+
+monitors:
+  - identifier: WhyMon
+    name: WhyMon
+    commit: 86684beecbfc14ed3367eb5c042f610ca8a60119
+    branch: main
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        response_mode: current-timepoint
+        output_collection_mode: before-delimiter
+
+tools_to_build:
+  - WhyMon
+
+data_setup:
+  type: CaseStudy
+  name: NokiaLogOnline

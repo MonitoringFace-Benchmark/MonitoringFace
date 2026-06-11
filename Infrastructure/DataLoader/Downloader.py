@@ -100,10 +100,10 @@ class BenchmarkDownloader(Downloader):
 
     def get_all_names(self):
         token = get_auth_token(self.path_to_infra)
-        return url_dir_getter_files(self.url, "/Settings", token, self.err)
+        return url_dir_getter_files(self.url, "/Experiments", token, self.err)
 
     def get_content(self, name):
-        i = url_getter(self.url, f"/Settings/{name}", f"Benchmark {name} is not reachable", self.path_to_infra)
+        i = url_getter(self.url, f"/Experiments/{name}", f"Benchmark {name} is not reachable", self.path_to_infra)
         return requests.get(i["download_url"]).content.decode()
 
 
@@ -148,7 +148,7 @@ def url_dir_getter_files(url, addon, token, err) -> Optional[list]:
     headers = {}
     if token:
         headers["Authorization"] = f"token {token}"
-    init_path = "Archive/Settings"
+    init_path = "Archive/Experiments"
     url += addon
 
     def remove_relative_path(path: str):
@@ -161,7 +161,7 @@ def url_dir_getter_files(url, addon, token, err) -> Optional[list]:
         if status_code == 403:
             raise print("Rate limit exceeded, supply github token in Infrastructure/environment/auth_token")
         elif status_code != 200:
-            raise ValueError(f"Unable to retrieve content from Archive/Settings; returned code {status_code}")
+            raise ValueError(f"Unable to retrieve content from Archive/Experiments; returned code {status_code}")
 
         inner_files = []
         for item in response.json():

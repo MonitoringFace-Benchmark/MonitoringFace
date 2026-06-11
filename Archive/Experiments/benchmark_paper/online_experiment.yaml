@@ -1,0 +1,12 @@
+experiments:
+  - path: benchmark_paper/timelymon_online_nokia.yaml
+    enabled: true
+    description: "Nokia case Online TimelyMon"
+
+  - path: benchmark_paper/monpoly_verimon_online_nokia.yaml
+    enabled: true
+    description: "Nokia case Online WhyMon"
+
+  - path: benchmark_paper/whymon_online_nokia.yaml
+    enabled: true
+    description: "Nokia case Online WhyMon"

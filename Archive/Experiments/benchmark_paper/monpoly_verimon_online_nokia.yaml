@@ -1,0 +1,37 @@
+experiment_name: online_nokia_monpoly
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  mode: real-time
+  timestamp_units: milliseconds
+  accumulative_time: 220
+  maximum_latency: 50000
+
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+    branch: master
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        response_mode: current-timepoint
+        output_collection_mode: after-delimiter
+  - identifier: VeriMon
+    name: VeriMon
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+    branch: master
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        response_mode: current-timepoint
+        output_collection_mode: after-delimiter
+
+tools_to_build:
+  - MonPoly
+  - VeriMon
+
+data_setup:
+  type: CaseStudy
+  name: NokiaLogOnline
