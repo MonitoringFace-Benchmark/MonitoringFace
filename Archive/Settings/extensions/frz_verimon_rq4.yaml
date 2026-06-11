@@ -6,7 +6,7 @@ monitors:
     branch: freeze
   - identifier: MonPoly
     name: MonPoly-frz
-    commit: 548bad8fd7e59b296bdbab26b7badcfe871cac3c
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
     branch: freeze-native
     params:
       nofilteremptytp: true
@@ -35,25 +35,25 @@ policy_setup:
     format: MFOTL
     delimiter: ;
     rq4_rule10_frz:     "a(x:int) b(x:int); FRZ q(x) = a(x) IN a(x) AND ((q(x) AND b(y) AND x > 0) SINCE[0,5] (a(x) AND b(y)))"
-    rq4_rule10_old:     "a(x:int) b(x:int); a(x) AND ((EVENTUALLY[0,5] a(x) AND b(y) AND x > 0) SINCE[0,5] (a(x) AND b(y)))"
+    rq4_rule10_old:     "a(x:int) b(x:int); a(x) AND (((EVENTUALLY[0,5] a(x)) AND b(y) AND x > 0) SINCE[0,5] (a(x) AND b(y)))"
     rq4_rule11_frz:     "a(x:int) b(x:int); FRZ q(x) = a(x) IN a(x) AND ((q(x) AND b(y) AND x > 0) UNTIL[0,5] (a(x) AND b(y)))"
-    rq4_rule11_old:     "a(x:int) b(x:int); a(x) AND ((ONCE[0,5] a(x) AND b(y) AND x > 0) UNTIL[0,5] (a(x) AND b(y)))"
+    rq4_rule11_old:     "a(x:int) b(x:int); a(x) AND (((ONCE[0,5] a(x)) AND b(y) AND x > 0) UNTIL[0,5] (a(x) AND b(y)))"
     rq4_rule12_frz:     "a(x:int) b(x:int); FRZ q(x) = a(x) IN a(x) AND ((a(x) AND b(y)) SINCE[0,5] (q(x) AND b(y) AND x > 0))"
-    rq4_rule12_old:     "a(x:int) b(x:int); a(x) AND ((a(x) AND b(y)) SINCE[0,5] (EVENTUALLY[0,5] a(x) AND b(y) AND x > 0))"
+    rq4_rule12_old:     "a(x:int) b(x:int); a(x) AND ((a(x) AND b(y)) SINCE[0,5] ((EVENTUALLY[0,5] a(x)) AND b(y) AND x > 0))"
     rq4_rule13_frz:     "a(x:int) b(x:int); FRZ q(x) = a(x) IN a(x) AND ((a(x) AND b(y)) UNTIL[0,5] (q(x) AND b(y) AND x > 0))"
-    rq4_rule13_old:     "a(x:int) b(x:int); a(x) AND ((a(x) AND b(y)) UNTIL[0,5] (ONCE[0,5] a(x) AND b(y) AND x > 0))"
+    rq4_rule13_old:     "a(x:int) b(x:int); a(x) AND ((a(x) AND b(y)) UNTIL[0,5] ((ONCE[0,5] a(x)) AND b(y) AND x > 0))"
     rq4_rule14_frz:     "a(x:int) b(x:int); FRZ q(x) = a(x) IN a(x) AND ONCE[0,5] (q(x) AND b(y) AND x > 0)"
-    rq4_rule14_old:     "a(x:int) b(x:int); a(x) AND ONCE[0,5] (EVENTUALLY[0,5] a(x) AND b(y) AND x > 0)"
+    rq4_rule14_old:     "a(x:int) b(x:int); a(x) AND ONCE[0,5] ((EVENTUALLY[0,5] a(x)) AND b(y) AND x > 0)"
     rq4_rule15_frz:     "a(x:int) b(x:int); FRZ q(x) = a(x) IN a(x) AND EVENTUALLY[0,5] (q(x) AND b(y) AND x > 0)"
-    rq4_rule15_old:     "a(x:int) b(x:int); a(x) AND EVENTUALLY[0,5] (ONCE[0,5] a(x) AND b(y) AND x > 0)"
+    rq4_rule15_old:     "a(x:int) b(x:int); a(x) AND EVENTUALLY[0,5] ((ONCE[0,5] a(x)) AND b(y) AND x > 0)"
     rq4_rule16_frz:     "a(x:int) b(x:int); FRZ q(x) = a(x) IN a(x) AND PAST_ALWAYS[0,5] (q(x) AND b(y) AND x > 0)"
-    rq4_rule16_old:     "a(x:int) b(x:int); a(x) AND PAST_ALWAYS[0,5] (EVENTUALLY[0,5] a(x) AND b(y) AND x > 0)"
+    rq4_rule16_old:     "a(x:int) b(x:int); a(x) AND PAST_ALWAYS[0,5] ((EVENTUALLY[0,5] a(x)) AND b(y) AND x > 0)"
     rq4_rule17_frz:     "a(x:int) b(x:int); FRZ q(x) = a(x) IN a(x) AND ALWAYS[0,5] (q(x) AND b(y) AND x > 0)"
-    rq4_rule17_old:     "a(x:int) b(x:int); a(x) AND ALWAYS[0,5] (ONCE[0,5] a(x) AND b(y) AND x > 0)"
+    rq4_rule17_old:     "a(x:int) b(x:int); a(x) AND ALWAYS[0,5] ((ONCE[0,5] a(x)) AND b(y) AND x > 0)"
     rq4_rule18_frz:     "a(x:int) b(x:int); FRZ q(x) = a(x) IN a(x) AND PREVIOUS[0,5] (q(x) AND b(y) AND x > 0)"
-    rq4_rule18_old:     "a(x:int) b(x:int); a(x) AND PREVIOUS[0,5] (NEXT[0,5] a(x) AND b(y) AND x > 0)"
+    rq4_rule18_old:     "a(x:int) b(x:int); a(x) AND PREVIOUS[0,5] ((NEXT[0,5] a(x)) AND b(y) AND x > 0)"
     rq4_rule19_frz:     "a(x:int) b(x:int); FRZ q(x) = a(x) IN a(x) AND NEXT[0,5] (q(x) AND b(y) AND x > 0)"
-    rq4_rule19_old:     "a(x:int) b(x:int); a(x) AND NEXT[0,5] (PREVIOUS[0,5] a(x) AND b(y) AND x > 0)"
+    rq4_rule19_old:     "a(x:int) b(x:int); a(x) AND NEXT[0,5] ((PREVIOUS[0,5] a(x)) AND b(y) AND x > 0)"
 
 
 
