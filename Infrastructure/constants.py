@@ -77,6 +77,7 @@ PATH_TO_INTERMEDIATE_WORKSPACE = "path_to_intermediate_workspace"
 PATH_TO_TRACE_INPUT = "path_to_trace_input"
 PATH_TO_TRACE_OUTPUT = "path_to_trace_output"
 
+NOMEASURE = "no_measure"
 
 
 

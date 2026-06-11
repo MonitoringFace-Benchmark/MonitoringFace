@@ -17,7 +17,8 @@ from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTra
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLICY_KEY, PATH_TO_BUILD, PATH_TO_ARCHIVE, \
-    PATH_TO_TRACE_INPUT, PATH_TO_TRACE_OUTPUT, PATH_TO_INTERMEDIATE_WORKSPACE, IMAGE_POSTFIX, Policy_File, Signature_File
+    PATH_TO_TRACE_INPUT, PATH_TO_TRACE_OUTPUT, PATH_TO_INTERMEDIATE_WORKSPACE, IMAGE_POSTFIX, Policy_File, \
+    Signature_File, NOMEASURE
 from Infrastructure.printing import print_headline, print_footline
 
 
@@ -214,7 +215,8 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
 
     start = time.perf_counter()
     cmd, name = mon.construct_offline_command()
-    out, code = mon.image.run_offline(parameters=cmd, path_to_data=path_to_folder, time_out=timeout_value, name=name)
+    measure = False if mon.params.get(NOMEASURE) else True
+    out, code = mon.image.run_offline(parameters=cmd, path_to_data=path_to_folder, time_out=timeout_value, name=name, measure=measure)
     end = time.perf_counter()
     run_offline_elapsed = end - start
 

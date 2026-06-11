@@ -7,7 +7,6 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon 1 S1
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 1
       output_mode: 1
@@ -15,7 +14,6 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon 1 S1000
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 1
       output_mode: 1
@@ -23,7 +21,6 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon 1 S10000
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 1
       output_mode: 1
@@ -31,7 +28,6 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon 3 S1
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 3
       output_mode: 1
@@ -39,7 +35,6 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon 3 S1000
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 3
       output_mode: 1
@@ -47,7 +42,6 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon 3 S10000
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 3
       output_mode: 1
@@ -55,7 +49,6 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon 6 S1
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 6
       output_mode: 1
@@ -63,7 +56,6 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon 6 S1000
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 6
       output_mode: 1
@@ -71,7 +63,6 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon 6 S10000
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 6
       output_mode: 1

@@ -7,10 +7,12 @@ monitors:
   - identifier: TeSSLa
     name: TeSSLa
     commit: b1964bd445286832bd2cb120ca7586858e941ceb
-    branch: master
+    params:
+      no_measure: True
 
-case_study_config:
-  case_study_name: TeSSLa
+data_setup:
+  type: CaseStudy
+  name: TeSSLa
 
 tools_to_build:
   - TeSSLa

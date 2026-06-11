@@ -99,8 +99,10 @@ class YamlParser:
             release = tool.get('release', 'branch')
             commit = tool.get('commit')
 
-            if not name or not branch:
-                raise YamlParserException(f"Tool configuration missing 'name' or 'branch': {tool}")
+            if not name:
+                raise YamlParserException(f"Tool configuration missing 'name': {tool}")
+            if not name and not commit:
+                raise YamlParserException(f"Tool configuration missing 'branch': {tool}")
 
             tools_to_build.append((name, branch, commit, self._parse_branch_or_release(release)))
 
@@ -194,7 +196,7 @@ class YamlParser:
             commit = monitor_dict.get('commit')
             params = self.parse_tool_params(monitor_dict)
 
-            if not identifier or not name or not branch:
+            if not identifier or not name or (not branch and not commit):
                 raise YamlParserException(f"Monitor configuration missing required fields: {monitor_dict}")
 
             if 'path_to_project' not in params:

@@ -10,6 +10,7 @@ class InputOutputTraceFormats(Enum):
     DEJAVU = "dejavu"
     DEJAVU_ENCODED = "dejavu-encoded"
     DEJAVU_LINEAR = "dejavu-linear"
+    SRV_TRACE = "srv-trace"
 
 
 def str_to_trace_inout_format(format_str: str) -> InputOutputTraceFormats:
@@ -30,6 +31,8 @@ def str_to_trace_inout_format(format_str: str) -> InputOutputTraceFormats:
         return InputOutputTraceFormats.DEJAVU_ENCODED
     elif format_str == "dejavu-linear":
         return InputOutputTraceFormats.DEJAVU_LINEAR
+    elif format_str == "srv-trace":
+        return InputOutputTraceFormats.SRV_TRACE
     else:
         raise ValueError(f"Unknown input/output format: {format_str}")
 
@@ -49,5 +52,7 @@ def trace_inout_format_to_str(format_enum: InputOutputTraceFormats) -> str:
         return "dejavu-encoded"
     elif format_enum == InputOutputTraceFormats.DEJAVU_LINEAR:
         return "dejavu-linear"
+    elif format_enum == InputOutputTraceFormats.SRV_TRACE:
+        return "srv-trace"
     else:
         raise ValueError(f"Unknown input/output format enum: {format_enum}")

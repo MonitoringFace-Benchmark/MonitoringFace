@@ -4,14 +4,12 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon 1
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 1
       output_mode: 1
   - identifier: TimelyMon
     name: TimelyMon 6
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 6
       output_mode: 1

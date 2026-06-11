@@ -25,7 +25,10 @@ class ToolManager:
                 commit = ""
             try:
                 if commit:
-                    print(f"\n-> Attempting to build Image {tool} - {branch} @ {commit}")
+                    if branch is None:
+                        print(f"\n-> Attempting to build Image {tool} - {commit}")
+                    else:
+                        print(f"\n-> Attempting to build Image {tool} - {branch} @ {commit}")
                 else:
                     print(f"\n-> Attempting to build Image {tool} - {branch}")
                 path_to_named_archive = f"{path_to_archive}/Docker/Tools/{tool}"

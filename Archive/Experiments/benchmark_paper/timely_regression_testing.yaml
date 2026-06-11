@@ -3,28 +3,28 @@ experiment_name: timely_version_ooo_comparison
 monitors:
   - identifier: TimelyMon
     name: TimelyMon 1
-    branch: old_timely_version
+    commit: dc7b3830e5ac06f6551af0967b758a13f4dd1329
     params:
       worker: 1
       output_mode: 1
       mode: oootps
   - identifier: TimelyMon
     name: TimelyMon 6
-    branch: old_timely_version
+    commit: dc7b3830e5ac06f6551af0967b758a13f4dd1329
     params:
       worker: 6
       output_mode: 1
       mode: oootps
   - identifier: TimelyMon
     name: TimelyMon 1 V
-    branch: version_update
+    commit: 2924d26f95acf539b85f3e71d8518ebad9961983
     params:
       worker: 1
       output_mode: 1
       mode: oootps
   - identifier: TimelyMon
     name: TimelyMon 6 V
-    branch: version_update
+    commit: 2924d26f95acf539b85f3e71d8518ebad9961983
     params:
       worker: 6
       output_mode: 1

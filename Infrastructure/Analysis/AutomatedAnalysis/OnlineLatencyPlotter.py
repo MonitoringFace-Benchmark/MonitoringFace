@@ -74,6 +74,9 @@ import matplotlib
 matplotlib.use("Agg", force=False)   # headless-safe; never overrides a live backend
 import matplotlib.pyplot as plt
 
+import csv
+csv.field_size_limit(sys.maxsize)
+
 __all__ = [
     # data types
     "ParsedReplay",
@@ -281,8 +284,7 @@ def parse_driver_log(source: LogSource) -> ParsedReplay:
 # Parsing — result CSV
 # =========================================================================== #
 
-def _parse_output_pairs(raw) -> Tuple[np.ndarray, np.ndarray]:
-    """Parse one ``output_pairs`` cell → (processed_counts, latency_ns)."""
+"""def _parse_output_pairs(raw) -> Tuple[np.ndarray, np.ndarray]:
     if pd.isna(raw) or raw == "":
         return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
     try:
@@ -297,7 +299,6 @@ def _parse_output_pairs(raw) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def _df_to_series(df: pd.DataFrame, status: str) -> List[RunSeries]:
-    """Convert one result DataFrame (one status group) into RunSeries list."""
     out = []
     if df.empty or "output_pairs" not in df.columns:
         return out
@@ -312,6 +313,52 @@ def _df_to_series(df: pd.DataFrame, status: str) -> List[RunSeries]:
             steps      = int(lat_ns.size),
             processed  = processed,
             latency_ns = lat_ns,
+        ))
+    return out"""
+
+
+def _parse_output_pairs(raw) -> Tuple[np.ndarray, np.ndarray]:
+    """Parse one ``output_pairs`` cell → (processed_counts, latency_ns)."""
+    if pd.isna(raw) or raw == "":
+        return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
+    try:
+        pairs = json.loads(raw) if isinstance(raw, str) else raw
+    except (ValueError, TypeError):
+        return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
+    if not isinstance(pairs, list) or len(pairs) == 0:
+        return np.array([], dtype=np.float64), np.array([], dtype=np.float64)
+
+    proc_list = []
+    lat_list = []
+    for p in pairs:
+        # Only include pairs with 2+ valid elements
+        if isinstance(p, (list, tuple)) and len(p) >= 2:
+            try:
+                proc_list.append(float(p[0]))
+                lat_list.append(float(p[1]))
+            except (ValueError, TypeError):
+                pass  # Skip invalid numeric values
+
+    return np.asarray(proc_list, dtype=np.float64), np.asarray(lat_list, dtype=np.float64)
+
+
+def _df_to_series(df: pd.DataFrame, status: str) -> List[RunSeries]:
+    """Convert one result DataFrame (one status group) into RunSeries list."""
+    out = []
+    if df.empty or "output_pairs" not in df.columns:
+        return out
+    for _, row in df.iterrows():
+        processed, lat_ns = _parse_output_pairs(row.get("output_pairs"))
+        # Only skip if the array is empty or contains strictly NaNs
+        if lat_ns.size == 0 or np.all(np.isnan(lat_ns)):
+            continue
+        out.append(RunSeries(
+            name=str(row.get("Name", "")),
+            setting=str(row.get("Setting", "")),
+            status=status,
+            steps=int(lat_ns.size),
+            processed=processed,
+            latency_ns=lat_ns,
         ))
     return out
 
@@ -353,6 +400,7 @@ def parse_result_csv(source: CsvSource) -> List[RunSeries]:
             full = os.path.join(path, fname)
             if os.path.exists(full):
                 df = pd.read_csv(full)
+                print(f"DEBUG: Read {fname} — {len(df)} rows")
                 series.extend(_df_to_series(df, status))
         return series
 
@@ -364,7 +412,10 @@ def parse_result_csv(source: CsvSource) -> List[RunSeries]:
             status = st
             break
     df = pd.read_csv(path)
-    return _df_to_series(df, status)
+    print(f"DEBUG: Read CSV — {len(df)} rows before filtering")  # Add this
+    series = _df_to_series(df, status)
+    print(f"DEBUG: After _df_to_series — {len(series)} series")  # Add this
+    return series
 
 
 # =========================================================================== #
@@ -391,7 +442,8 @@ def _save_fig(fig, out: Optional[Union[str, "os.PathLike[str]"]]):
     parent = os.path.dirname(os.fspath(out)) if out else ""
     if parent:
         os.makedirs(parent, exist_ok=True)
-    fig.savefig(os.fspath(out), dpi=150)
+    #fig.savefig(os.fspath(out), dpi=150)
+    fig.savefig(os.fspath(out), format='svg', bbox_inches='tight')
     plt.close(fig)
 
 
@@ -414,36 +466,8 @@ def plot_latency_over_replay(
     title:           Optional[str]  = None,
     label:           Optional[str]  = None,
 ) -> LatencyReplaySummary:
-    """Plot per-step latency from a driver log against real-time replay position.
+    """Plot per-step latency from a driver log against real-time replay position."""
 
-    Parameters
-    ----------
-    log:
-        File path, raw log text, iterable of lines, or a pre-parsed
-        :class:`ParsedReplay`.
-    out:
-        Output image path (PNG/PDF/SVG).  Ignored when *render* is ``False``.
-    x_source:
-        ``"ts"`` (scheduled, from event timestamps) or ``"wall"`` (measured
-        per-step wall offset).  ``"wall"`` falls back to ``"ts"`` with a
-        warning if the log has no ``[Wall Offset]`` lines.
-    timestamp_units:
-        How to scale trace timestamps to seconds for the ``ts`` x-axis.
-    y_unit:
-        Latency unit shown on the y-axis (``s`` / ``ms`` / ``us`` / ``ns``).
-    y_log:
-        Log-scale the latency axis.
-    threshold_ms:
-        Draw a horizontal threshold line (e.g. the maximum-latency budget).
-    drop_warmup:
-        Drop the first *N* steps (e.g. a JIT cold-start spike).
-    max_points:
-        Downsample cap; top-1% latency spikes are always preserved.
-    render:
-        When ``False``, return stats only without drawing (``out_path=None``).
-    title, label:
-        Custom plot title / display name used in the default title.
-    """
     if x_source not in ("ts", "wall"):
         raise ValueError(f"x_source must be 'ts' or 'wall', got {x_source!r}")
     if timestamp_units not in TS_UNIT_SECONDS:
@@ -479,8 +503,7 @@ def plot_latency_over_replay(
         eff_src   = "ts"
 
     lat_ms = lat_ns / 1e6
-    p50, p99, ymax = (float(np.percentile(lat_ms, q))
-                      for q in (50, 99, 100))
+    p50, p99, ymax = (float(np.percentile(lat_ms, q)) for q in (50, 99, 100))
 
     mask = ~np.isnan(x)
     x, y = x[mask], (lat_ns * yfac)[mask]
@@ -506,15 +529,15 @@ def plot_latency_over_replay(
         if timeout_x is not None:
             ax.axvline(timeout_x, color="black", ls=":", lw=1.5, label="timeout")
         ax.set_xlim(left=0)
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(f"Per-step latency ({y_unit})")
+        ax.set_xlabel(x_label, fontsize=12)
+        ax.set_ylabel(f"Per-step latency ({y_unit})", fontsize=12)
         ax.set_title(title or (
             f"Per-step latency over replay — {src_name}\n"
             f"{lat_ns.size} steps, span {span_s:.1f}s, "
             f"p50 {p50:.3f}ms / p99 {p99:.3f}ms / max {ymax:.3f}ms"
         ))
         ax.grid(True, which="both", alpha=0.3)
-        ax.legend(loc="upper right", fontsize=8)
+        ax.legend(loc="upper right", fontsize=16)
         fig.tight_layout()
         out_path = os.fspath(out)
         _save_fig(fig, out_path)
@@ -533,71 +556,50 @@ def plot_latency_over_replay(
     )
 
 
-# =========================================================================== #
-# Plot — result CSVs (merged valid + timeout)
-# =========================================================================== #
-
 def plot_latency_from_csv(
-    source: CsvSource,
-    out: Optional[Union[str, "os.PathLike[str]"]] = "latency_from_csv.png",
-    *,
-    y_unit:       str            = "ms",
-    y_log:        bool           = False,
-    threshold_ms: Optional[float] = None,
-    drop_warmup:  int            = 0,
-    max_points:   int            = 400_000,
-    render:       bool           = True,
-    title:        Optional[str]  = None,
+        source: CsvSource,
+        out: Optional[Union[str, "os.PathLike[str]"]] = "latency_from_csv.png",
+        *,
+        y_unit: str = "ms",
+        y_log: bool = False,
+        threshold_ms: Optional[float] = None,
+        drop_warmup: int = 0,
+        max_points: int = 400_000,
+        render: bool = True,
+        title: Optional[str] = None,
 ) -> LatencyReplaySummary:
-    """Plot per-step latency from result CSVs, merging all status groups.
-
-    Valid (OK), accumulative-timeout (ATO) and maximum-timeout (MTO) runs are
-    overlaid on the same figure with distinct colours.  The x-axis is step
-    index (0-based); real-time position is not available from the CSV alone.
-
-    Parameters
-    ----------
-    source:
-        A folder (auto-discovers the three report files), a single CSV path,
-        or a DataFrame already loaded by ``AnalysisOnline``.
-    out:
-        Output image path.  Ignored when *render* is ``False``.
-    y_unit:
-        Latency unit (``s`` / ``ms`` / ``us`` / ``ns``).
-    y_log:
-        Log-scale the latency axis.
-    threshold_ms:
-        Draw a horizontal threshold line.
-    drop_warmup:
-        Drop the first *N* steps from every series.
-    max_points:
-        Per-series downsample cap.
-    render:
-        When ``False``, return stats only.
-    title:
-        Custom plot title.
-    """
     if y_unit not in Y_UNIT_FROM_NS:
         raise ValueError(f"y_unit must be one of {sorted(Y_UNIT_FROM_NS)}")
 
     all_series = parse_result_csv(source)
+
+    print(f"DEBUG: parse_result_csv returned {len(all_series)} series")
+    for i, s in enumerate(all_series):
+        print(f"  Series {i}: name={s.name}, status={s.status}, steps={s.steps}, "
+              f"latency_ns size={s.latency_ns.size}")
+
     if not all_series:
         raise ValueError("no parseable run series found in source")
 
     yfac = Y_UNIT_FROM_NS[y_unit]
 
-    # Aggregate stats across ALL series for the summary.
+    # Aggregate stats across ALL series for the summary (ignoring NaNs)
     all_lat_ms: List[float] = []
     for s in all_series:
         lat = s.latency_ns[drop_warmup:] if drop_warmup else s.latency_ns
-        all_lat_ms.extend((lat / 1e6).tolist())
+        lat_clean = lat[~np.isnan(lat)]
+        all_lat_ms.extend((lat_clean / 1e6).tolist())
 
     lat_ms_arr = np.asarray(all_lat_ms, dtype=np.float64)
-    p50  = float(np.percentile(lat_ms_arr, 50))
-    p99  = float(np.percentile(lat_ms_arr, 99))
-    ymax = float(lat_ms_arr.max())
+    if lat_ms_arr.size > 0:
+        p50 = float(np.percentile(lat_ms_arr, 50))
+        p99 = float(np.percentile(lat_ms_arr, 99))
+        ymax = float(lat_ms_arr.max())
+    else:
+        p50 = p99 = ymax = 0.0
+
     total_steps = sum(s.steps for s in all_series)
-    span_steps  = max(
+    span_steps = max(
         (s.latency_ns[drop_warmup:].size if drop_warmup < s.steps else 0)
         for s in all_series
     )
@@ -609,30 +611,58 @@ def plot_latency_from_csv(
         if out is None:
             raise ValueError("out must be set when render=True")
 
-        # Build one scatter series per (status, name) combination so the legend
-        # is readable even with many runs.  Colour by status, alpha by run count.
         fig, ax = plt.subplots(figsize=(12, 5))
-
-        # Track which status labels have already been added to the legend.
         _legend_seen: set = set()
+
+        _SERIES_COLORS = {
+            "WhyMon": "tab:blue",
+            "TimelyMon": "tab:orange",
+            "MonPoly": "tab:green",
+            "VeriMon": "tab:red",
+        }
 
         for run in all_series:
             lat = run.latency_ns[drop_warmup:] if drop_warmup < run.steps else run.latency_ns
             if lat.size == 0:
                 continue
+
+            # Original unfiltered coordinate scale
             x = np.arange(lat.size, dtype=np.float64)
             y = lat * yfac
-            xs, ys = _downsample(x, y, max_points)
-            color = _STATUS_COLOR.get(run.status, "tab:gray")
-            legend_key = run.status
+
+            # Mask out NaNs so that _downsample respects valid data, index stays correct
+            mask = ~np.isnan(y)
+            x_clean, y_clean = x[mask], y[mask]
+
+            if y_clean.size == 0:
+                continue
+
+            print(f"DEBUG: Plotting {run.name} — {run.status} — {y_clean.size} points")  # Add this
+
+            xs, ys = _downsample(x_clean, y_clean, max_points)
+            print(f"DEBUG:   After downsample: {xs.size} points")
+            color = _SERIES_COLORS.get(run.name, "tab:gray")
+            legend_key = run.name
             label_str = (
-                f"{_STATUS_LABEL.get(run.status, run.status)} — {run.name} / {run.setting}"
+                f"{run.name}"
                 if legend_key not in _legend_seen
                 else None
             )
             _legend_seen.add(legend_key)
-            ax.scatter(xs, ys, s=3, alpha=0.45, edgecolors="none",
-                       rasterized=True, color=color, label=label_str)
+            # Instead of scatter, compute rolling average and plot as line
+            window_size = 100  # adjust based on data density
+            rolling_avg = pd.Series(ys).rolling(window=window_size, center=True).mean()
+            ax.plot(xs, rolling_avg, linewidth=1.5, color=color, label=label_str, alpha=0.8)
+
+            #ax.scatter(xs, ys, s=3, alpha=0.45, edgecolors="none", rasterized=True, color=color, label=label_str)
+
+        print(f"DEBUG: Legend entries: {len(_legend_seen)}")
+        for i, run in enumerate(all_series):
+            lat = run.latency_ns[drop_warmup:] if drop_warmup < run.steps else run.latency_ns
+            lat_clean = lat[~np.isnan(lat)]
+            if lat_clean.size > 0:
+                print(f"DEBUG: Series {i} ({run.name}): min={lat_clean.min():.2f}ns, "
+                      f"max={lat_clean.max():.2f}ns, mean={lat_clean.mean():.2f}ns")
 
         if y_log:
             ax.set_yscale("log")
@@ -641,41 +671,46 @@ def plot_latency_from_csv(
                        label=f"threshold {threshold_ms:g} ms")
 
         ax.set_xlim(left=0)
-        ax.set_xlabel("Step index")
-        ax.set_ylabel(f"Per-step latency ({y_unit})")
+        ax.set_xlabel("Step index", fontsize=20)
+        ax.set_ylabel(f"Per-step latency ({y_unit})", fontsize=20)
 
         status_counts = {st: sum(1 for s in all_series if s.status == st)
                          for st in (_STATUS_OK, _STATUS_ATO, _STATUS_MTO)}
         status_summary = ", ".join(
             f"{_STATUS_LABEL[st]}={n}" for st, n in status_counts.items() if n > 0
         )
-        ax.set_title(title or (
-            f"Per-step latency — merged results ({status_summary})\n"
-            f"{total_steps} total steps, "
-            f"p50 {p50:.3f}ms / p99 {p99:.3f}ms / max {ymax:.3f}ms"
-        ))
+
+        #ax.set_title(title or (
+         #   f"Per-step latency — merged results ({status_summary})\n"
+         #   f"{total_steps} total steps, "
+         #   f"p50 {p50:.3f}ms / p99 {p99:.3f}ms / max {ymax:.3f}ms"
+        #))
+        #ax.set_title("a = 1000")
         ax.grid(True, which="both", alpha=0.3)
         handles, labels = ax.get_legend_handles_labels()
-        if handles:
-            ax.legend(handles, labels, loc="upper right", fontsize=8,
-                      markerscale=3)
+        #if handles:
+        #    ax.legend(handles, labels, loc="upper right", fontsize=20, markerscale=3)
         fig.tight_layout()
         out_path = os.fspath(out)
         _save_fig(fig, out_path)
 
     return LatencyReplaySummary(
-        out_path        = out_path,
-        steps           = total_steps,
-        span_s          = float(span_steps),    # steps, not seconds
-        p50_ms          = p50,
-        p99_ms          = p99,
-        max_ms          = ymax,
-        x_source        = "step",
-        timed_out       = timed_out,
-        timeout_message = None,
-        footers         = {},
+        out_path=out_path,
+        steps=total_steps,
+        span_s=float(span_steps),
+        p50_ms=p50,
+        p99_ms=p99,
+        max_ms=ymax,
+        x_source="step",
+        timed_out=timed_out,
+        timeout_message=None,
+        footers={},
     )
 
+
+# =========================================================================== #
+# Plot — result CSVs (merged valid + timeout)
+# =========================================================================== #
 
 # =========================================================================== #
 # CLI
@@ -734,10 +769,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(f"latency p99    : {summary.p99_ms:.3f} ms")
     print(f"latency max    : {summary.max_ms:.3f} ms")
     if summary.footers:
-        print(f"driver footers : {summary.footers}")
+        for key, val in summary.footers.items():
+            print(f"  {key}: {val}")
     if summary.timed_out:
         print(f"TIMEOUT        : {summary.timeout_message or 'yes'}")
-    print(f"wrote          : {summary.out_path}")
+    if summary.out_path:
+        print(f"wrote          : {summary.out_path}")
     return 0
 
 

@@ -28,7 +28,12 @@ class TeSSLa(BaseMonitorTemplate, OfflineRunnable):
         self.params[POLICY_KEY] = policy_file.removeprefix("data/")
 
     def construct_offline_command(self, time_on=None, time_out=None) -> Tuple[List[str], Optional[str]]:
-        cmd = [self.params[POLICY_KEY], self.params[TRACE_KEY]]
+        # The data folder itself is the container mount (WORKDIR=/data), so paths must be
+        # relative to it. Strip any leading "data/" here so this holds whether the framework
+        # took the auto-conversion (distance 0) path or the custom preprocessing path.
+        policy = str(self.params[POLICY_KEY]).removeprefix("data/")
+        trace = str(self.params[TRACE_KEY]).removeprefix("data/")
+        cmd = [policy, trace]
         return cmd, "interpreter"
 
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
@@ -36,8 +41,8 @@ class TeSSLa(BaseMonitorTemplate, OfflineRunnable):
 
     @staticmethod
     def supported_policy_formats() -> List[InputOutputPolicyFormats]:
-        pass
+        return [InputOutputPolicyFormats.SRV_POLICY]
 
     @staticmethod
     def supported_trace_formats() -> List[InputOutputTraceFormats]:
-        pass
+        return [InputOutputTraceFormats.SRV_TRACE]

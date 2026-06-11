@@ -7,6 +7,7 @@ class InputOutputPolicyFormats(Enum):
     UNICODE_MFOTL = "unicode-mfotl"
     NEGATED_UNICODE_MFOTL = "negated-unicode-mfotl"
     QTL = "qtl"
+    SRV_POLICY = "srv-policy"
 
 
 def str_to_policy_inout_format(format_str: str) -> InputOutputPolicyFormats:
@@ -21,6 +22,8 @@ def str_to_policy_inout_format(format_str: str) -> InputOutputPolicyFormats:
         return InputOutputPolicyFormats.NEGATED_UNICODE_MFOTL
     elif format_str == "qtl":
         return InputOutputPolicyFormats.QTL
+    elif format_str == "srv-policy":
+        return InputOutputPolicyFormats.SRV_POLICY
     else:
         raise ValueError(f"Unknown input/output policy format: {format_str}")
 
@@ -36,5 +39,7 @@ def policy_inout_format_to_str(formats: InputOutputPolicyFormats) -> str:
         return "negated-unicode-mfotl"
     elif formats == InputOutputPolicyFormats.QTL:
         return "qtl"
+    elif formats == InputOutputPolicyFormats.SRV_POLICY:
+        return "srv-policy"
     else:
         raise ValueError(f"Unknown input/output policy format enum: {formats}")
