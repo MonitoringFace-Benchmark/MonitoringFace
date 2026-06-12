@@ -38,18 +38,18 @@ class DejaVu(BaseMonitorTemplate, OfflineRunnable):
         return ["run", str(self.params[POLICY_KEY]), str(self.params[TRACE_KEY]), "scratch"], ""
 
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        event_rate = self.params.get(EVENTRATE)
+        #event_rate = self.params.get(EVENTRATE)
         prop_list = PropositionList(DefaultVariableOrder())
         if stdout_input == "":
             return prop_list
 
-        stripping = 0 if event_rate is None else len(str(event_rate))-1
+        #stripping = 0 if event_rate is None else len(str(event_rate))-1
         lines = stdout_input.strip()
         for line in filter(lambda l: "violated on event number" in l, lines.split("\n")):
-            num_str = line.split("number")[1].strip().rstrip(":")
+            #num_str = line.split("number")[1].strip().rstrip(":")
             try:
-                num = int(num_str[0:-stripping]) if stripping > 0 else int(num_str)
-                prop_list.insert(False, num)
+                #num = int(num_str[0:-stripping]) if stripping > 0 else int(num_str)
+                prop_list.insert(False, int(num_str))
             except ValueError:
                 pass
         return prop_list
