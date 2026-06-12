@@ -1,6 +1,7 @@
 import sys
 import time
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import Dict, AnyStr, Any, Tuple, List, Optional, Union
 
 from Infrastructure.AutoConversion.AutoPolicyConverter import AutoPolicyConverter
@@ -10,6 +11,7 @@ from Infrastructure.Builders.BuilderUtilities import run_online_image
 from Infrastructure.Builders.OnlineExperiementPipeline import build_pipeline
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
 from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
+from Infrastructure.DataTypes.Types.StratificationIndex import StratificationIndex
 from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
@@ -18,7 +20,7 @@ from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultError
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLICY_KEY, PATH_TO_BUILD, PATH_TO_ARCHIVE, \
     PATH_TO_TRACE_INPUT, PATH_TO_TRACE_OUTPUT, PATH_TO_INTERMEDIATE_WORKSPACE, IMAGE_POSTFIX, Policy_File, \
-    Signature_File, NOMEASURE
+    Signature_File, NOMEASURE, STRATIFIED, STRATIFIED_MAP, TRACE_TARGET_FORMAT
 from Infrastructure.printing import print_headline, print_footline
 
 
@@ -91,6 +93,7 @@ class BaseMonitorTemplate(AutoConvertable):
             if verbose:
                 print("Automatic Trace conversion from {} to {}".format(trace_source_format, trace_target_format))
 
+            self.params[TRACE_TARGET_FORMAT] = trace_target_format
             if trace_conversion_distance == 0:
                 self.params[TRACE_KEY] = data_file
             else:
@@ -208,6 +211,12 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
         data_file, signature_file, policy_file, path_manager, verbose=cli_args.verbose
     )
 
+    if mon.params.get(STRATIFIED):
+        stratified_map = init_stratification_map(
+            trace_source_format, mon.params[TRACE_TARGET_FORMAT], data_file, path_manager.get_path(PATH_TO_TRACE_INPUT)
+        )
+        mon.params[STRATIFIED_MAP] = stratified_map
+
     start_compile = time.perf_counter()
     mon.offline_compile()
     end_compile = time.perf_counter()
@@ -276,3 +285,14 @@ def find_policy_path(mon: BaseMonitorTemplate, path_manager: PathManager, policy
                 policy_target_format = target
                 conversion_distance = dist
     return policy_target_format, conversion_distance
+
+
+def init_stratification_map(src_format: InputOutputTraceFormats, target_format: InputOutputTraceFormats, data_file, path_to_data) -> StratificationIndex:
+    mapping = defaultdict(int)
+    with open(f"{path_to_data}/{data_file}", "r") as f:
+        for line in f:
+            if line.__contains__("tp="):
+                tp = line.split("tp=")[1].split(",")[0]
+                mapping[tp] += 1
+
+    return StratificationIndex(mapping)

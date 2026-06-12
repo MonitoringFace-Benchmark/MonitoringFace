@@ -3,13 +3,14 @@ from typing import Dict, AnyStr, Any, Tuple, List, Optional
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Proposition import Proposition
 from Infrastructure.Monitors.MonitorExceptions import ToolException
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
 from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
-from Infrastructure.constants import POLICY_KEY, FOLDER_KEY, TRACE_KEY, EVENTRATE
+from Infrastructure.constants import POLICY_KEY, FOLDER_KEY, TRACE_KEY, STRATIFIED_MAP
 
 
 class DejaVu(BaseMonitorTemplate, OfflineRunnable):
@@ -38,18 +39,24 @@ class DejaVu(BaseMonitorTemplate, OfflineRunnable):
         return ["run", str(self.params[POLICY_KEY]), str(self.params[TRACE_KEY]), "scratch"], ""
 
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        #event_rate = self.params.get(EVENTRATE)
+        stratindex = self.params.get(STRATIFIED_MAP)
         prop_list = PropositionList(DefaultVariableOrder())
         if stdout_input == "":
             return prop_list
 
-        #stripping = 0 if event_rate is None else len(str(event_rate))-1
         lines = stdout_input.strip()
         for line in filter(lambda l: "violated on event number" in l, lines.split("\n")):
             num_str = line.split("number")[1].strip().rstrip(":")
             try:
-                #num = int(num_str[0:-stripping]) if stripping > 0 else int(num_str)
-                prop_list.insert(False, int(num_str))
+                number = int(num_str)
+                if stratindex is not None:
+                    try:
+                        orig_tp, _ = stratindex.original(number)
+                        prop_list.insert(Proposition(False), int(orig_tp))
+                    except ValueError as e:
+                        pass
+                else:
+                    prop_list.insert(Proposition(False), number)
             except ValueError:
                 pass
         return prop_list

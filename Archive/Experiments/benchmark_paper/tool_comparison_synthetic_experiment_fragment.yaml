@@ -28,7 +28,7 @@ monitors:
     name: DejaVu
     commit: 2b5052d89e3a961de7344a2bdcb7adf1308f2bca
     params:
-      event_rate: 1000
+      stratified: True
   - identifier: EnfGuard
     name: EnfGuard
     commit: 9e6ec02c04dbcf8fa43b9e3223cad882a6d462f3
