@@ -46,7 +46,7 @@ class DejaVu(BaseMonitorTemplate, OfflineRunnable):
         #stripping = 0 if event_rate is None else len(str(event_rate))-1
         lines = stdout_input.strip()
         for line in filter(lambda l: "violated on event number" in l, lines.split("\n")):
-            #num_str = line.split("number")[1].strip().rstrip(":")
+            num_str = line.split("number")[1].strip().rstrip(":")
             try:
                 #num = int(num_str[0:-stripping]) if stripping > 0 else int(num_str)
                 prop_list.insert(False, int(num_str))
