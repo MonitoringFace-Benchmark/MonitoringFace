@@ -243,7 +243,8 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
         try:
             verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, f"scratch/{policy_file}", result_file)
         except Exception as e:
-            print(f"Oracle verification failed with exception: {e}")
+            if cli_args.verbose:
+                print(f"Oracle verification failed with exception: {e}")
             raise ResultErrorException((preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed), str(e))
         print_headline(f"Verified: {verified}")
         if not verified:

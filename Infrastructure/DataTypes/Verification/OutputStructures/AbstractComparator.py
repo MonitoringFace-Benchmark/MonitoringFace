@@ -56,8 +56,6 @@ def verdicts_to_verdicts_inner(oracle: Union[Verdicts, OooVerdicts], other: Unio
 
 
 def verdicts_to_prop_list_inner(oracle: Union[Verdicts, OooVerdicts], other: PropositionList) -> Tuple[bool, str]:
-    print(f"Oracle time points: {oracle.time_points().keys()}")
-    print(f"Tool time points: {other.time_points().keys()}")
     (verdict, txt) = time_point_check(oracle, other)
     if not verdict: return False, txt
 
