@@ -1,57 +1,38 @@
-# Example YAML configuration for a synthetic benchmark experiment
 experiment_name: test_synthetic_experiment
-
-# Benchmark type: 'synthetic' or 'case_study'
-benchmark_type: synthetic
 
 monitors:
   - identifier: TimelyMon
     name: TimelyMon 1
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 1
       output_mode: 1
   - identifier: TimelyMon
     name: TimelyMon 6
     commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
-    branch: development
     params:
       worker: 6
       output_mode: 1
   - identifier: MonPoly
     name: MonPoly
     commit: bc752d37f1d4560b5667eddac9dd1670451b758e
-    branch: master
-    params:
-      replayer: gen_data
   - identifier: VeriMon
     name: VeriMon
     commit: bc752d37f1d4560b5667eddac9dd1670451b758e
-    branch: master
-    params:
-      replayer: gen_data
-      verified: true
   - identifier: WhyMon
     name: WhyMon
     commit: 86684beecbfc14ed3367eb5c042f610ca8a60119
-    branch: main
     params:
-      replayer: gen_data
       mode: light
   - identifier: DejaVu
     name: DejaVu
     commit: 2b5052d89e3a961de7344a2bdcb7adf1308f2bca
-    branch: master
     params:
-      replayer: gen_data
-      translator: qtl-translator
+      event_rate: 1000
   - identifier: EnfGuard
     name: EnfGuard
     commit: 9e6ec02c04dbcf8fa43b9e3223cad882a6d462f3
-    branch: enfguard
     params:
-      replayer: gen_data
       monitoring: true
 
 # Oracles configuration (optional)
@@ -59,17 +40,10 @@ oracles:
   - identifier: VeriMonOracle
     name: VeriMonOracle
     monitor_name: VeriMon
-    params:
-      replayer: gen_data
-      verified: true
 
 # Time guard configuration
-time_guard:
-  enabled: false
-  lower_bound: null  # null for None
+runtime_constraints:
   upper_bound: 60
-  guard_type: Monitor  # Monitor, Oracle, or Generator
-  guard_name: TimelyMon 6
 
 # Data setup - Hydra structured format
 data_setup:

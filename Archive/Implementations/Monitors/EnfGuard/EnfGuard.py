@@ -45,7 +45,7 @@ class EnfGuard(BaseMonitorTemplate, OfflineRunnable):
 
     @staticmethod
     def supported_policy_formats() -> List[InputOutputPolicyFormats]:
-        return [InputOutputPolicyFormats.MFOTL, InputOutputPolicyFormats.NEGATED_MFOTL]
+        return [InputOutputPolicyFormats.UNICODE_MFOTL, InputOutputPolicyFormats.MFOTL, InputOutputPolicyFormats.NEGATED_MFOTL]
 
     @staticmethod
     def supported_trace_formats() -> List[InputOutputTraceFormats]:

@@ -9,7 +9,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
 from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
-from Infrastructure.constants import POLICY_KEY, FOLDER_KEY, TRACE_KEY
+from Infrastructure.constants import POLICY_KEY, FOLDER_KEY, TRACE_KEY, EVENTRATE
 
 
 class DejaVu(BaseMonitorTemplate, OfflineRunnable):
@@ -38,17 +38,18 @@ class DejaVu(BaseMonitorTemplate, OfflineRunnable):
         return ["run", str(self.params[POLICY_KEY]), str(self.params[TRACE_KEY]), "scratch"], ""
 
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        event_rate = self.params.get(EVENTRATE)
         prop_list = PropositionList(DefaultVariableOrder())
         if stdout_input == "":
             return prop_list
 
+        stripping = 0 if event_rate is None else len(str(event_rate))-1
         lines = stdout_input.strip()
-        print("Output")
-        print(lines)
         for line in filter(lambda l: "violated on event number" in l, lines.split("\n")):
             num_str = line.split("number")[1].strip().rstrip(":")
             try:
-                prop_list.insert(False, int(num_str))
+                num = int(num_str[0:-stripping]) if stripping > 0 else int(num_str)
+                prop_list.insert(False, num)
             except ValueError:
                 pass
         return prop_list

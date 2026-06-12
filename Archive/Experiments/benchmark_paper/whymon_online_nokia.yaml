@@ -13,7 +13,6 @@ monitors:
   - identifier: WhyMon
     name: WhyMon
     commit: 86684beecbfc14ed3367eb5c042f610ca8a60119
-    branch: main
     params:
       OnlineExperimentContractTool:
         format: log

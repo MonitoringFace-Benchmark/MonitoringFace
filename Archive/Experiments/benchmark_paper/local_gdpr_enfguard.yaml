@@ -4,6 +4,8 @@ monitors:
   - identifier: EnfGuard
     name: EnfGuard
     commit: 9e6ec02c04dbcf8fa43b9e3223cad882a6d462f3
+    params:
+      monitoring: true
 
 repeats: 3
 

@@ -12,7 +12,6 @@ monitors:
   - identifier: MonPoly
     name: MonPoly
     commit: bc752d37f1d4560b5667eddac9dd1670451b758e
-    branch: master
     params:
       OnlineExperimentContractTool:
         format: log
@@ -21,7 +20,6 @@ monitors:
   - identifier: VeriMon
     name: VeriMon
     commit: bc752d37f1d4560b5667eddac9dd1670451b758e
-    branch: master
     params:
       OnlineExperimentContractTool:
         format: log

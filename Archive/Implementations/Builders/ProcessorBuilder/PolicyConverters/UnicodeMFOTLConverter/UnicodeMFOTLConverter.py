@@ -5,10 +5,10 @@ from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.PolicyConverterTe
 
 
 UNICODE_TO_STRING = [
-    ("∞", "*"), ("⊤", "TRUE"), ("⊥", "FALSE"), ("¬", "NOT"), ("∧", "AND"),
-    ("∨", "OR"), ("→", "IMPLIES"), ("↔", "IFF"), ("∃", "EXISTS"), ("∀", "FORALL"),
-    ("S", "SINCE"), ("U", "UNTIL"), ("●", "PREV"), ("○", "NEXT"), ("⧫", "ONCE"),
-    ("◊", "EVENTUALLY"), ("■", "ALWAYS"), ("□", "HISTORICALLY")
+    ("∞", "*"), ("⊤", " TRUE "), ("⊥", " FALSE "), ("¬", " NOT "), ("∧", " AND "),
+    ("∨", " OR "), ("→", " IMPLIES "), ("↔", " IFF "), ("∃", " EXISTS "), ("∀", " FORALL "),
+    ("S", " SINCE "), ("U", " UNTIL "), ("●", " PREV "), ("○", " NEXT "), ("⧫", " ONCE "),
+    ("◊", " EVENTUALLY "), ("■", " ALWAYS "), ("□", " HISTORICALLY ")
 ]
 
 

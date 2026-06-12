@@ -26,7 +26,7 @@ class OooVerdicts(AbstractOutputStructure):
     def retrieve(self, time_point):
         if time_point not in self.tp_to_ts:
             return None
-        selected = [x for (tp, _, val) in self.ooo_verdict if tp == time_point for x in val]
+        selected = [x for (_, tp, val) in self.ooo_verdict if tp == time_point for x in val]
         return self.tp_to_ts[time_point], time_point, selected
 
     def insert(self, value, time_point, time_stamp):

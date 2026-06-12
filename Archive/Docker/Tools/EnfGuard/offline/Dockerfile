@@ -23,8 +23,8 @@ RUN mkdir -p /home/opam/dist && chown opam:opam /home/opam/dist
 # Install dependencies and build with local prefix
 RUN opam switch create 4.13.1
 RUN eval $(opam env --switch=4.13.1) && \
-    opam install -y dune core_kernel core_unix base zarith menhir zarith_stubs_js qcheck pyml calendar z3 && \
-    dune build --profile=release @install && \
+    OPAMJOBS=2 opam install -y dune core_kernel core_unix base zarith menhir zarith_stubs_js qcheck pyml calendar z3 && \
+    dune build -j2 --profile=release @install && \
     dune install --prefix=/home/opam/dist --relocatable
 
 # Runtime stage
