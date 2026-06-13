@@ -6,16 +6,13 @@ monitors:
     commit: 9e6ec02c04dbcf8fa43b9e3223cad882a6d462f3
 
 repeats: 3
-
 runtime_constraints:
   upper_bound: 30
 
-# Case study specific configuration
 data_setup:
   type: CaseStudy
   fixed: true
   name: Local_GDPR_EnfGuard
 
-# Tools to build and run
 tools_to_build:
   - EnfGuard

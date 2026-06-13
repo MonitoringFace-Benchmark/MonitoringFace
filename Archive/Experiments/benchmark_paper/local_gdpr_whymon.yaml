@@ -9,7 +9,6 @@ runtime_constraints:
   upper_bound: 30
 
 repeats: 3
-
 data_setup:
   type: CaseStudy
   fixed: true

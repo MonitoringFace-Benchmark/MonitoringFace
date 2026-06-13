@@ -15,7 +15,6 @@ monitors:
       output_mode: 1
 
 repeats: 3
-
 runtime_constraints:
   upper_bound: 30
 
