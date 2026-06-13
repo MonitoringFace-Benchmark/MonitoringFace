@@ -66,10 +66,7 @@ class WhyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
 
     @staticmethod
     def supported_policy_formats() -> List[InputOutputPolicyFormats]:
-        return [
-            InputOutputPolicyFormats.UNICODE_MFOTL, InputOutputPolicyFormats.NEGATED_MFOTL,
-            InputOutputPolicyFormats.MFOTL, InputOutputPolicyFormats.NEGATED_UNICODE_MFOTL
-        ]
+        return [InputOutputPolicyFormats.NEGATED_MFOTL, InputOutputPolicyFormats.NEGATED_UNICODE_MFOTL]
 
     @staticmethod
     def supported_trace_formats() -> List[InputOutputTraceFormats]:
