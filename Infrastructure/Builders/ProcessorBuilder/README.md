@@ -1,45 +1,114 @@
+# Data and Policy Generators
 
-### Common Structure to add new Policy and Data Generators
-Navigate to ``YOUR_PATH_TO/MonitoringFace/Infrastructure/Builders/ProcessorBuilder/PolicyGenerators``.
+A **generator** produces experiment inputs — *data generators* produce traces, *policy
+generators* produce policies — subject to parameters carried by a **contract**. This
+document describes how to add one. The base classes live here in the Infrastructure;
+the concrete generators live in the [Archive](../../../Archive/README.md).
 
-In the folder create a subfolder with a unique name in camel-case ending with the type with ``<YourToolName>Generator``,
-e.g., ``ComplexPolicyGenerator`` or ``ComplexDataGenerator``.
+## Where a generator lives
 
-Add an ``__init__.py`` file to the folder. Add two files the contract defining all parameters and option for
-the tool, the file is named ``<YourToolName>Contract.py``. The second file is the implementation of the builder
-named ``<YourToolName>Generator.py``.
+Each generator consists of:
 
-In the contract file define a dataclass named ``<YourToolName>Contract`` that inherits from 
-``AbstractContract`` located in ``MonitoringFace.DataTypes.Contracts.AbstractContract.py``.
-The inheriting class requires the implementation of two methods:
-1. ``default_contract()``: populates all the fields of the contract with reasonable default values.
-2. ``instantiate_contract(params: Dict[str, Any])``: populates all the fields of the contract with the values 
-provided in the params dictionary, or if the params are empty calls ``default_contract()``.
-Otherwise, the dataclass implements one field a parameter or option for the tool.
+- a **Dockerfile** packaging the generator, under
+  `Archive/Docker/DataGenerators/<Name>Generator/` or
+  `Archive/Docker/PolicyGenerators/<Name>Generator/`
+  (see the [Archive README](../../../Archive/README.md)), and
+- a **wrapper class + contract**, under
+  `Archive/Implementations/Builders/ProcessorBuilder/<DataGenerators|PolicyGenerators>/<Name>Generator/`.
 
-### PolicyGenerators
-In the builder file implement a class named ``<YourToolName>Generator`` that inherits from 
-``PolicyGeneratorTemplate`` located in ``MonitoringFace.Infrastructure.Builders.PolicyGenerator.PolicyGeneratorTemplate``.
-Implement the required methods:
-1. ``init(self, name, path_to_build)``: are used to link the class to the underlying Dockerfile.
-2. ``generate_policy(self, policy_contract, time_on=None, time_out=None)``: returns the name of the tool as a string.
-The parameter ``policy_contract`` is a raw dict and need to be parsed to create the command. The time_on and time_out are provided
-by the framework and need to be passed to the call to the image, to control execution time.
-The main logic of this method is to create the command to call the Docker image with the parameters and options, process
-the output and return the seed, signature and policy the tool produced.
+> Note: generators are **added to the Archive**, not to the Infrastructure. The
+> Infrastructure only holds the base classes (`DataGeneratorTemplate`,
+> `PolicyGeneratorTemplate`, `AbstractContract`) that the Archive classes extend.
 
+## Common structure
 
-### DataGenerators
-In the builder file implement a class named ``<YourToolName>Generator`` that inherits from 
-``DataGeneratorTemplate`` located in ``MonitoringFace.Infrastructure.Builders.DataGenerator.DataGeneratorTemplate``.
-Implement the required methods:
-1. ``run_generator(self, contract_inner: Dict[AnyStr, Any], time_on=None, time_out=None) -> Tuple[int, AnyStr, int]``: 
-Executes the data generator with the provided contract. The ``contract_inner`` parameter is a raw dictionary that needs to be parsed to create the command. 
-The ``time_on`` and ``time_out`` parameters are provided by the framework and should be passed to the image call to control execution time. 
-Returns a tuple containing the seed, the generated data as a string, and the return code of the dockerfile.
-2. ``check_policy(self, path_inner, signature, formula) -> bool``: 
-Validates that the policy (signature and formula) is compatible with the data generator. 
-Returns ``True`` if the policy is valid for the generator, ``False`` otherwise.
-3. ``output_formats() -> List[InputOutputFormat]``: 
-Returns a list of produced output formats for the data generator.
+Create a folder named `<Name>Generator` (camel-case, ending in `Generator`) containing:
 
+```
+<Name>Generator/
+  __init__.py
+  <Name>Generator.py    → class <Name>Generator(DataGeneratorTemplate | PolicyGeneratorTemplate)
+  <Name>Contract.py     → class <Name>Contract(AbstractContract)
+```
+
+### Discovery and naming
+
+The platform derives the generator from the contract by replacing `Contract` with
+`Generator`. Therefore the names must line up exactly:
+
+- The YAML `data_setup.type` / `policy_setup.type` equals the **contract** class name,
+  e.g. `SignatureContract`.
+- The folder, file, and **generator** class name must all be `<Name>Generator`,
+  e.g. `SignatureGenerator`.
+
+So `type: SignatureContract` ⇒ the platform loads
+`.../DataGenerators/SignatureGenerator/SignatureGenerator.py` and reads the contract
+fields from the YAML block named `SignatureContract`.
+
+## The contract
+
+Define a dataclass `<Name>Contract` that extends `AbstractContract`
+([`Infrastructure/DataTypes/Contracts/AbstractContract.py`](../../DataTypes/Contracts/AbstractContract.py)).
+Each dataclass field is one tunable parameter/option of the generator. Implement:
+
+1. **`default_contract(self)`** — return an instance with reasonable default values.
+2. **`instantiate_contract(self, params)`** — set fields from the `params` dict (a raw
+   dict parsed from YAML); fall back to `default_contract()` when `params` is empty.
+
+```python
+from dataclasses import dataclass
+from Infrastructure.DataTypes.Contracts.AbstractContract import AbstractContract
+
+@dataclass
+class SignatureContract(AbstractContract):
+    trace_length: int = None
+    event_rate: int = 1000
+    seed: int = None
+    # ...
+
+    def default_contract(self):
+        return SignatureContract(trace_length=None, event_rate=1000, seed=None)
+
+    def instantiate_contract(self, params):
+        if not params:
+            return self.default_contract()
+        valid = {f.name for f in fields(self)}
+        for k, v in params.items():
+            if k in valid:
+                setattr(self, k, v)
+        return self
+```
+
+## Data generators
+
+Extend `DataGeneratorTemplate`
+([`DataGenerators/DataGeneratorTemplate.py`](DataGenerators/DataGeneratorTemplate.py))
+and implement:
+
+1. **`__init__(self, name, path_to_build)`** — links the class to its Docker image.
+2. **`run_generator(self, contract_inner: Dict[AnyStr, Any], time_on=None, time_out=None) -> Tuple[int, AnyStr]`**
+   Execute the generator with the (raw dict) contract; build and run the image command.
+   `time_on`/`time_out` are supplied by the framework for time-guarded generation and
+   must be passed through to the image call. Return `(seed, generated_trace)`.
+3. **`check_policy(self, path_inner, signature, formula) -> bool`**
+   Validate that the given policy is compatible with this generator (return `True` if
+   it accepts any policy; e.g. `SignatureGenerator` accepts all).
+4. **`output_format() -> InputOutputTraceFormats`** (static) — the trace format produced.
+
+## Policy generators
+
+Extend `PolicyGeneratorTemplate`
+([`PolicyGenerators/PolicyGeneratorTemplate.py`](PolicyGenerators/PolicyGeneratorTemplate.py))
+and implement:
+
+1. **`__init__(self, name, path_to_build)`** — links the class to its Docker image.
+2. **`generate_policy(self, policy_contract: Dict[AnyStr, Any], time_on=None, time_out=None) -> Tuple[int, AnyStr, AnyStr]`**
+   Parse the (raw dict) contract into the image command, run it, and return
+   `(seed, signature, policy)`. Pass `time_on`/`time_out` through to the image call.
+3. **`output_format() -> InputOutputPolicyFormats`** (static) — the policy format produced.
+
+## See also
+
+- [Archive README](../../../Archive/README.md) — Dockerfile and `tool.properties` conventions for the generator image.
+- [CLI Usage Guide](../../Frontend/CLI/CLI_USAGE.md) — how contracts appear in experiment YAML, with a per-contract field reference.
+- [Infrastructure README](../../README.md) — the other component base classes.

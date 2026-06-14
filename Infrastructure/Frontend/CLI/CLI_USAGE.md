@@ -2,332 +2,416 @@
 
 ## Overview
 
-MonitoringFace provides a command-line interface (CLI) that allows users to configure and run benchmark experiments using YAML configuration files. The framework uses **[Hydra](https://hydra.cc/)**, a powerful configuration framework that provides structured configs, type safety, and automatic validation.
+MonitoringFace is driven by a command-line interface that runs benchmark experiments
+described in YAML configuration files. The CLI itself is a standard `argparse` program
+([`cli.py`](cli.py)); the YAML files are loaded and composed with
+**[Hydra](https://hydra.cc/) / [OmegaConf](https://omegaconf.readthedocs.io/)**, so
+they support structured configs and variable interpolation
+([`YamlParser`](../Parser/YamlParser.py)).
 
+A configuration file describes both **build information** (which monitors to build,
+from which branch/commit) and **experimental instructions** (the data/policy
+generators or case study, the parameters, and any oracle). The platform then
+orchestrates the components registered in the [Archive](../../../Archive/README.md).
 
+## Invocation
 
-## Command-Line Options
-
-```
-usage: MonitoringFace [-h] [--build-dir BUILD_DIR] [--exp-dir EXP_DIR] 
-                      [--dry-run] [--verbose] [--suite] [--debug] config
-
-positional arguments:
-  config                Path to YAML configuration file (single experiment or suite)
-
-optional arguments:
-  -h, --help           Show help message and exit
-  --debug              Enable debug mode with additional logging
-  --dry-run            Validate configuration without running experiments
-  --verbose, -v        Enable verbose output
-  --suite              Force treat config as experiment suite (auto-detected by default)
+```bash
+python -m Infrastructure.main <config> [options]
 ```
 
-## YAML Configuration Format
+The `config` argument is a YAML file name resolved **relative to
+`Archive/Experiments/`**. The same resolution applies to single experiments and to
+suites; if the file is not found locally, the platform attempts to fetch it from the
+remote repository.
 
-### Single Experiment Configuration
+```bash
+# Single experiment  ->  Archive/Experiments/examples/example_synthetic_experiment.yaml
+python -m Infrastructure.main examples/example_synthetic_experiment.yaml
 
-A single experiment YAML file contains all the information needed to run one benchmark experiment.
+# Experiment suite    ->  Archive/Experiments/examples/experiments_suite.yaml
+python -m Infrastructure.main examples/experiments_suite.yaml
 
-#### Required Sections
+# Validate without building or running anything
+python -m Infrastructure.main examples/example_synthetic_experiment.yaml --dry-run
+```
 
-##### 1. Experiment Metadata
+Suites are auto-detected (a top-level `experiments:` key); pass `--suite` to force it.
+
+## Command-line options
+
+| Option | Effect |
+|--------|--------|
+| `config` (positional) | YAML config name, resolved relative to `Archive/Experiments/`. |
+| `--dry-run` | Validate the configuration; do not build or run anything. |
+| `--verbose`, `-v` | Print detailed progress and the commands being executed. |
+| `--debug` | Preserve the per-execution `scratch` data (converted traces/policies) that is otherwise deleted. |
+| `--no-measure` | Disable the in-container `/usr/bin/time` measurement of time and memory. |
+| `--suite` | Force the config to be treated as an experiment suite (otherwise auto-detected). |
+| `--clean` | After running, keep only the latest result/analysis folder for this experiment. |
+| `--clean-all` | Remove the entire `results/` and `analysis_results/` folders before running. |
+| `--analyze` | Run automated analysis on the results after execution (written to `analysis_results/`). |
+| `-h`, `--help` | Show help and exit. |
+
+Results are written to a timestamped folder under `Infrastructure/results/`.
+
+---
+
+## YAML configuration reference
+
+### Single experiment
+
+A single-experiment file is composed of the sections below. `monitors`, `data_setup`,
+and `tools_to_build` are required; the rest are optional and apply as noted.
+
+#### `experiment_name` (required)
+
 ```yaml
-experiment_name: my_experiment  # Unique name for the experiment
-benchmark_type: synthetic       # 'synthetic' or 'case_study'
+experiment_name: my_experiment      # used to name result/experiment folders
 ```
 
-##### 2. Tools Configuration
-Define which monitoring tools to build:
+#### `runtime_setting` (optional)
+
 ```yaml
-tools:
-  - name: TimelyMon
-    branch: development
-    release: branch              # 'branch' or 'release'
-  - name: MonPoly
-    branch: master
-    release: branch
+runtime_setting: offline            # 'offline' (default) or 'online'
 ```
 
-##### 3. Monitors Configuration
-Configure monitors to run during the experiment:
+#### `monitors` (required)
+
+The monitors to build and (potentially) run. Each entry identifies a tool packaged in
+the Archive and pins a version by `branch` **or** `commit`.
+
 ```yaml
 monitors:
-  - identifier: TimelyMon        # Tool identifier
-    name: TimelyMon 1            # Unique monitor name
-    branch: development          # Git branch
-    params:                      # Monitor-specific parameters
+  - identifier: TimelyMon           # tool name as packaged in Archive/Docker/Tools
+    name: TimelyMon 1               # unique label for this monitor instance
+    branch: development             # build from a branch ...
+    release: branch                 # optional: 'branch' (default) or 'release'
+    params:                         # optional, monitor-specific (see below)
       worker: 1
       output_mode: 1
-  - identifier: MonPoly
-    name: MonPoly
-    branch: master
-    params:
-      replayer: gen_data
+  - identifier: VeriMon
+    name: VeriMon
+    commit: 2924d26f95acf539b85f3e71d8518ebad9961983   # ... or pin an exact commit
 ```
 
-##### 4. Time Guard Configuration
-Configure execution time limits:
+- `identifier` and `name` are required; provide `branch` or `commit`.
+- `name` must be unique — it is how the monitor is referenced in `tools_to_build`,
+  `oracles`, and `generation_constraints`. Reuse the same `identifier` with different
+  `name`s and `params` to compare configurations or versions of one tool.
+- `params` are passed to the monitor's wrapper class. They are tool-specific; e.g.
+  TimelyMon accepts `worker`, `output_mode`, and `mode` (e.g. `oootps`), while MonPoly
+  accepts `replayer`. For online runs, `params` may carry an
+  `OnlineExperimentContractTool` block (see [Online experiments](#online-experiments)).
+
+#### `tools_to_build` (required)
+
+The subset of monitor `name`s to actually build and run for this experiment.
+
 ```yaml
-time_guard:
-  enabled: false                 # Enable/disable time guarding
-  lower_bound: null              # Minimum time (null for none)
-  upper_bound: 200               # Maximum time in seconds
-  guard_type: Monitor            # 'Monitor', 'Oracle', or 'Generator'
-  guard_name: TimelyMon 6        # Name of guard monitor
-```
-
-##### 5. Data Setup Configuration
-Configure data generation. With Hydra, configuration is organized by type:
-
-**Signature Generator:**
-```yaml
-data_setup:
-  type: Signature
-  Signature:
-    trace_length: 1000
-    seed: null
-    event_rate: 1000
-    index_rate: null
-    time_stamp: null
-    sig: ""
-    sample_queue: null
-    string_length: null
-    fresh_value_rate: null
-    domain: null
-```
-
-**Patterns Generator:**
-```yaml
-data_setup:
-  type: Patterns
-  Patterns:
-    trace_length: 1000
-    seed: null
-    event_rate: 1000
-    index_rate: null
-    time_stamp: null
-    linear: 1
-    interval: null
-    star: null
-    triangle: null
-    pattern: null
-    violations: 1.0
-    zipf: "x=1.5+3,z=2"
-    prob_a: 0.2
-    prob_b: 0.3
-    prob_c: 0.5
-```
-
-**DataGolf Contract:**
-```yaml
-data_setup:
-  type: DataGolfContract
-  DataGolfContract:
-    sig_file: "signature.sig"
-    formula: "formula.mfotl"
-    tup_ts: [0, 1, 2, 3, 4, 5, 6]
-    tup_amt: 100
-    tup_val: 1
-    oracle: true
-    no_rewrite: null
-    trace_length: 5
-```
-
-##### 6. Policy Setup Configuration
-```yaml
-policy_setup:
-  type: PolicyGeneratorContract
-  num_preds: 4
-  prob_eand: 0
-  prob_rand: 0
-  prob_let: 0
-  prob_matchF: 0
-  prob_matchP: 0
-```
-
-##### 7. Benchmark-Specific Configuration
-
-**For Synthetic Benchmarks:**
-```yaml
-synthetic_config:
-  data_source: DATAGENERATOR     # 'DATAGENERATOR' or 'DATAGOLF'
-  policy_source: MFOTLGENERATOR  # 'MFOTLGENERATOR' or 'PATTERNS'
-  experiment:
-    num_operators: [5]
-    num_fvs: [2]
-    num_setting: [0, 1]
-    num_data_set_sizes: [50]
-```
-
-**For Case Studies:**
-```yaml
-case_study_config:
-  case_study_name: Nokia
-```
-
-##### 8. Execution Configuration
-```yaml
-experiment_type: Signature       # 'Pattern', 'Signature', or 'CaseStudy'
-
-tools_to_build:                  # List of monitor names to run
+tools_to_build:
   - TimelyMon 1
-  - MonPoly
   - VeriMon
 ```
 
-##### 9. Oracle Configuration (Optional)
+#### `oracles` and `oracle` (optional)
+
+Define available oracles in `oracles`, then activate one with `oracle`.
+
 ```yaml
 oracles:
-  - identifier: VeriMonOracle
-    name: VeriMonOracle
-    monitor_name: VeriMon
+  - identifier: VeriMonOracle       # oracle name as packaged in Archive
+    name: VeriMonOracle             # unique label
+    monitor_name: VeriMon           # monitor this oracle composes with (if any)
     params:
       replayer: gen_data
-      verified: true
 
 oracle:
-  enabled: true
-  name: VeriMonOracle
+  enabled: true                     # set false (or omit the section) to skip checking
+  name: VeriMonOracle               # which entry from `oracles` to use as ground truth
 ```
 
-### Experiment Suite Configuration
+When enabled, each monitor's output is compared against the oracle's ground truth and
+reported as correct / wrong.
 
-An experiment suite YAML file references multiple individual experiment configurations:
+#### `data_setup` (required)
+
+Selects the trace source. The `type` is either a special source (`CaseStudy`,
+`Script`) or a **data-generator contract**. For a contract, the platform derives the
+generator from the contract name by replacing `Contract` with `Generator`
+(e.g. `SignatureContract` → `SignatureGenerator`), and reads the contract's fields from
+a nested block named after the `type`.
 
 ```yaml
-experiments:
-  - path: example_synthetic_experiment.yaml
-    enabled: true
-    description: "Basic synthetic experiment"
-  
-  - path: example_patterns.yaml
-    enabled: true
-    description: "Patterns data generator experiment"
-  
-  - path: example_case_study.yaml
-    enabled: false                # Can be disabled without removing
-    description: "Nokia case study"
+# Synthetic trace generation
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    event_rate: 1000
 ```
 
-**Note:** Paths can be relative (to the suite file) or absolute.
-
-## Complete Examples
-
-### Example 1: Basic Synthetic Experiment
-
-See: `Archive/Benchmarks/example_synthetic_experiment.yaml`
-
-This example demonstrates a complete synthetic benchmark with:
-- Multiple monitors (TimelyMon, MonPoly, WhyMon, EnfGuard)
-- Signature data generator
-- VeriMon oracle for correctness checking
-- Time guarding enabled
-
-### Example 2: Patterns Generator
-
-See: `Archive/Benchmarks/example_patterns.yaml`
-
-This example shows:
-- Using the Patterns data generator
-- Multiple parameter sweeps
-- Simplified monitor configuration
-
-### Example 3: Case Study
-
-See: `Archive/Benchmarks/example_case_study.yaml`
-
-This example demonstrates:
-- Case study benchmark (Nokia)
-- Minimal monitor setup
-- No oracle required
-
-### Example 4: Experiment Suite
-
-See: `Archive/Benchmarks/experiments_suite.yaml`
-
-This example shows how to:
-- Group multiple experiments
-- Enable/disable experiments
-- Add descriptions for documentation
-
-## Usage Patterns
-
-### 1. Create a New Experiment
-
-1. Copy an existing example YAML file.
-
-2. Edit the configuration to match your needs
-
-3. Validate the configuration:
-```bash
-python -m Infrastructure.main my_folder/my_experiment.yaml --dry-run
-```
-
-4. Run the experiment:
-```bash
-python -m Infrastructure.main my_folder/my_experiment.yaml --verbose
-```
-
-### 2. Create an Experiment Suite
-
-1. Create individual experiment YAML files
-
-2. Create a suite file:
 ```yaml
-experiments:
-  - path: my_folder/experiment1.yaml
-    enabled: true
-    description: "First experiment"
-  - path: my_folder/experiment2.yaml
-    enabled: true
-    description: "Second experiment"
+# Fixed case-study trace
+data_setup:
+  type: CaseStudy
+  name: Nokia                       # a case study packaged in Archive
+  fixed: false                      # optional; true copies fixed data instead of generating
 ```
 
-3. Run the suite:
-```bash
-python -m Infrastructure.main my_folder/my_suite.yaml
+Available data-generator contracts (`type` values) and their key fields are listed in
+[Data-generator contracts](#data-generator-contracts).
+
+#### `policy_setup` (optional, required for synthetic experiments)
+
+Selects the policy source, analogous to `data_setup`
+(`MfotlPolicyContract` → `MfotlPolicyGenerator`).
+
+```yaml
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_eand: 0
 ```
 
-### 3. Parameter Sweeps
+#### `synthetic_config` (required for synthetic experiments)
 
-Use lists in the synthetic experiment configuration to run multiple variations:
+The synthetic parameter ranges. Only the `experiment` block is read; lists produce a
+parameterized family (see [Parameter sweeps](#parameter-sweeps)).
 
 ```yaml
 synthetic_config:
   experiment:
-    num_operators: [3, 5, 7, 10]      # Will run 4 variations
-    num_fvs: [1, 2, 3]                # Combined with above
+    num_operators: [5]              # formula size(s)
+    num_fvs: [2]                    # number(s) of free variables
+    num_setting: [0, 1]            # setting index/indices (distinct seeded instances)
+    num_data_set_sizes: [50]        # number(s) of traces per setting
+```
+
+> Some configs also carry `data_source:`/`policy_source:` keys here. They are
+> **cosmetic** — the generators are determined by `data_setup.type` and
+> `policy_setup.type`, not by these keys.
+
+#### `runtime_constraints` (optional)
+
+Per-run timeout for monitors, in seconds.
+
+```yaml
+runtime_constraints:
+  upper_bound: 30                   # kill a monitor run after 30 s
+```
+
+#### `generation_constraints` (optional — time-guarded generation)
+
+Regenerate random experiments until a selected tool's runtime falls in `[lower_bound,
+upper_bound]` seconds. This excludes trivial or intractable instances.
+
+```yaml
+generation_constraints:
+  lower_bound: null                 # null for no lower bound
+  upper_bound: 150
+  guard_type: Monitor               # 'Monitor', 'Oracle', or 'Generator'
+  guard_name: TimelyMon 4           # the monitor whose runtime is guarded
+```
+
+#### `repeats` (optional)
+
+```yaml
+repeats: 3                          # repetitions per experiment (default 1)
+```
+
+#### `seeds` (optional — reproducibility)
+
+Fix the generator seeds per synthetic setting. Each key is the stringified setting
+tuple `[num_operators, num_fvs, num_setting]` (omit `num_fvs` for generators without
+free variables); each value is `[policy_seed, trace_seed]`.
+
+```yaml
+seeds:
+  '[5, 2, 0]': [314159265, 87006]
+  '[5, 2, 1]': [314159265, 53339]
+```
+
+### Online experiments
+
+Set `runtime_setting: online` and add a global `OnlineExperimentContractGeneral`
+section; per-monitor online behavior goes in `params.OnlineExperimentContractTool`.
+
+```yaml
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: file            # 'file' or 'script'
+  mode: real-time                   # 'real-time' or 'accelerated'
+  timestamp_units: milliseconds     # 'milliseconds', 'microseconds', or 'seconds'
+  accumulative_time: 220            # cumulative-latency budget
+  maximum_latency: 50000            # per-step latency budget
+  # batch_delimiter: ...            # optional
+
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon
+    commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
+    params:
+      worker: 1
+      output_mode: 1
+      OnlineExperimentContractTool:
+        format: csv                       # 'csv' or 'log'
+        response_mode: event-count        # 'event-count' or 'current-timepoint'
+        output_collection_mode: before-delimiter   # required
+        input_aggregation_number: 1       # optional
+        input_aggregation_pattern: ">W"   # optional
+        # latency_marker: ...             # optional
+        # warm_up_input: ...              # optional
+
+data_setup:
+  type: CaseStudy
+  name: NokiaCsvOnline
+```
+
+### Experiment suite
+
+A suite references several experiment configs (paths relative to `Archive/Experiments/`);
+disabled entries are skipped.
+
+```yaml
+experiments:
+  - path: examples/example_synthetic_experiment.yaml
+    enabled: true
+    description: "Basic synthetic experiment with Signature data generator"
+  - path: examples/example_patterns.yaml
+    enabled: true
+    description: "Patterns data generator experiment"
+  - path: examples/example_case_study.yaml
+    enabled: false                  # kept in the suite but not run
+    description: "Nokia case study"
+```
+
+---
+
+## Contract reference
+
+Contracts are Python dataclasses; their fields are the options you may set in the
+nested block under `data_setup`/`policy_setup`. Unset fields fall back to defaults.
+Source: `Archive/Implementations/Builders/ProcessorBuilder/{DataGenerators,PolicyGenerators}/`.
+
+### Data-generator contracts
+
+**`SignatureContract`** → `SignatureGenerator` (signature-driven random traces)
+
+| Field | Default | Notes |
+|-------|---------|-------|
+| `trace_length` | `null` | number of time points |
+| `event_rate` | `1000` | events per time point |
+| `seed` | `null` | trace seed |
+| `index_rate` | `null` | |
+| `time_stamp` | `null` | timestamp increment |
+| `signature` | `""` | inline signature |
+| `sample_queue` | `null` | |
+| `fresh_value_rate` | `null` | rate of fresh values |
+| `domain` | `null` | value-domain size |
+| `string_length` | `null` | |
+| `watermarks` | `null` | emit watermarks (out-of-order traces) |
+
+**`PatternDataContract`** → `PatternDataGenerator` (pattern-shaped traces)
+
+| Field | Default | Notes |
+|-------|---------|-------|
+| `trace_length` | `1000` | |
+| `event_rate` | `1000` | |
+| `seed` / `index_rate` / `time_stamp` / `watermarks` | `null` | as above |
+| `linear` / `star` / `triangle` | `linear=1` | pattern shape selector (set one) |
+| `pattern` | `null` | explicit pattern string (alternative to the above) |
+| `violations` | `1.0` | violation rate |
+| `interval` | `null` | |
+| `zipf` | `"x=1.5+3,z=2"` | Zipf distribution spec |
+| `prob_a` / `prob_b` / `prob_c` | `0.2` / `0.3` / `0.5` | event probabilities |
+
+**`DataGolfContract`** → `DataGolfGenerator` (policy-aware "Data Golf" traces; can act as an oracle)
+
+| Field | Default | Notes |
+|-------|---------|-------|
+| `sig_file` / `formula` / `path` | `""` | inputs the generator builds traces from |
+| `trace_length` | `10` | |
+| `seed` | `null` | |
+| `oracle` | `false` | also emit ground truth |
+| `no_rewrite` | `null` | |
+| `tup_ts` | `[0..4]` | time points to populate |
+| `tup_amt` | `10` | tuples per time point |
+| `tup_val` | `0` | tuple value strategy |
+
+### Policy-generator contracts
+
+**`MfotlPolicyContract`** → `MfotlPolicyGenerator` (random MFOTL formulas)
+
+| Field | Default | Notes |
+|-------|---------|-------|
+| `num_preds` | `4` | number of predicates |
+| `max_arity` | `4` | maximum predicate arity |
+| `size` | `null` | formula size |
+| `seed` | `null` | policy seed |
+| `non_zero` | `false` | forbid zero-length intervals |
+| `aggregation` | `false` | allow aggregations |
+| `lb` / `ub` / `delta` | `0` / `5` / `30` | interval bounds and delta |
+| `unbounded` | `false` | allow unbounded future |
+| `regex` | `false` | allow regex / match operators |
+| `prob_*` | `null` | relative operator frequencies (see below) |
+
+Operator frequency fields (`prob_*`, unset = generator default): `prob_and`, `prob_or`,
+`prob_eand`, `prob_nand`, `prob_rand`, `prob_prev`, `prob_once`, `prob_next`,
+`prob_eventually`, `prob_since`, `prob_until`, `prob_exists`, `prob_let`, `prob_aggreg`,
+`prob_matchP`, `prob_matchF`. Set an operator's probability to `0` to exclude it
+(e.g. `prob_let: 0` to forbid let-bindings).
+
+Other policy generators packaged in the Archive include `GenFmaContract`
+(→ `GenFmaGenerator`), `PatternPolicyContract` (→ `PatternPolicyGenerator`), and
+`ImmediatePolicyContract` (→ `ImmediatePolicyGenerator`). Consult their contract files
+for fields.
+
+---
+
+## Worked examples
+
+The complete, runnable versions of these live under `Archive/Experiments/`:
+
+| Config | Demonstrates |
+|--------|--------------|
+| [`examples/example_synthetic_experiment.yaml`](../../../Archive/Experiments/examples/example_synthetic_experiment.yaml) | Synthetic experiment with the Signature generator, MFOTL policies, and a VeriMon oracle. |
+| [`examples/example_patterns.yaml`](../../../Archive/Experiments/examples/example_patterns.yaml) | Patterns generator + time-guarded generation. |
+| [`examples/example_case_study.yaml`](../../../Archive/Experiments/examples/example_case_study.yaml) | A fixed case-study (Nokia) benchmark. |
+| [`examples/experiments_suite.yaml`](../../../Archive/Experiments/examples/experiments_suite.yaml) | Grouping several experiments into a suite. |
+| [`benchmark_paper/timely_regression_testing.yaml`](../../../Archive/Experiments/benchmark_paper/timely_regression_testing.yaml) | Comparing two pinned commits of one tool (`repeats`, `seeds`). |
+| [`benchmark_paper/timelymon_online_nokia.yaml`](../../../Archive/Experiments/benchmark_paper/timelymon_online_nokia.yaml) | An online experiment on a real-world trace. |
+
+### Parameter sweeps
+
+Lists in `synthetic_config.experiment` expand into a family of experiments over all
+combinations:
+
+```yaml
+synthetic_config:
+  experiment:
+    num_operators: [3, 5, 7, 10]    # four formula sizes
+    num_fvs: [1, 2, 3]              # three free-variable counts
     num_data_set_sizes: [50, 100, 500]
 ```
 
-This will generate experiments for all combinations of parameters.
+Pin `seeds` per setting tuple to keep the family reproducible across runs.
 
-### 4. Organizing Experiments
+## Creating a new experiment
 
-Recommended directory structure:
+1. Copy an existing config from `Archive/Experiments/examples/` and edit it.
+2. Validate it: `python -m Infrastructure.main my_experiment.yaml --dry-run`.
+3. Run it (optionally verbose): `python -m Infrastructure.main my_experiment.yaml -v`.
+4. Inspect results under `Infrastructure/results/<experiment>_<timestamp>/`; add
+   `--analyze` to produce summary CSVs under `Infrastructure/analysis_results/`.
 
-```
-Archive/Benchmarks/
-├── experiments_suite.yaml          # Main suite file
-├── synthetic/
-│   ├── basic_experiment.yaml
-│   ├── scaling_test.yaml
-│   └── correctness_test.yaml
-├── case_studies/
-│   ├── nokia.yaml
-│   └── other_case_study.yaml
-└── ablation/
-    ├── no_optimization.yaml
-    └── with_optimization.yaml
-```
+## Where to look in the code
 
-
-## Additional Resources
-
-- [Hydra Documentation](https://hydra.cc/) - Learn more about Hydra's powerful configuration features
-- [OmegaConf Documentation](https://omegaconf.readthedocs.io/) - Learn about OmegaConf's structured configs
-- See example YAML files in `Archive/Benchmarks/`
-- Review `Infrastructure/Parser/YamlParser.py` for all configuration options
-- Review `Infrastructure/Parser/HydraConfig.py` for structured config definitions
-- Check `Infrastructure/cli.py` for CLI implementation details
+- [`cli.py`](cli.py) / [`cli_args.py`](cli_args.py) — CLI parsing and options.
+- [`../Parser/YamlParser.py`](../Parser/YamlParser.py) — the authoritative YAML schema.
+- `Infrastructure/DataTypes/Contracts/` and
+  `Archive/Implementations/Builders/ProcessorBuilder/**/...Contract.py` — contract fields.
+- [Top-level README](../../../README.md) and [Infrastructure README](../../README.md) —
+  architecture and how to add new components.
