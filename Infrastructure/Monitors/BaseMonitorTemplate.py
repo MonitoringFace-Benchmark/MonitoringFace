@@ -293,7 +293,11 @@ def init_stratification_map(src_format: InputOutputTraceFormats, target_format: 
     with open(f"{path_to_data}/{data_file}", "r") as f:
         for line in f:
             if line.__contains__("tp="):
-                tp = line.split("tp=")[1].split(",")[0]
+                tp = int(line.split("tp=")[1].split(",")[0])  # int, not str: lexicographic order breaks for tp >= 10
                 mapping[tp] += 1
 
+    # DejaVu's stratified trace emits one breaker event per timepoint to mark the
+    # timepoint switch, and that breaker consumes a (1-based) DejaVu event index.
+    # Include it in each block's size so the indices DejaVu reports map back correctly.
+    mapping = {tp: count + 1 for tp, count in mapping.items()}
     return StratificationIndex(mapping)

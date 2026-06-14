@@ -39,6 +39,7 @@ class DejaVu(BaseMonitorTemplate, OfflineRunnable):
         return ["run", str(self.params[POLICY_KEY]), str(self.params[TRACE_KEY]), "scratch"], ""
 
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        BASE = 1
         stratindex = self.params.get(STRATIFIED_MAP)
         prop_list = PropositionList(DefaultVariableOrder())
         if stdout_input == "":
@@ -51,9 +52,9 @@ class DejaVu(BaseMonitorTemplate, OfflineRunnable):
                 number = int(num_str)
                 if stratindex is not None:
                     try:
-                        orig_tp, _ = stratindex.original(number)
+                        orig_tp, _ = stratindex.original(number-BASE)
                         prop_list.insert(Proposition(False), int(orig_tp))
-                    except ValueError as e:
+                    except IndexError:
                         pass
                 else:
                     prop_list.insert(Proposition(False), number)

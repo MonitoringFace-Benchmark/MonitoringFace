@@ -16,13 +16,11 @@ class StratificationIndex:
     def total(self) -> int:
         return self.boundaries[-1]                        # number of stratified tps
 
-    # stratified -> original
     def original(self, x: int) -> tuple[int, int]:
-        if self.total == 0:
-            raise IndexError("empty index: no timepoints")
-        x = min(max(x, 0), self.total - 1)  # clamp into [0, total-1]
+        if not 0 <= x < self.total:
+            raise ValueError(f"stratified tp {x} out of range [0,{self.total})")
         i = bisect_right(self.boundaries, x) - 1
-        return self.tps[i], x - self.boundaries[i]  # (original_tp, event_pos)
+        return self.tps[i], x - self.boundaries[i] # (original_tp, event_pos)
 
     # original -> stratified
     def stratified_range(self, original_tp: int) -> tuple[int, int]:
