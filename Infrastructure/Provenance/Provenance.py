@@ -54,6 +54,8 @@ class ConversionStep:
     target_format: str                 # e.g. "dejavu-encoded"
     command: Optional[List[str]]       # exact argv, None for in-process converters
     cmd_params: Optional[List[str]]    # params["cmd_params"] override, if any
+    image: Optional[str] = None        # converter image tag, None for in-process
+    image_version: Optional[str] = None  # resolved upstream commit of that image
 
 
 @dataclass(frozen=True)
@@ -183,13 +185,19 @@ class ProvenanceFactory:
         self.project_root = project_root
 
     def session(self, setting_key: str, setting_folder: str, tool) -> "ProvenanceSession":
+        tool_image = getattr(tool, "image", None)
+        tool_version = {
+            "branch": getattr(tool_image, "branch", None),
+            "commit": getattr(tool_image, "commit", None) or None,
+            "image": getattr(tool_image, "image_name", None),
+        }
         return ProvenanceSession(
             root=os.path.join(self.result_folder, PROVENANCE_DIR_NAME),
             setting_key=setting_key, setting_folder=setting_folder,
             tool_name=tool.name, tool_identifier=tool.__class__.__name__,
             tool_params=tool.params, experiment_root=self.experiment_root,
             fingerprint=self.fingerprint, commit=self.commit,
-            project_root=self.project_root,
+            project_root=self.project_root, tool_version=tool_version,
         )
 
 
@@ -199,10 +207,12 @@ class ProvenanceSession:
     def __init__(self, root: str, setting_key: str, setting_folder: str,
                  tool_name: str, tool_identifier: str, tool_params: Dict[str, Any],
                  experiment_root: str, fingerprint: Dict[str, str],
-                 commit: Optional[str], project_root: Optional[str] = None):
+                 commit: Optional[str], project_root: Optional[str] = None,
+                 tool_version: Optional[Dict[str, Optional[str]]] = None):
         self.setting_folder = setting_folder
         self.tool_name = tool_name
         self.tool_identifier = tool_identifier
+        self.tool_version = tool_version or {}
         self.tool_params = tool_params
         self.experiment_root = experiment_root
         self.fingerprint = fingerprint
@@ -284,6 +294,8 @@ class ProvenanceSession:
                         "target_format": s.target_format,
                         "command": s.command,
                         "cmd_params": s.cmd_params,
+                        "image": s.image,
+                        "image_version": s.image_version,
                     }
                     for s in rec.steps
                 ] if not rec.custom else "custom",
@@ -298,6 +310,9 @@ class ProvenanceSession:
             "tool": {
                 "name": self.tool_name,
                 "identifier": self.tool_identifier,
+                "branch": self.tool_version.get("branch"),
+                "commit": self.tool_version.get("commit"),
+                "image": self.tool_version.get("image"),
                 "params": _scrub_paths(_jsonable(
                     {k: v for k, v in self.tool_params.items() if k not in _DERIVED_PARAM_KEYS}
                 ), self.project_root),

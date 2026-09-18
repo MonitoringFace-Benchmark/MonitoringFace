@@ -40,3 +40,7 @@ tools_to_build:
   - MonPoly Feb 15, 2023
   - MonPoly Jan 4, 2023
   - VeriMon
+
+components:
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672

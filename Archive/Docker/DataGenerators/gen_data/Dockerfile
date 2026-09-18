@@ -4,9 +4,11 @@ RUN apt-get update && apt-get install -y git maven && apt-get clean && rm -rf /v
 WORKDIR /build
 
 ARG REPO_URL="https://git.ku.dk/krq770/monitoring_data_generator.git"
-ARG BRANCH="main"
+ARG GIT_BRANCH="main"
+ARG GIT_COMMIT=""
 
-RUN git clone --branch ${BRANCH} --depth 1 ${REPO_URL} . 
+RUN git clone --branch "${GIT_BRANCH}" ${REPO_URL} . \
+    && if [ -n "$GIT_COMMIT" ]; then git checkout "$GIT_COMMIT"; fi
 RUN mvn scala:compile compile dependency:copy-dependencies -q -DskipTests
 
 FROM eclipse-temurin:17-jre

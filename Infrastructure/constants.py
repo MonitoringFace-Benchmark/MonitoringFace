@@ -61,6 +61,7 @@ ADDITIONAL_FOLDER = "additional"
 FINGERPRINT_DATA = "fingerprint_data"
 FINGERPRINT_EXPERIMENT = "fingerprint_experiment"
 FINGERPRINT_POLICY = "fingerprint_policy"
+FINGERPRINT_COMPONENTS = "fingerprint_components"
 
 
 PATH_TO_BUILD = "path_to_build"

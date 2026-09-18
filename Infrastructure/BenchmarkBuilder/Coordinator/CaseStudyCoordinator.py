@@ -14,7 +14,8 @@ from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Types.custome_type import OnlineOffline
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import TRACE_KEY, POLICY_KEY, PATH_KEY, BENCHMARK_BUILDING_OFFSET, \
-    SIGNATURE_KEY, FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, PATH_TO_NAMED_DATA, PATH_TO_NAMED_EXPERIMENT, \
+    SIGNATURE_KEY, FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, FINGERPRINT_COMPONENTS, PATH_TO_NAMED_DATA, \
+    PATH_TO_NAMED_EXPERIMENT, \
     PATH_TO_INSTRUCTIONS
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, TimeGuardingTool
 
@@ -52,10 +53,24 @@ class CaseStudyCoordinator(Coordinator):
             self.fresh_build = False
             self.header, self.instructions = None, None
 
+    def component_versions(self) -> Dict[str, Dict[str, Optional[str]]]:
+        image = getattr(self.generator, "image", None)
+        return {
+            "generator": {
+                "component": self.generator.__class__.__name__,
+                "name": getattr(self.generator, "name", None),
+                "resolved_version": getattr(image, "resolved_version", None),
+            }
+        }
+
     def finger_print(self) -> Dict[str, str]:
         new_data_setup_fingerprint = data_class_to_finger_print(self.data_setup)
         new_experiment_fingerprint = self.generator.name
-        return {FINGERPRINT_EXPERIMENT: new_experiment_fingerprint, FINGERPRINT_DATA: new_data_setup_fingerprint}
+        return {
+            FINGERPRINT_EXPERIMENT: new_experiment_fingerprint,
+            FINGERPRINT_DATA: new_data_setup_fingerprint,
+            FINGERPRINT_COMPONENTS: data_class_to_finger_print(self.component_versions()),
+        }
 
     def time_out(self) -> Optional[int]:
         constraint = self.constraints.runtime_constraint()

@@ -147,3 +147,13 @@ seeds:
   '[5, 2, 9, 100]': [314159265, 53326]
   '[5, 2, 9, 500]': [314159265, 53326]
   '[5, 2, 9, 1000]': [314159265, 53326]
+
+components:
+  - identifier: SignatureGenerator
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: MfotlPolicyGenerator
+    commit: fef5f8f5551a36dac4aa45cc7c48bef09964a265
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: QTLConverter
+    commit: 9fa865a5db71e1d46f1d7b48b281f609ce36ac43

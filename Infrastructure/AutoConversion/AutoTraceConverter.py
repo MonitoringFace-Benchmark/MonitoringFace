@@ -73,11 +73,14 @@ class AutoTraceConverter:
                     source, target, params
                 )
                 shutil.copy(intermediate_out, intermediate_in)
+                converter_image = getattr(converter, "image", None)
                 steps.append(ConversionStep(
                     converter=converter.__class__.__name__,
                     source_format=source.value, target_format=target.value,
                     command=command if isinstance(command, list) else None,
                     cmd_params=params.get("cmd_params"),
+                    image=getattr(converter_image, "image_name", None),
+                    image_version=getattr(converter_image, "resolved_version", None),
                 ))
             except Exception as e:
                 raise TraceConversionError(f"AutoTraceConverter: Conversion failed in {converter.__class__.__name__} from {source} to {target}: {e}")

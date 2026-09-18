@@ -90,3 +90,9 @@ seeds:
   '[10, 4, 3]': [314159265, 31159]
   '[10, 4, 4]': [314159265, 70357]
   '[10, 4, 5]': [314159265, 69513]
+
+components:
+  - identifier: SignatureGenerator
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: MfotlPolicyGenerator
+    commit: fef5f8f5551a36dac4aa45cc7c48bef09964a265

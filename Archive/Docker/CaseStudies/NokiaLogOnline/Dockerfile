@@ -4,7 +4,10 @@ RUN apk add --no-cache git unzip bash
 
 WORKDIR /data
 
-RUN git clone https://github.com/LennardEc/nokia_online_log.git /tmp/nokia_online_log && \
+ARG GIT_BRANCH=main
+ARG GIT_COMMIT=""
+RUN git clone --branch "$GIT_BRANCH" https://github.com/LennardEc/nokia_online_log.git /tmp/nokia_online_log && \
+    if [ -n "$GIT_COMMIT" ]; then git -C /tmp/nokia_online_log checkout "$GIT_COMMIT"; fi && \
     unzip /tmp/nokia_online_log/log/Trace/ldcc_sample_log.zip -d /tmp/nokia_online_log/log/Trace/ && \
     mv /tmp/nokia_online_log/log/Trace/ldcc_sample_log /tmp/nokia_online_log/log/Trace/trace.log
 

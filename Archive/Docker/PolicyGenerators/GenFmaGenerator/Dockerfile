@@ -5,7 +5,9 @@ RUN sudo apk add --update --no-cache gmp-dev libffi-dev m4 perl pkgconfig git ba
 RUN sudo mkdir -p /usr/src/app && sudo chown opam:opam /usr/src/app
 
 ARG GIT_BRANCH=main
-RUN git clone --depth 1 --branch $GIT_BRANCH https://git.ku.dk/krq770/monitoring_gen_fma.git /usr/src/app/monitoring_gen_fma
+ARG GIT_COMMIT=""
+RUN git clone --branch "$GIT_BRANCH" https://git.ku.dk/krq770/monitoring_gen_fma.git /usr/src/app/monitoring_gen_fma \
+    && if [ -n "$GIT_COMMIT" ]; then git -C /usr/src/app/monitoring_gen_fma checkout "$GIT_COMMIT"; fi
 
 WORKDIR /usr/src/app/monitoring_gen_fma
 

@@ -4,9 +4,11 @@ RUN apk add --no-cache git tar
 
 WORKDIR /data
 
+ARG GIT_BRANCH=enfguard
+ARG GIT_COMMIT=""
 RUN git clone https://github.com/runtime-enforcement/whyenf.git /tmp/whyenf && \
     cd /tmp/whyenf && \
-    git checkout enfguard
+    git checkout "${GIT_COMMIT:-$GIT_BRANCH}"
 
 CMD sh -c "\
 mkdir -p data/Formula data/Signature data/Trace && \

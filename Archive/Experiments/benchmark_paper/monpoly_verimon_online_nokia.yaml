@@ -33,3 +33,9 @@ tools_to_build:
 data_setup:
   type: CaseStudy
   name: NokiaLogOnline
+
+components:
+  - identifier: NokiaLogOnline
+    commit: ce2d423c78a22b7711827a3fa742c04bb38e39e1
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672

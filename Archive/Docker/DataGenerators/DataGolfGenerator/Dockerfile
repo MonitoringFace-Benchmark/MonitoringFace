@@ -13,7 +13,10 @@ RUN mkdir -p /usr/src/app && chown opam:opam /usr/src/app
 USER opam
 
 # Clone the project
-RUN git clone https://git.ku.dk/krq770/minidatagolf.git /usr/src/app/monpoly
+ARG GIT_BRANCH=main
+ARG GIT_COMMIT=""
+RUN git clone --branch "$GIT_BRANCH" https://git.ku.dk/krq770/minidatagolf.git /usr/src/app/monpoly \
+    && if [ -n "$GIT_COMMIT" ]; then git -C /usr/src/app/monpoly checkout "$GIT_COMMIT"; fi
 WORKDIR /usr/src/app/monpoly
 
 # Initialize OPAM and install Dune

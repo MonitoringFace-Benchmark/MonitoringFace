@@ -16,3 +16,7 @@ data_setup:
 
 tools_to_build:
   - WhyMon
+
+components:
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672

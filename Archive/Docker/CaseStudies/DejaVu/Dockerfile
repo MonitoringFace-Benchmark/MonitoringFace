@@ -2,9 +2,11 @@ FROM alpine:latest
 RUN apk add --no-cache git bash
 WORKDIR /data
 
-RUN git clone https://github.com/havelund/dejavu.git /tmp/dejavu_case_study && \
+ARG GIT_BRANCH=master
+ARG GIT_COMMIT="2b5052d89e3a961de7344a2bdcb7adf1308f2bca"
+RUN git clone --branch "$GIT_BRANCH" https://github.com/havelund/dejavu.git /tmp/dejavu_case_study && \
     cd /tmp/dejavu_case_study && \
-    git checkout 2b5052d89e3a961de7344a2bdcb7adf1308f2bca
+    git checkout "${GIT_COMMIT:-$GIT_BRANCH}"
 
 CMD mkdir -p data/ && \
     cp -r /tmp/dejavu_case_study/out/examples/* data/ && \

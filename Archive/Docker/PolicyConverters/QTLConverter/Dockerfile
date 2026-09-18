@@ -16,7 +16,10 @@ ENV WDIR=/home/qtl-translator/work
 WORKDIR /home/qtl-translator
 
 # qtl-translator
-RUN git clone https://github.com/krledmno1/qtl-translator.git
+ARG GIT_BRANCH=main
+ARG GIT_COMMIT=""
+RUN git clone --branch "$GIT_BRANCH" https://github.com/krledmno1/qtl-translator.git \
+    && if [ -n "$GIT_COMMIT" ]; then git -C qtl-translator checkout "$GIT_COMMIT"; fi
 RUN cd qtl-translator && \
     mvn clean package
 

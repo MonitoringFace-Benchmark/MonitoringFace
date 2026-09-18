@@ -3,7 +3,8 @@ FROM python:3.9-slim AS builder
 
 # Set build arguments (configurable at build time)
 ARG REPO_URL="https://git.ku.dk/krq770/monitoring_benchmark_generator.git"
-ARG BRANCH="main"
+ARG GIT_BRANCH="main"
+ARG GIT_COMMIT=""
 ARG REPO_DIR="/app"
 
 # Set environment variables for runtime
@@ -20,8 +21,8 @@ USER appuser
 
 # Clone repository
 WORKDIR ${REPO_DIR}
-RUN git clone --branch ${BRANCH} --depth 1 ${REPO_URL} .
-
+RUN git clone --branch "${GIT_BRANCH}" ${REPO_URL} . \
+    && if [ -n "$GIT_COMMIT" ]; then git checkout "$GIT_COMMIT"; fi
 # Install Python dependencies
 RUN pip install pandas
 RUN pip install argparse

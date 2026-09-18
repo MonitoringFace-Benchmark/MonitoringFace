@@ -12,6 +12,7 @@ from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
 from Infrastructure.BenchmarkBuilder.Coordinator.ScriptCoordinator import ScriptCoordinator
 from Infrastructure.BenchmarkBuilder.Coordinator.SyntheticDataCoordinator import SyntheticDataCoordinator
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyCopyGenerator import CaseStudyCopyGenerator
+from Infrastructure.Builders.ProcessorBuilder.ComponentPins import set_pins
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyImageGenerator import CaseStudyImageGenerator
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
 from Infrastructure.Builders.ProcessorBuilder.PolicyGenerators.PolicyGeneratorTemplate import PolicyGeneratorTemplate
@@ -34,6 +35,31 @@ from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineEx
 
 class YamlParserException(Exception):
     pass
+
+
+def collect_component_pins(entries, docker_root: str) -> Dict[str, Tuple[Optional[str], Optional[str]]]:
+    available = set()
+    if os.path.isdir(docker_root):
+        for category in os.listdir(docker_root):
+            if category == "Tools":
+                continue
+            cat_path = os.path.join(docker_root, category)
+            if os.path.isdir(cat_path):
+                available.update(
+                    n for n in os.listdir(cat_path) if os.path.isdir(os.path.join(cat_path, n)))
+    pins: Dict[str, Tuple[Optional[str], Optional[str]]] = {}
+    for entry in entries or []:
+        identifier = entry.get("identifier")
+        branch = entry.get("branch")
+        commit = entry.get("commit")
+        if not identifier or (not branch and not commit):
+            raise YamlParserException(f"Component configuration missing required fields: {entry}")
+        if identifier in pins:
+            raise YamlParserException(f"Duplicate components entry: {identifier}")
+        if identifier not in available:
+            raise YamlParserException(f"Invalid component {identifier} not in {sorted(available)}")
+        pins[identifier] = (branch, commit)
+    return pins
 
 
 class YamlParser:
@@ -338,7 +364,12 @@ class YamlParser:
             return 1
         return self.cfg.get('repeats')
 
+    def parse_components(self) -> Dict[str, Tuple[Optional[str], Optional[str]]]:
+        entries = self.cfg.get("components", []) or []
+        return collect_component_pins(entries, f"{self.path_to_project}/Archive/Docker")
+
     def parse_experiment(self, cli_args: CLIArgs, experiment_name) -> Tuple[Coordinator, MonitorManager, List[str], int]:
+        set_pins(self.parse_components())
         tool_manager = self.parse_tool_manager(cli_args=cli_args)
         monitor_manager = self.parse_monitor_manager(tool_manager)
         oracle_manager = self.parse_oracle_manager(monitor_manager)

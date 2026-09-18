@@ -18,7 +18,8 @@ from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import ORACLE_KEY, SEEDS_KEY, PATH_KEY, SIZE_KEY, FREE_VARIABLES_KEY, PLACEHOLDER_EVENT, \
     SIGNATURE_FILE, SIGNATURE_FILE_ENDING, POLICY_FILE, POLICY_FILE_ENDING, TRACE_LENGTH_KEY, SIGNATURE_KEY, \
-    FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, FINGERPRINT_POLICY, SIGNATURE_FILE_KEY, PATH_TO_FOLDER
+    FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, FINGERPRINT_POLICY, FINGERPRINT_COMPONENTS, SIGNATURE_FILE_KEY, \
+    PATH_TO_FOLDER
 from Infrastructure.DataTypes.FileRepresenters.SeedHandler import SeedHandler
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
 from Infrastructure.Monitors.MonitorExceptions import ToolException
@@ -47,6 +48,16 @@ class SyntheticDataCoordinator(Coordinator):
 
         self.instructions = []
 
+    def component_versions(self) -> Dict[str, Dict[str, Optional[str]]]:
+        out = {}
+        for label, source in (("data_source", self.data_source), ("policy_source", self.policy_source)):
+            image = getattr(source, "image", None)
+            out[label] = {
+                "component": source.__class__.__name__,
+                "resolved_version": getattr(image, "resolved_version", None),
+            }
+        return out
+
     def finger_print(self) -> Dict[str, str]:
         new_data_setup_fingerprint = data_class_to_finger_print(self.data_setup)
         new_experiment_fingerprint = data_class_to_finger_print(self.experiment)
@@ -58,6 +69,7 @@ class SyntheticDataCoordinator(Coordinator):
             FINGERPRINT_EXPERIMENT: new_experiment_fingerprint,
             FINGERPRINT_DATA: new_data_setup_fingerprint,
             FINGERPRINT_POLICY: new_policy_fingerprint,
+            FINGERPRINT_COMPONENTS: data_class_to_finger_print(self.component_versions()),
         }
 
     def time_out(self) -> Optional[int]:

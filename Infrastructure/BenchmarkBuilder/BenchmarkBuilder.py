@@ -20,6 +20,7 @@ from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
 from Infrastructure.Monitors.BaseMonitorTemplate import run_monitor_offline, run_monitor_online
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
+from Infrastructure.Builders.ProcessorBuilder.ComponentPins import all_pins
 from Infrastructure.Provenance.Provenance import ProvenanceFactory, ProvenanceSession, framework_commit, read_fingerprint
 from Infrastructure.constants import LENGTH, PATH_TO_NAMED_EXPERIMENT, PATH_TO_INFRA, PATH_TO_EXPERIMENTS, PATH_TO_DEBUG, PATH_TO_PROJECT
 from Infrastructure.printing import print_headline, print_footline, normal_line
@@ -30,6 +31,41 @@ class RunToolResult(Enum):
     TIMEOUT = 2
     TOOL_ERROR = 3
     VALIDATION_ERROR = 4
+
+
+def _component_entry(source):
+    image = getattr(source, "image", None)
+    return {
+        "component": source.__class__.__name__,
+        "pin_branch": getattr(image, "pin_branch", None),
+        "pin_commit": getattr(image, "pin_commit", None),
+        "branch": getattr(image, "branch", None),
+        "resolved_version": getattr(image, "resolved_version", None),
+        "image": getattr(image, "image_name", None),
+    }
+
+
+def component_report(coordinator):
+    report = {}
+    for label in ("data_source", "policy_source", "generator"):
+        source = getattr(coordinator, label, None)
+        if source is not None:
+            report[label] = _component_entry(source)
+    return report
+
+
+def write_components_json(path, coordinator, monitors=None, commit=None):
+    payload = {
+        "schema_version": 1,
+        "requested_pins": {k: {"branch": b, "commit": c} for k, (b, c) in all_pins().items()},
+        "components": component_report(coordinator),
+    }
+    if monitors is not None:
+        payload["monitors"] = monitors
+    if commit is not None:
+        payload["framework_commit"] = commit
+    with open(path, "w") as f:
+        json.dump(payload, f, indent=1)
 
 
 class BenchmarkBuilder:
@@ -68,6 +104,8 @@ class BenchmarkBuilder:
             self._build()
             FingerPrintHandler(finger_print).to_file(fingerprint_location)
 
+        write_components_json(named_experiment_path + "/components.json", self.coordinator)
+
     def _build(self):
         print_headline("(Starting) building Benchmark")
         try:
@@ -96,6 +134,25 @@ class BenchmarkBuilder:
                 commit=framework_commit(self.coordinator.get_path(PATH_TO_PROJECT)),
                 project_root=self.coordinator.get_path(PATH_TO_PROJECT),
             )
+
+        if self.result_folder is not None:
+            monitors = {}
+            for t in tools:
+                mon = getattr(t, "tool", None)
+                if mon is None:
+                    continue
+                image = getattr(mon, "image", None)
+                monitors[mon.name] = {
+                    "identifier": mon.__class__.__name__,
+                    "branch": getattr(image, "branch", None),
+                    "commit": getattr(image, "commit", None) or None,
+                    "image": getattr(image, "image_name", None),
+                }
+            os.makedirs(self.result_folder, exist_ok=True)
+            write_components_json(
+                os.path.join(self.result_folder, "components.json"), self.coordinator,
+                monitors=monitors,
+                commit=framework_commit(self.coordinator.get_path(PATH_TO_PROJECT)))
 
         for ((identifier, data_set_size), path_to_folder, data_file, data_type, policy_file, policy_type, signature, result) in self.coordinator.iterate_settings():
             sfh = ScratchFolderHandler(path_to_folder)
