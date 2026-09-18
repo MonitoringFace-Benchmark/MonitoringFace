@@ -11,7 +11,14 @@ class PrefixRebuilder(StreamProcessorTemplate):
     only understand downward-closed claims: events pass through immediately
     and unsorted, point claims are absorbed into a set, and whenever the
     frontier advances a single watermark for the new maximal complete prefix
-    is emitted. Only claims are ever withheld, never events."""
+    is emitted. Only claims are ever withheld, never events.
+
+    Watermarks are exclusive on both sides, matching the consumers:
+    `>WATERMARK n<` settles exactly the time points strictly below n
+    (TimelyMon finalizes tp < n on capability downgrade, OOOMon turns it
+    into the half-open range claim [previous, n)). A claimed prefix 0..k
+    is therefore announced as WATERMARK k+1, and an incoming WATERMARK w
+    asserts only 0..w-1."""
 
     buffering = True
     deterministic = True
@@ -37,7 +44,7 @@ class PrefixRebuilder(StreamProcessorTemplate):
             return self._advance()
         if watermark is not None:
             self.claims_seen += 1
-            self.claims.update(range(self.frontier, watermark + 1))
+            self.claims.update(range(self.frontier, watermark))
             return self._advance()
         tp = extract_tp(line)
         self.max_tp_seen = tp if self.max_tp_seen is None else max(self.max_tp_seen, tp)
@@ -57,7 +64,7 @@ class PrefixRebuilder(StreamProcessorTemplate):
             return []
         self.watermarks_emitted += 1
         self.last_origins = [SYNTHESIZED_ORIGIN]
-        return [render_watermark(self.frontier - 1)]
+        return [render_watermark(self.frontier)]
 
     def flush(self) -> List[str]:
         if self.max_tp_seen is None or self.frontier > self.max_tp_seen:
@@ -65,7 +72,7 @@ class PrefixRebuilder(StreamProcessorTemplate):
             return []
         self.watermarks_emitted += 1
         self.last_origins = [SYNTHESIZED_ORIGIN]
-        return [render_watermark(self.max_tp_seen)]
+        return [render_watermark(self.max_tp_seen + 1)]
 
     def released_origins(self) -> Optional[List[int]]:
         return self.last_origins
