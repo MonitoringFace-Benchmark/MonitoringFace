@@ -9,11 +9,11 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, \
     DefaultVariableOrder
-from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable, OnlineRunnable
 from Infrastructure.constants import POLICY_KEY, TRACE_KEY, SIGNATURE_KEY, FOLDER_KEY
 
 
-class OOOMon(BaseMonitorTemplate, OfflineRunnable):
+class OOOMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
     """The Isabelle-verified out-of-order reference monitor (formalized_streaming_monitor).
 
     Everything between a parsed token and a printed verdict runs OCaml code
@@ -49,6 +49,21 @@ class OOOMon(BaseMonitorTemplate, OfflineRunnable):
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         variable_order = self._variable_order()
         return parse_output_structure(stdout_input, variable_order)
+
+    def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
+        cmd = ["-formula", "additional/policy.policy", "-format", "timelymon", "-ack"]
+        if not self.params.get("ignore_signature", False):
+            cmd += ["-sig", "additional/signature.sig"]
+        if self.params.get("no_claims", False):
+            cmd += ["-no-claims"]
+        return cmd, None
+
+    @staticmethod
+    def latency_marker() -> Optional[str]:
+        return None
+
+    def post_processing_online(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        pass
 
     def _variable_order(self):
         cmd = ["-formula", str(self.params[POLICY_KEY]), "-columns"]
