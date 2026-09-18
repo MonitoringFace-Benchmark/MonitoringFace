@@ -1,0 +1,138 @@
+# Online claim-family experiment: the progress-curve run. The driver
+# (protocol 2, chain accounting) feeds the disordered claim stream line by
+# line; dynamic stages adapt it in-chain, and the per-round frames
+# (results/<run>/frames/) carry fed/delivered/held plus the harvested tool
+# output, from which cumulative output-vs-input curves are extracted.
+#   MonPoly            static Disorderer (bridge) + dynamic Sorter -> @ts blocks;
+#                      chain accounting (MonPoly is silent on empty timepoints)
+#   TimelyMon common   static Disorderer (csv) + dynamic PrefixRebuilder
+#   TimelyMon tp-interval  static Disorderer (csv) only: native ELAPSED claims
+# OOOMon is offline-only and excluded here.
+
+experiment_name: ooo_claim_family_online
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  mode: accelerated
+  timestamp_units: seconds
+  maximum_latency: 60000
+  accumulative_time: 900
+
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        response_mode: current-timepoint
+        output_collection_mode: before-delimiter
+        response_accounting: chain
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params:
+          seed: 271828
+          displacement_bound: 20
+          delay_distribution: uniform
+          fraction_displaced: 0.3
+          lag: 8
+          claim_order: independent
+          format: bridge
+      - identifier: Sorter
+        stage: dynamic
+  - identifier: TimelyMon
+    name: TimelyMon common
+    branch: development
+    commit: f6e7e6d1255b86abb3c31e00d1a8398eb4f2a4e3
+    params:
+      worker: 1
+      output_mode: 1
+      OnlineExperimentContractTool:
+        format: csv
+        response_mode: event-count
+        output_collection_mode: before-delimiter
+        input_aggregation_number: 1
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: &disorder
+          seed: 271828
+          displacement_bound: 20
+          delay_distribution: uniform
+          fraction_displaced: 0.3
+          lag: 8
+          claim_order: independent
+      - identifier: PrefixRebuilder
+        stage: dynamic
+  - identifier: TimelyMon
+    name: TimelyMon tp-interval
+    branch: tp-interval-timestamp
+    commit: 652c1351b712c43f2e64b8b1652938a266b3c1f8
+    params:
+      worker: 1
+      output_mode: 1
+      OnlineExperimentContractTool:
+        format: csv
+        response_mode: event-count
+        output_collection_mode: before-delimiter
+        input_aggregation_number: 1
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    event_rate: 10
+
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_eand: 0
+    prob_rand: 0
+    prob_let: 0
+    prob_matchF: 0
+    prob_matchP: 0
+    prob_next: 0
+    prob_eventually: 0
+    prob_until: 0
+    ub: 0
+    unbounded: True
+
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [1, 2]
+    num_data_set_sizes: [50, 100]
+
+experiment_type: Signature
+
+tools_to_build:
+  - MonPoly
+  - TimelyMon common
+  - TimelyMon tp-interval
+
+oracle:
+  enabled: false
+
+seeds:
+  '[5, 2, 1, 50]': [314159265, 53339]
+  '[5, 2, 1, 100]': [314159265, 53339]
+  '[5, 2, 2, 50]': [314159265, 34134]
+  '[5, 2, 2, 100]': [314159265, 34134]
+
+components:
+  - identifier: SignatureGenerator
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: MfotlPolicyGenerator
+    commit: fef5f8f5551a36dac4aa45cc7c48bef09964a265
+  - identifier: OnlineExperimentDriver
+    commit: 006f01fe223cce9279022987fa26854c449d1e1f

@@ -32,3 +32,5 @@ data_setup:
 components:
   - identifier: NokiaCsvOnline
     commit: ce2d423c78a22b7711827a3fa742c04bb38e39e1
+  - identifier: OnlineExperimentDriver
+    commit: 138801d3adad967e9bdd46751803857fe6017d03

@@ -10,6 +10,11 @@ BUILD_ARG_GIT_COMMIT = "GIT_COMMIT"
 MODE_KEY = "mode"
 OOO_MODES = frozenset({"reverse", "delayed", "oootps", "oooevents"})
 
+STREAM_PIPELINE_KEY = "stream_pipeline"
+STREAM_STAGE_STATIC = "static"
+STREAM_STAGE_DYNAMIC = "dynamic"
+STREAM_STAGES = frozenset({STREAM_STAGE_STATIC, STREAM_STAGE_DYNAMIC})
+
 WORKDIR_KEY = "workdir"
 WORKDIR_VAL = "/data"
 

@@ -22,7 +22,8 @@ class ResultAggregatorOffline(AbstractAggregator):
     def __init__(self):
         # Valid runs: full timing and stats
         self.valid_results = pd.DataFrame(columns=[
-            "Status", "Name", "Setting", "pre", "compilation", "runtime", "post", "wall_time", "max_mem", "cpu"
+            "Status", "Name", "Setting", "pre", "compilation", "runtime", "post", "wall_time", "max_mem", "cpu",
+            "outputs", "distinct_outputs"
         ])
 
         # Timed out runs: only status, tool name, setting, and timeout value
@@ -55,12 +56,15 @@ class ResultAggregatorOffline(AbstractAggregator):
             prop: float,
             wall_time: str,
             max_mem: str,
-            cpu: str
+            cpu: str,
+            outputs=None,
+            distinct_outputs=None
     ) -> None:
         """Add a valid run result."""
         self.valid_results.loc[len(self.valid_results)] = [
             Status.OK, tool_name, setting_id, prep, compiled, runtime, prop,
-            parse_wall_time(wall_time), parse_memory(max_mem), parse_cpu(cpu)
+            parse_wall_time(wall_time), parse_memory(max_mem), parse_cpu(cpu),
+            outputs, distinct_outputs
         ]
 
     def add_timeout(

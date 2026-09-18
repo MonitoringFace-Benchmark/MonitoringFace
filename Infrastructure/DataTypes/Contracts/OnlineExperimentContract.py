@@ -55,7 +55,7 @@ class OnlineExperimentContractGeneral:
 
 
 class OnlineExperimentContractTool:
-    def __init__(self, formatting: FormatType, response_mode, input_aggregation_number, input_aggregation_pattern, output_collection_mode, latency_marker: Optional[str] = None, warm_up_input: Optional[str] = None):
+    def __init__(self, formatting: FormatType, response_mode, input_aggregation_number, input_aggregation_pattern, output_collection_mode, latency_marker: Optional[str] = None, warm_up_input: Optional[str] = None, response_accounting: str = "lockstep"):
         self.formatting = formatting
         self.response_mode = response_mode
         self.input_aggregation_number = input_aggregation_number
@@ -63,6 +63,12 @@ class OnlineExperimentContractTool:
         self.latency_marker = latency_marker
         self.warm_up_input = warm_up_input
         self.output_collection_mode = output_collection_mode
+        self.response_accounting = response_accounting
+
+    def get_response_accounting(self) -> List[str]:
+        if self.response_accounting == "chain":
+            return ["--response-accounting", "chain"]
+        return []
 
     def get_format(self) -> List[str]:
         return ["--format", self.formatting.to_string()]
@@ -102,4 +108,5 @@ class OnlineExperimentContractTool:
         arguments += self.get_output_collection_mode()
         arguments += self.get_latency_marker()
         arguments += self.get_warm_up_input()
+        arguments += self.get_response_accounting()
         return arguments

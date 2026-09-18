@@ -1,0 +1,128 @@
+# The claim-family experiment: one disordered stream with point-completeness
+# claims (>ELAPSED tp @ ts<), consumed through three adapter lanes:
+#   MonPoly                      Sorter lane (full serialization, claims spent)
+#   TimelyMon @ common commit    PrefixRebuilder lane (claims downgraded to watermarks)
+#   TimelyMon @ tp-interval-ts   identity lane (native ELAPSED point claims)
+#   OOOMon                       PrefixRebuilder lane (timelymon-format input is
+#                                watermark-only today; native `c LO HI` claims
+#                                would need an ELAPSED extension in its frontend)
+# The Disorderer runs with identical seed and params for every monitor, so all
+# lanes consume the same permutation; lane deltas measure the price of
+# in-orderness (MonPoly) and of prefix-closure (watermark tools).
+# Output counts (outputs / distinct_outputs in the valid results) are the
+# measurement; the gap between the two exposes duplicate emissions.
+# Policies: generated MFOTL reaches OOOMon through the OOOFragmentConverter
+# (syntax rewriting into fragment-direct s-expressions, wf_tra-gated at load).
+
+experiment_name: ooo_claim_family
+
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: &disorder
+          seed: 271828
+          displacement_bound: 20
+          delay_distribution: uniform
+          fraction_displaced: 0.3
+          lag: 8
+          claim_order: independent
+      - identifier: Sorter
+        stage: static
+  - identifier: TimelyMon
+    name: TimelyMon common
+    branch: development
+    commit: ec86e20a86aa64bc6aed41e2c8bfb264f9420b90
+    params:
+      worker: 1
+      output_mode: 1
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+      - identifier: PrefixRebuilder
+        stage: static
+  - identifier: TimelyMon
+    name: TimelyMon tp-interval
+    branch: tp-interval-timestamp
+    commit: 086f0ba2eeac91f1a15c6ca4a2eb20e3167e1cfe
+    params:
+      worker: 1
+      output_mode: 1
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+  - identifier: OOOMon
+    name: OOOMon
+    branch: ooomon_rework
+    commit: 71f51458cd261f7e2c45e3a9bc5e1ac3f3829253
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+      - identifier: PrefixRebuilder
+        stage: static
+
+runtime_constraints:
+  upper_bound: 120
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    event_rate: 10
+
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_eand: 0
+    prob_rand: 0
+    prob_let: 0
+    prob_matchF: 0
+    prob_matchP: 0
+    prob_next: 0
+    prob_eventually: 0
+    prob_until: 0
+    ub: 0
+    unbounded: True
+
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [0, 1, 2]
+    num_data_set_sizes: [50, 100]
+
+experiment_type: Signature
+
+tools_to_build:
+  - MonPoly
+  - TimelyMon common
+  - TimelyMon tp-interval
+  - OOOMon
+
+oracle:
+  enabled: false
+
+seeds:
+  '[5, 2, 0, 50]': [314159265, 87006]
+  '[5, 2, 0, 100]': [314159265, 87006]
+  '[5, 2, 1, 50]': [314159265, 53339]
+  '[5, 2, 1, 100]': [314159265, 53339]
+  '[5, 2, 2, 50]': [314159265, 34134]
+  '[5, 2, 2, 100]': [314159265, 34134]
+
+components:
+  - identifier: SignatureGenerator
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: MfotlPolicyGenerator
+    commit: fef5f8f5551a36dac4aa45cc7c48bef09964a265
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
