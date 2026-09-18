@@ -3,9 +3,8 @@
 #   MonPoly                      Sorter lane (full serialization, claims spent)
 #   TimelyMon @ common commit    PrefixRebuilder lane (claims downgraded to watermarks)
 #   TimelyMon @ tp-interval-ts   identity lane (native ELAPSED point claims)
-#   OOOMon                       PrefixRebuilder lane (timelymon-format input is
-#                                watermark-only today; native `c LO HI` claims
-#                                would need an ELAPSED extension in its frontend)
+#   OOOMon                       identity lane (frontend 6218df6 reads the
+#                                native ELAPSED point claims directly)
 # The Disorderer runs with identical seed and params for every monitor, so all
 # lanes consume the same permutation; lane deltas measure the price of
 # in-orderness (MonPoly) and of prefix-closure (watermark tools).
@@ -59,13 +58,11 @@ monitors:
   - identifier: OOOMon
     name: OOOMon
     branch: ooomon_rework
-    commit: 71f51458cd261f7e2c45e3a9bc5e1ac3f3829253
+    commit: 6218df6528f36ba24416ec9bd7066512ad1b6d27
     stream_pipeline:
       - identifier: Disorderer
         stage: static
         params: *disorder
-      - identifier: PrefixRebuilder
-        stage: static
 
 runtime_constraints:
   upper_bound: 120

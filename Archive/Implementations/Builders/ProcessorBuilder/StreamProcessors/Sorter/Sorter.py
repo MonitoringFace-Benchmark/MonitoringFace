@@ -59,7 +59,7 @@ class Sorter(StreamProcessorTemplate):
         if watermark is not None:
             self.claims_seen += 1
             self.dropped += 1
-            self.claims.update(range(self.frontier, watermark + 1))
+            self.claims.update(range(self.frontier, watermark))
             return self._advance()
 
         bridge = bridge_parts(line)
