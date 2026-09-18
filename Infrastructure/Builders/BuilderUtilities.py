@@ -163,12 +163,151 @@ def run_offline_image(image_name, generic_contract: Dict[AnyStr, Any], verbose=F
     return stdout, return_code
 
 
+def _empty_block():
+    return {"output": None, "processed": None, "elapsed_ns": None,
+            "delivered": None, "held": None, "origins": None}
+
+
+def parse_online_logs(chunks):
+    """Parses the OnlineExperimentDriver's log stream. Protocol 2 adds
+    [Driver Protocol], [Delivered], [Held], [Origins k], [Stage k Stats] and
+    [Total Delivered]; logs from older drivers parse exactly as before."""
+    footer_acc_elapsed_s = None
+    footer_wall_clock_s = None
+    footer_total_count = None
+    footer_total_delivered = None
+    protocol = None
+    stage_stats = {}
+
+    parsed_blocks = []
+    current_block = _empty_block()
+
+    current_output = False
+    check_for_final_error = False
+
+    final_error = None
+    unexpected_error = None
+
+    for chunk in chunks:
+        text = chunk.decode("utf-8", errors="ignore") if isinstance(chunk, (bytes, bytearray)) else str(chunk)
+        if text.startswith("[Error"):
+            unexpected_error = text.strip()
+            break
+
+        if text == "\n":
+            parsed_blocks.append(current_block)
+            current_block = _empty_block()
+            continue
+
+        if text.startswith("[Driver Protocol]"):
+            protocol = int(text.split("]")[1].strip())
+            continue
+
+        if text.startswith("[Accumulative Elapsed]"):
+            payload = text.split("]")[1]
+            payload = payload.strip()
+            if payload.endswith("s"):
+                payload = payload[:-1].strip()
+            footer_acc_elapsed_s = float(payload)
+
+        if text.startswith("[Wall Clock]"):
+            payload = text.split("]")[1]
+            payload = payload.strip()
+            if payload.endswith("s"):
+                payload = payload[:-1].strip()
+            footer_wall_clock_s = float(payload)
+
+        if text.startswith("[Total Count]"):
+            payload = text.split("]")[1]
+            payload = payload.strip()
+            footer_total_count = int(payload)
+            check_for_final_error = True
+
+        if text.startswith("[Total Delivered]"):
+            footer_total_delivered = int(text.split("]")[1].strip())
+
+        if check_for_final_error and text.startswith("[Error"):
+            final_error = text.strip()
+            break
+
+        if text.startswith("[Input"):
+            continue
+
+        if text.startswith("[Output"):
+            current_block["output"] = []
+            current_output = True
+            continue
+
+        if not text.startswith("[Processed") and current_output:
+            payload = text.strip()
+            current_block["output"].append(payload)
+        else:
+            current_output = False
+
+        if text.startswith("[Processed"):
+            payload = text.split("]")[1]
+            payload = payload.strip()
+            current_block["processed"] = int(payload)
+
+        if text.startswith("[Delivered]"):
+            current_block["delivered"] = int(text.split("]")[1].strip())
+
+        if text.startswith("[Held]"):
+            current_block["held"] = int(text.split("]")[1].strip())
+
+        if text.startswith("[Origins "):
+            stage = int(text.split("]")[0].split()[1])
+            values = [int(v) for v in text.split("]")[1].strip().split(",") if v]
+            if current_block["origins"] is None:
+                current_block["origins"] = []
+            current_block["origins"].append([stage, values])
+
+        if text.startswith("[Stage ") and "Stats]" in text:
+            stage = int(text.split("]")[0].split()[1])
+            stage_stats[stage] = text.split("]", 1)[1].strip()
+
+        if text.startswith("[Elapsed"):
+            payload = text.split("]")[1]
+            payload = payload.strip()
+            if payload.endswith("ns"):
+                payload = payload[:-2].strip()
+            current_block["elapsed_ns"] = int(payload)
+
+    return {
+        "blocks": parsed_blocks,
+        "acc_elapsed_s": footer_acc_elapsed_s,
+        "wall_clock_s": footer_wall_clock_s,
+        "total_count": footer_total_count,
+        "total_delivered": footer_total_delivered,
+        "protocol": protocol,
+        "stage_stats": stage_stats,
+        "final_error": final_error,
+        "unexpected_error": unexpected_error,
+    }
+
+
+def stream_processor_commands(stream_spec) -> List[str]:
+    """One `--processor` command per dynamic stage: the LiveRunner for that
+    index of the baked pipeline.json, the last stage teeing the tool's actual
+    input to /app/delivered.log."""
+    root = "/app/processors"
+    runner = f"{root}/Infrastructure/Builders/ProcessorBuilder/StreamProcessors/LiveRunner.py"
+    commands = []
+    for k in range(len(stream_spec)):
+        command = f"PYTHONPATH={root} python3 -u {runner} --spec {root}/pipeline.json --index {k}"
+        if k == len(stream_spec) - 1:
+            command += " --tee /app/delivered.log"
+        commands.append(command)
+    return commands
+
+
 def run_online_image(
         image_name: str,
         tool_command: List[str],
         online_experiment_contract: OnlineExperimentContractGeneral,
         tool_online_experiment_contract: OnlineExperimentContractTool,
-        verbose=False
+        verbose=False,
+        stream_spec=None
 ):
     client = docker.from_env()
     workdir = "/app"
@@ -180,6 +319,9 @@ def run_online_image(
     ]
     command_tool_specific = tool_online_experiment_contract.get_tool_arguments()
     command_experiment_specific = online_experiment_contract.get_settings()
+    command_processors = []
+    for processor_command in stream_processor_commands(stream_spec or []):
+        command_processors += ["--processor", processor_command]
     if isinstance(tool_command, (list, tuple)):
         tool_command_list = [str(x) for x in tool_command]
     elif isinstance(tool_command, str):
@@ -187,7 +329,8 @@ def run_online_image(
     else:
         tool_command_list = [str(tool_command)]
 
-    command_driver = command_fixed + command_tool_specific + command_experiment_specific + ["--"] + tool_command_list
+    command_driver = command_fixed + command_tool_specific + command_experiment_specific + command_processors \
+        + ["--"] + tool_command_list
     command_driver = [str(x) for x in command_driver if x is not None]
 
     if verbose:
@@ -203,85 +346,27 @@ def run_online_image(
             detach=True, remove=False,
         )
 
-        footer_acc_elapsed_s = None
-        footer_wall_clock_s = None
-        footer_total_count = None
-
-        parsed_blocks = []
-        current_block = {"output": None, "processed": None, "elapsed_ns": None}
-
-        current_output = False
-        check_for_final_error = False
-
-        final_error = None
-        unexpected_error = None
-
-        for chunk in container.logs(stream=True, follow=True, stdout=True, stderr=True):
-            text = chunk.decode("utf-8", errors="ignore") if isinstance(chunk, (bytes, bytearray)) else str(chunk)
-            if text.startswith("[Error"):
-                unexpected_error = text.strip()
-                break
-
-            if text == "\n":
-                parsed_blocks.append(current_block)
-                current_block = {"output": None, "processed": None, "elapsed_ns": None}
-                continue
-
-            if text.startswith("[Accumulative Elapsed]"):
-                payload = text.split("]")[1]
-                payload = payload.strip()
-                if payload.endswith("s"):
-                    payload = payload[:-1].strip()
-                footer_acc_elapsed_s = float(payload)
-
-            if text.startswith("[Wall Clock]"):
-                payload = text.split("]")[1]
-                payload = payload.strip()
-                if payload.endswith("s"):
-                    payload = payload[:-1].strip()
-                footer_wall_clock_s = float(payload)
-
-            if text.startswith("[Total Count]"):
-                payload = text.split("]")[1]
-                payload = payload.strip()
-                footer_total_count = int(payload)
-                check_for_final_error = True
-
-            if check_for_final_error and text.startswith("[Error"):
-                final_error = text.strip()
-                break
-
-            if text.startswith("[Input"):
-                continue
-
-            if text.startswith("[Output"):
-                current_block["output"] = []
-                current_output = True
-                continue
-
-            if not text.startswith("[Processed") and current_output:
-                payload = text.strip()
-                current_block["output"].append(payload)
-            else:
-                current_output = False
-
-            if text.startswith("[Processed"):
-                payload = text.split("]")[1]
-                payload = payload.strip()
-                current_block["processed"] = int(payload)
-
-            if text.startswith("[Elapsed"):
-                payload = text.split("]")[1]
-                payload = payload.strip()
-                if payload.endswith("ns"):
-                    payload = payload[:-2].strip()
-                current_block["elapsed_ns"] = int(payload)
+        parsed = parse_online_logs(container.logs(stream=True, follow=True, stdout=True, stderr=True))
+        parsed_blocks = parsed["blocks"]
+        footer_acc_elapsed_s = parsed["acc_elapsed_s"]
+        footer_total_count = parsed["total_count"]
+        final_error = parsed["final_error"]
+        unexpected_error = parsed["unexpected_error"]
 
         # Wall-clock span of the replay (includes pacing sleeps). In real-time
         # mode this tracks the trace's timestamp span; `total_elapsed` /
         # "Runtime" is compute-only and intentionally excludes the sleeps.
-        if footer_wall_clock_s is not None:
-            print(f"Wall Clock:  {footer_wall_clock_s} s (real-time replay span)")
+        if parsed["wall_clock_s"] is not None:
+            print(f"Wall Clock:  {parsed['wall_clock_s']} s (real-time replay span)")
+        if parsed["total_delivered"] is not None:
+            print(f"Delivered:   {parsed['total_delivered']} lines reached the tool")
+        for stage, stats in sorted(parsed["stage_stats"].items()):
+            print(f"Stage {stage} Stats: {stats}")
+
+        if stream_spec and (parsed["protocol"] is None or parsed["protocol"] < 2):
+            raise ToolException(
+                f"stream processors require driver protocol 2, but the driver announced "
+                f"{parsed['protocol']}; pin OnlineExperimentDriver to a protocol-2 commit")
 
         result = container.wait()
         exit_code = result.get("StatusCode", 1) if isinstance(result, dict) else 1

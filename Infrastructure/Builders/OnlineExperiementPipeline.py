@@ -1,22 +1,64 @@
+import json
 import os
 import io
 import shutil
 import tarfile
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 import docker
 from docker.errors import APIError
 
 from Infrastructure.Builders.BuilderUtilities import image_building, ImageBuildException, image_exists
+from Infrastructure.Builders.ProcessorBuilder.ComponentPins import get_pin, docker_ref
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
-from Infrastructure.constants import Policy_File, Signature_File, ADDITIONAL_FOLDER
+from Infrastructure.constants import Policy_File, Signature_File, ADDITIONAL_FOLDER, BUILD_ARG_GIT_BRANCH, \
+    BUILD_ARG_GIT_COMMIT
+
+DRIVER_COMPONENT_NAME = "OnlineExperimentDriver"
+
+
+def driver_image_details():
+    """The driver is a component like any other: a `components:` pin selects
+    its branch/commit, the ref lands in the image tag so pinned versions
+    coexist, and unpinned keeps the historical name-cached main build."""
+    branch, commit = get_pin(DRIVER_COMPONENT_NAME)
+    if branch is None and commit is None:
+        print(f"    WARNING: {DRIVER_COMPONENT_NAME} is unpinned; the cached main build is "
+              f"reused as-is (add a components: entry to pin it)")
+        return "online_experiment_driver", None
+    ref = docker_ref(commit or branch)
+    args = {BUILD_ARG_GIT_BRANCH: branch or "main"}
+    if commit:
+        args[BUILD_ARG_GIT_COMMIT] = commit
+    return f"online_experiment_driver_{ref}", args
+
+
+def bake_stream_processors(temporary_build_folder: str, path_to_project: str, spec: Optional[List[Dict]]):
+    dest = os.path.join(temporary_build_folder, "processors")
+    os.makedirs(dest, exist_ok=True)
+    if not spec:
+        return
+    subtree = "Builders/ProcessorBuilder/StreamProcessors"
+    for rel in (f"Infrastructure/{subtree}", f"Archive/Implementations/{subtree}"):
+        shutil.copytree(
+            os.path.join(path_to_project, rel), os.path.join(dest, rel),
+            ignore=shutil.ignore_patterns("__pycache__"))
+        parent = ""
+        for part in rel.split("/")[:-1]:
+            parent = os.path.join(parent, part)
+            init = os.path.join(dest, parent, "__init__.py")
+            if not os.path.exists(init):
+                open(init, "w").close()
+    with open(os.path.join(dest, "pipeline.json"), "w") as f:
+        json.dump(spec, f, indent=1)
 
 
 def build_pipeline(
         tool_image_manager: AbstractToolImageManager,
         path_to_build, path_to_archive, data_source: str, path_to_folder: str,
         policy_file: str, signature_file: Optional[str], target_image_name: str,
-        compilation_details: Optional[Dict[str, str]] = None, verbose: bool = False
+        compilation_details: Optional[Dict[str, str]] = None, verbose: bool = False,
+        stream_spec: Optional[List[Dict]] = None
 ):
     path = f"{path_to_build}/OnlineExperimentDriver"
     if os.path.exists(path):
@@ -24,13 +66,15 @@ def build_pipeline(
     os.makedirs(path, exist_ok=True)
 
     driver_docker = f"{path_to_archive}/Docker/Utilities/OnlineExperimentDriver"
-    driver_tool_name = "online_experiment_driver"
+    driver_tool_name, driver_args = driver_image_details()
     build_stage(
         temporary_build_folder=path, tool_image_manager=tool_image_manager,
         driver_docker=driver_docker, driver_tool_name=driver_tool_name, path_to_folder=path_to_folder,
         data_source=data_source, policy_file=policy_file, signature_file=signature_file,
-        compilation_details=compilation_details, verbose=verbose
+        compilation_details=compilation_details, verbose=verbose, driver_args=driver_args
     )
+
+    bake_stream_processors(path, os.path.dirname(path_to_archive.rstrip("/")), stream_spec)
 
     # build the final image with the copied dockerfile and the copied data
     shutil.copy(f"{path_to_archive}/Docker/Utilities/OnlineExperimentTemplate/Dockerfile", path)
@@ -41,7 +85,8 @@ def build_stage(
         tool_image_manager: AbstractToolImageManager, temporary_build_folder: str,
         driver_docker: str, driver_tool_name: str, path_to_folder: str,
         data_source: str, policy_file: str, signature_file: Optional[str],
-        compilation_details: Optional[Dict[str, str]] = None, verbose: bool = False
+        compilation_details: Optional[Dict[str, str]] = None, verbose: bool = False,
+        driver_args: Optional[Dict[str, str]] = None
 ):
     if compilation_details is None:
         extract_binary(tool_image_manager.get_image_name(), temporary_build_folder, "tool", verbose=verbose)
@@ -52,7 +97,7 @@ def build_stage(
         extract_binary(tool_name, temporary_build_folder, "tool", verbose=verbose)
 
     # build, extract and move driver binary to build folder
-    if not build_image_wrapper(driver_docker, driver_tool_name, verbose=verbose):
+    if not build_image_wrapper(driver_docker, driver_tool_name, args=driver_args, verbose=verbose):
         raise ImageBuildException(f"Failed to build driver image: {driver_tool_name}")
     extract_binary(driver_tool_name, temporary_build_folder, "driver", verbose=verbose)
 

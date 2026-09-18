@@ -29,7 +29,10 @@ from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineO
     DataSourceType, TimeUnits, FormatType, ResponseMode, InputSpeed
 from Infrastructure.Monitors.MonitorManager import MonitorManager
 from Infrastructure.Oracles.OracleManager import OracleManager
-from Infrastructure.constants import PATH_TO_NAMED_EXPERIMENT
+from Infrastructure.Builders.ProcessorBuilder.StreamProcessors.StreamProcessorTemplate import \
+    discover_stream_processors, load_stream_processor
+from Infrastructure.constants import PATH_TO_NAMED_EXPERIMENT, STREAM_PIPELINE_KEY, STREAM_STAGE_STATIC, \
+    STREAM_STAGE_DYNAMIC, STREAM_STAGES
 from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral, OnlineExperimentContractTool
 
 
@@ -60,6 +63,83 @@ def collect_component_pins(entries, docker_root: str) -> Dict[str, Tuple[Optiona
             raise YamlParserException(f"Invalid component {identifier} not in {sorted(available)}")
         pins[identifier] = (branch, commit)
     return pins
+
+
+def collect_stream_pipeline(entries, path_to_archive: str) -> List[Dict]:
+    if not isinstance(entries, list):
+        raise YamlParserException(f"stream_pipeline must be a list, got {type(entries).__name__}")
+    available = discover_stream_processors(path_to_archive)
+    spec: List[Dict] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise YamlParserException(f"Invalid stream_pipeline entry: {entry}")
+        identifier = entry.get("identifier")
+        if not identifier:
+            raise YamlParserException(f"stream_pipeline entry missing 'identifier': {entry}")
+        if identifier not in available:
+            raise YamlParserException(
+                f"Invalid stream processor {identifier} not in {available}")
+        stage = entry.get("stage", STREAM_STAGE_STATIC)
+        if stage not in STREAM_STAGES:
+            raise YamlParserException(
+                f"Invalid stream_pipeline stage {stage!r} for {identifier}, expected one of {sorted(STREAM_STAGES)}")
+        params = entry.get("params") or {}
+        if not isinstance(params, dict):
+            raise YamlParserException(f"stream_pipeline params must be a mapping: {entry}")
+        try:
+            load_stream_processor(identifier)
+        except Exception as e:
+            raise YamlParserException(f"Failed to load stream processor {identifier}: {e}")
+        spec.append({"identifier": identifier, "stage": stage, "params": dict(params)})
+    return spec
+
+
+def warn_static_stream_divergence(specs_by_monitor: Dict[str, List[Dict]]):
+    """Static stages transform each monitor's copy of the trace; two monitors
+    running the same processor with different params silently compare
+    different streams, so divergence is worth a loud warning. The 'format'
+    param is exempt: it is a per-lane rendering applied per line after the
+    permutation, so it provably preserves the stream up to line syntax."""
+    seen: Dict[str, Tuple[str, Dict]] = {}
+    for monitor_name, spec in specs_by_monitor.items():
+        for entry in spec or []:
+            if entry.get("stage") != STREAM_STAGE_STATIC:
+                continue
+            identifier = entry["identifier"]
+            core = {k: v for k, v in entry["params"].items() if k != "format"}
+            if identifier in seen:
+                first_monitor, first_params = seen[identifier]
+                if first_params != core:
+                    print(f"    WARNING: static stream processor {identifier} runs with "
+                          f"different params for {first_monitor} ({first_params}) and "
+                          f"{monitor_name} ({core}); the monitors will consume "
+                          f"DIFFERENT streams")
+            else:
+                seen[identifier] = (monitor_name, core)
+
+
+def validate_stream_contract(spec, tool_contract):
+    dynamic = [entry for entry in spec if entry.get("stage") == STREAM_STAGE_DYNAMIC]
+    if not dynamic or tool_contract is None:
+        return
+    buffering = [
+        entry["identifier"] for entry in dynamic
+        if getattr(load_stream_processor(entry["identifier"]), "buffering", False)
+    ]
+    chain_accounting = getattr(tool_contract, "response_accounting", "lockstep") == "chain"
+    if buffering and tool_contract.response_mode != ResponseMode.EVENT_COUNT and not chain_accounting:
+        raise YamlParserException(
+            f"Buffering stream processors {buffering} at stage 'dynamic' require response_mode "
+            f"'event-count' (the driver's 1:1 response accounting) or "
+            f"response_accounting 'chain'; got {tool_contract.response_mode}")
+    if tool_contract.latency_marker:
+        raise YamlParserException(
+            "latency_marker cannot be combined with dynamic stream processors; "
+            "the marker would enter the chain as a data line")
+    if tool_contract.warm_up_input:
+        raise YamlParserException(
+            "warm_up_input cannot be combined with dynamic stream processors; "
+            "a buffering stage would withhold it")
 
 
 class YamlParser:
@@ -226,10 +306,21 @@ class YamlParser:
             if not identifier or not name or (not branch and not commit):
                 raise YamlParserException(f"Monitor configuration missing required fields: {monitor_dict}")
 
+            stream_raw = monitor_dict.get('stream_pipeline')
+            if stream_raw is not None:
+                params[STREAM_PIPELINE_KEY] = collect_stream_pipeline(
+                    stream_raw, f"{self.path_to_project}/Archive")
+                validate_stream_contract(
+                    params[STREAM_PIPELINE_KEY], params.get("OnlineExperimentContractTool"))
+
             if 'path_to_project' not in params:
                 params['path_to_project'] = self.path_to_project
             monitors_to_build.append((identifier, name, branch, commit, params))
 
+        warn_static_stream_divergence({
+            name: params.get(STREAM_PIPELINE_KEY)
+            for _, name, _, _, params in monitors_to_build
+        })
         return MonitorManager(tool_manager=tool_manager, monitors_to_build=monitors_to_build, path_to_archive=f"{self.path_to_project}/Archive")
 
     def parse_tool_params(self, monitor_dict):
@@ -262,6 +353,10 @@ class YamlParser:
         input_aggregation_pattern = raw.pop("input_aggregation_pattern", None)
         latency_marker = raw.pop("latency_marker", None)
         warm_up_input = raw.pop("warm_up_input", None)
+        response_accounting = raw.pop("response_accounting", "lockstep")
+        if response_accounting not in ("lockstep", "chain"):
+            raise YamlParserException(
+                f"Invalid response_accounting {response_accounting!r}, expected 'lockstep' or 'chain'")
 
         params.pop("OnlineExperimentContractTool", None)
         params["OnlineExperimentContractTool"] = OnlineExperimentContractTool(
@@ -272,6 +367,7 @@ class YamlParser:
             latency_marker=latency_marker,
             output_collection_mode=output_collection,
             warm_up_input=warm_up_input,
+            response_accounting=response_accounting,
         )
         return params
 

@@ -31,3 +31,5 @@ components:
     commit: ce2d423c78a22b7711827a3fa742c04bb38e39e1
   - identifier: ReplayerConverter
     commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: OnlineExperimentDriver
+    commit: 138801d3adad967e9bdd46751803857fe6017d03

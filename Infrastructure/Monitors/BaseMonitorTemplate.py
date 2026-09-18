@@ -19,11 +19,14 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
-from Infrastructure.Provenance.Provenance import ConversionRecord, PreprocessingResult, ProvenanceSession
+from Infrastructure.Builders.ProcessorBuilder.ComponentPins import docker_ref
+from Infrastructure.Builders.ProcessorBuilder.StreamProcessors.StreamRunner import apply_stream_pipeline
+from Infrastructure.Provenance.Provenance import ConversionRecord, ConversionStep, PreprocessingResult, ProvenanceSession
 from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLICY_KEY, PATH_TO_BUILD, PATH_TO_ARCHIVE, \
     PATH_TO_TRACE_INPUT, PATH_TO_TRACE_OUTPUT, PATH_TO_INTERMEDIATE_WORKSPACE, IMAGE_POSTFIX, Policy_File, \
     Signature_File, NOMEASURE, POLICY_CONSTANTS_APPLIED, POLICY_CONSTANTS_COUNT, POLICY_CONSTANTS_FILE, \
-    STRATIFIED, STRATIFIED_MAP, TRACE_TARGET_FORMAT, MODE_KEY, OOO_MODES
+    STRATIFIED, STRATIFIED_MAP, TRACE_TARGET_FORMAT, MODE_KEY, OOO_MODES, PATH_TO_PROJECT, \
+    STREAM_PIPELINE_KEY, STREAM_STAGE_STATIC, STREAM_STAGE_DYNAMIC
 from Infrastructure.printing import print_headline, print_footline
 
 
@@ -128,32 +131,67 @@ class BaseMonitorTemplate(AutoConvertable):
                 steps=[], as_seen_by_tool=self.params.get(POLICY_KEY, policy_file), custom=True
             )
 
-        if trace_auto_convertible:
+        stream_steps: List[ConversionStep] = []
+        effective_data_file = data_file
+        pipeline = self.params.get(STREAM_PIPELINE_KEY) or []
+        stream_spec = [
+            entry for entry in pipeline
+            if entry.get("stage", STREAM_STAGE_STATIC) == STREAM_STAGE_STATIC
+        ]
+        has_dynamic_stages = any(
+            entry.get("stage", STREAM_STAGE_STATIC) == STREAM_STAGE_DYNAMIC
+            for entry in pipeline
+        )
+        if stream_spec:
+            if verbose:
+                print("Stream pipeline ({}) on {}".format(
+                    ", ".join(entry["identifier"] for entry in stream_spec), data_file))
+            streamed_name = f"streamed_{os.path.basename(data_file)}"
+            stream_steps = apply_stream_pipeline(
+                stream_spec, f"{path_to_folder}/{data_file}",
+                f"{path_manager.get_path(PATH_TO_TRACE_OUTPUT)}/{streamed_name}",
+                trace_source_format.value, self.params.get(PATH_TO_PROJECT)
+            )
+            effective_data_file = f"scratch/{streamed_name}"
+
+        if has_dynamic_stages:
+            # the wire stream feeds the driver chain, whose dynamic stages own
+            # the tool's format adaptation; converting the file here would
+            # destroy the disorder the chain is supposed to see
+            if verbose:
+                print("Dynamic stream stages present: trace format conversion is in-chain")
+            self.params[TRACE_TARGET_FORMAT] = trace_source_format
+            self.params[TRACE_KEY] = effective_data_file
+            trace_record = ConversionRecord(
+                kind="trace", source_file=data_file, source_format=trace_source_format.value,
+                steps=stream_steps, as_seen_by_tool=effective_data_file
+            )
+        elif trace_auto_convertible:
             if verbose:
                 print("Automatic Trace conversion from {} to {}".format(trace_source_format, trace_target_format))
 
             self.params[TRACE_TARGET_FORMAT] = trace_target_format
             if trace_conversion_distance == 0:
-                self.params[TRACE_KEY] = data_file
+                self.params[TRACE_KEY] = effective_data_file
                 trace_record = ConversionRecord(
                     kind="trace", source_file=data_file, source_format=trace_source_format.value,
-                    steps=[], as_seen_by_tool=data_file
+                    steps=stream_steps, as_seen_by_tool=effective_data_file
                 )
             else:
                 self.params[TRACE_KEY], trace_steps = AutoTraceConverter(path_manager, trace_source_format, trace_target_format).convert(
-                    input_file=data_file, output_file=data_file, params=self.params
+                    input_file=effective_data_file, output_file=data_file, params=self.params
                 )
                 trace_record = ConversionRecord(
                     kind="trace", source_file=data_file, source_format=trace_source_format.value,
-                    steps=trace_steps, as_seen_by_tool=self.params[TRACE_KEY]
+                    steps=stream_steps + trace_steps, as_seen_by_tool=self.params[TRACE_KEY]
                 )
         else:
             if verbose:
                 print("Costume Trace preprocessing for format {}".format(trace_source_format))
-            self.preprocessing_data(path_to_folder, data_file, trace_source_format, path_manager)
+            self.preprocessing_data(path_to_folder, effective_data_file, trace_source_format, path_manager)
             trace_record = ConversionRecord(
                 kind="trace", source_file=data_file, source_format=trace_source_format.value,
-                steps=[], as_seen_by_tool=self.params.get(TRACE_KEY, data_file), custom=True
+                steps=stream_steps, as_seen_by_tool=self.params.get(TRACE_KEY, effective_data_file), custom=True
             )
 
         # Constants the policy conversion extracted but not added to the trace:
@@ -239,7 +277,12 @@ def run_monitor_online(
         policy_file = mon.params[POLICY_KEY]
         signature_file = mon.params[SIGNATURE_KEY]
 
-    target_name = f"online_experiment_{mon.name.lower()}{IMAGE_POSTFIX}"
+    dynamic_stream_spec = [
+        entry for entry in (mon.params.get(STREAM_PIPELINE_KEY) or [])
+        if entry.get("stage", STREAM_STAGE_STATIC) == STREAM_STAGE_DYNAMIC
+    ]
+
+    target_name = f"online_experiment_{docker_ref(mon.name)}{IMAGE_POSTFIX}"
     additional_compilation_data = mon.online_compile()
     start_build_comp = time.perf_counter()
 
@@ -247,7 +290,8 @@ def run_monitor_online(
         tool_image_manager=mon.image, path_to_build=path_manager.get_path(PATH_TO_BUILD),
         path_to_archive=path_manager.get_path(PATH_TO_ARCHIVE), path_to_folder=path_to_folder,
         data_source=data_source, policy_file=policy_file, signature_file=signature_file,
-        target_image_name=target_name, compilation_details=additional_compilation_data
+        target_image_name=target_name, compilation_details=additional_compilation_data,
+        stream_spec=dynamic_stream_spec
     )
     end_build_comp = time.perf_counter()
     build_comp_elapsed = end_build_comp - start_build_comp
@@ -264,7 +308,7 @@ def run_monitor_online(
         image_name=target_name, tool_command=tool_command,
         online_experiment_contract=online_experiment_contract,
         tool_online_experiment_contract=tool_online_experiment_contract,
-        verbose=cli_args.verbose
+        verbose=cli_args.verbose, stream_spec=dynamic_stream_spec
     )
     if provenance is not None and pre is not None:
         provenance.verify_after_run(pre.records)
@@ -284,8 +328,15 @@ def run_monitor_online(
 def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
                         path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
                         result_file, cli_args: CLIArgs, oracle: Optional[AbstractOracleTemplate] = None,
-                        provenance: Optional[ProvenanceSession] = None) -> Tuple[float, float, float, float]:
+                        provenance: Optional[ProvenanceSession] = None) -> Tuple[float, float, float, float, Optional[int], Optional[int]]:
     print_headline(f"Run (Offline) {mon.name}")
+
+    for entry in (mon.params.get(STREAM_PIPELINE_KEY) or []):
+        if entry.get("stage", STREAM_STAGE_STATIC) == STREAM_STAGE_DYNAMIC:
+            raise ToolException(
+                f"{mon.name}: stream_pipeline stage 'dynamic' ({entry.get('identifier')}) "
+                f"runs in the online driver chain and cannot be used in an offline "
+                f"experiment; use stage 'static'")
 
     pre = mon.preprocessing(
         path_to_folder, trace_source_format, policy_source_format,
@@ -327,7 +378,10 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
     end = time.perf_counter()
     postprocessing_elapsed = end - start
 
+    outputs, distinct_outputs = res.output_counts()
     print(f"Prep:        {preprocessing_elapsed}\nCompilation: {compile_elapsed}\nRuntime:     {run_offline_elapsed}\nPost:        {postprocessing_elapsed}")
+    if outputs is not None:
+        print(f"Outputs:     {outputs} ({distinct_outputs} distinct)")
 
     if oracle is not None:
         try:
@@ -341,7 +395,7 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
             raise ResultErrorException((preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
 
     print_footline()
-    return preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed
+    return preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed, outputs, distinct_outputs
 
 
 def find_trace_path(mon: BaseMonitorTemplate, path_manager: PathManager, trace_source_format: InputOutputTraceFormats) -> Tuple[Optional[InputOutputTraceFormats], Optional[int]]:

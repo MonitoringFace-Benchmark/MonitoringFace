@@ -22,7 +22,8 @@ from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, R
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
 from Infrastructure.Builders.ProcessorBuilder.ComponentPins import all_pins
 from Infrastructure.Provenance.Provenance import ProvenanceFactory, ProvenanceSession, framework_commit, read_fingerprint
-from Infrastructure.constants import LENGTH, PATH_TO_NAMED_EXPERIMENT, PATH_TO_INFRA, PATH_TO_EXPERIMENTS, PATH_TO_DEBUG, PATH_TO_PROJECT
+from Infrastructure.constants import LENGTH, PATH_TO_NAMED_EXPERIMENT, PATH_TO_INFRA, PATH_TO_EXPERIMENTS, PATH_TO_DEBUG, PATH_TO_PROJECT, \
+    STREAM_PIPELINE_KEY
 from Infrastructure.printing import print_headline, print_footline, normal_line
 
 
@@ -148,6 +149,9 @@ class BenchmarkBuilder:
                     "commit": getattr(image, "commit", None) or None,
                     "image": getattr(image, "image_name", None),
                 }
+                stream_spec = getattr(mon, "params", {}).get(STREAM_PIPELINE_KEY)
+                if stream_spec:
+                    monitors[mon.name]["stream_pipeline"] = stream_spec
             os.makedirs(self.result_folder, exist_ok=True)
             write_components_json(
                 os.path.join(self.result_folder, "components.json"), self.coordinator,
@@ -194,7 +198,9 @@ class BenchmarkBuilder:
                                 signature_file=signature, policy_file=policy_file, sfh=sfh, cli_args=self.cli_args,
                                 coordinator=self.coordinator, policy_type=policy_type, data_type=data_type,
                                 online_experiment_contract=self.coordinator.get_online_settings(),
-                                provenance=provenance
+                                provenance=provenance,
+                                frames_dir=(os.path.join(self.result_folder, "frames")
+                                            if self.result_folder else None)
                             )
                         else:
                             run_tools_offline(
@@ -252,7 +258,7 @@ def run_tools_online(
         data_file: str, data_type: InputOutputTraceFormats, policy_file: str, policy_type: InputOutputPolicyFormats,
         signature_file: str, _result_file: str, cli_args: CLIArgs, coordinator: Coordinator,
         online_experiment_contract: OnlineExperimentContractGeneral, sfh=None,
-        provenance: Optional[ProvenanceSession] = None
+        provenance: Optional[ProvenanceSession] = None, frames_dir: Optional[str] = None
 ):
     debug_path = coordinator.get_path(PATH_TO_DEBUG)
     try:
@@ -274,6 +280,18 @@ def run_tools_online(
                         processed_elapsed_pairs.append([processed, elapsed_ns])
 
         output_pairs_json = json.dumps(processed_elapsed_pairs)
+
+        # level-0 frames: the raw per-round blocks (output text, processed,
+        # delivered, held, origins) the progress curves are built from
+        if frames_dir is not None and isinstance(output, list):
+            os.makedirs(frames_dir, exist_ok=True)
+            frame_name = f"{setting_id}__{tool.name.replace(' ', '_').replace('/', '_')}.json"
+            with open(os.path.join(frames_dir, frame_name), "w") as frames_file:
+                json.dump({
+                    "tool": tool.name, "setting": setting_id, "exit_code": code,
+                    "acc_elapsed_s": total_elapsed_s, "total_count": total_count,
+                    "blocks": output,
+                }, frames_file)
 
         if code == 0:
             result_aggregator.add_valid(
@@ -319,7 +337,7 @@ def run_tools_offline(
     debug_path = coordinator.get_path(PATH_TO_DEBUG)
     timeout_value = coordinator.time_out()
     try:
-        prep, compiled, runtime, prop = run_monitor_offline(
+        prep, compiled, runtime, prop, outputs, distinct_outputs = run_monitor_offline(
             mon=tool, path_to_folder=path_to_folder, data_file=data_file, signature_file=signature_file,
             policy_file=policy_file, cli_args=cli_args, trace_source_format=data_type, policy_source_format=policy_type,
             result_file=result_file, timeout_value=timeout_value,
@@ -340,7 +358,8 @@ def run_tools_offline(
                 wall_time, max_mem, cpu = None, None, None
 
         result_aggregator.add_valid(
-            tool.name, setting_id, prep, compiled, runtime, prop, wall_time, max_mem, cpu
+            tool.name, setting_id, prep, compiled, runtime, prop, wall_time, max_mem, cpu,
+            outputs, distinct_outputs
         )
         return RunToolResult.OK
     except TimedOut as e:

@@ -56,6 +56,8 @@ class ConversionStep:
     cmd_params: Optional[List[str]]    # params["cmd_params"] override, if any
     image: Optional[str] = None        # converter image tag, None for in-process
     image_version: Optional[str] = None  # resolved upstream commit of that image
+    params: Optional[Dict[str, Any]] = None  # stream-processor params, None otherwise
+    stats: Optional[Dict[str, Any]] = None   # stream-processor self-report, None otherwise
 
 
 @dataclass(frozen=True)
@@ -296,9 +298,11 @@ class ProvenanceSession:
                         "cmd_params": s.cmd_params,
                         "image": s.image,
                         "image_version": s.image_version,
+                        "params": _jsonable(s.params) if s.params is not None else None,
+                        "stats": _jsonable(s.stats) if s.stats is not None else None,
                     }
                     for s in rec.steps
-                ] if not rec.custom else "custom",
+                ] if (rec.steps or not rec.custom) else "custom",
                 "stored": stored,
                 "as_seen_by_tool": rec.as_seen_by_tool,
             })
