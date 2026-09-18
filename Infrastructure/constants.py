@@ -7,6 +7,9 @@ IMAGE_POSTFIX = "_mf_image"
 BUILD_ARG_GIT_BRANCH = "GIT_BRANCH"
 BUILD_ARG_GIT_COMMIT = "GIT_COMMIT"
 
+MODE_KEY = "mode"
+OOO_MODES = frozenset({"reverse", "delayed", "oootps", "oooevents"})
+
 WORKDIR_KEY = "workdir"
 WORKDIR_VAL = "/data"
 

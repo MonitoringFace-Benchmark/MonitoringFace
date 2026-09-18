@@ -18,12 +18,15 @@ class PatternDataGenerator(DataGeneratorTemplate):
         self.image = ImageManager(name, Processor.DataGenerators, path_to_build)
 
     def run_generator(self, contract_inner, time_on=None, time_out=None):
+        seed_raw = contract_inner.get("seed")
+        seed = seed_raw if seed_raw is not None else DEFAULT_SEED
+        contract_with_seed = dict(contract_inner)
+        contract_with_seed["seed"] = seed
+
         inner_contract = dict()
         inner_contract[COMMAND_KEY] = (["java", "-cp", "classes:libs/*", "org.entry.Dispatcher", "Generator"]
-                                       + pattern_contract_to_commands(contract_inner))
+                                       + pattern_contract_to_commands(contract_with_seed))
         inner_contract[ENTRYPOINT_KEY] = ""
-        seed_raw = contract_inner["seed"]
-        seed = seed_raw if seed_raw else DEFAULT_SEED
         out, code = self.image.run(inner_contract, time_on=time_on, time_out=time_out)
 
         if code != 0:

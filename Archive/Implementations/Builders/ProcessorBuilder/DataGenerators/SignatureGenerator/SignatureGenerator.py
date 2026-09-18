@@ -17,12 +17,15 @@ class SignatureGenerator(DataGeneratorTemplate):
         self.image = ImageManager(name, Processor.DataGenerators, path_to_build)
 
     def run_generator(self, contract_inner, time_on=None, time_out=None):
-        inner_contract = dict()
-        inner_contract[COMMAND_KEY] = (["java", "-cp", "classes:libs/*", "org.entry.Dispatcher", "Generator"]
-                                       + signature_contract_to_commands(contract_inner))
-        inner_contract[ENTRYPOINT_KEY] = ""
         seed_raw = contract_inner.get("seed")
         seed = seed_raw if seed_raw is not None else DEFAULT_SEED
+        contract_with_seed = dict(contract_inner)
+        contract_with_seed["seed"] = seed
+
+        inner_contract = dict()
+        inner_contract[COMMAND_KEY] = (["java", "-cp", "classes:libs/*", "org.entry.Dispatcher", "Generator"]
+                                       + signature_contract_to_commands(contract_with_seed))
+        inner_contract[ENTRYPOINT_KEY] = ""
 
         out, code = self.image.run(inner_contract, time_on=time_on, time_out=time_out)
 

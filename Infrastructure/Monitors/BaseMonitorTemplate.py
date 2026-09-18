@@ -23,7 +23,7 @@ from Infrastructure.Provenance.Provenance import ConversionRecord, Preprocessing
 from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLICY_KEY, PATH_TO_BUILD, PATH_TO_ARCHIVE, \
     PATH_TO_TRACE_INPUT, PATH_TO_TRACE_OUTPUT, PATH_TO_INTERMEDIATE_WORKSPACE, IMAGE_POSTFIX, Policy_File, \
     Signature_File, NOMEASURE, POLICY_CONSTANTS_APPLIED, POLICY_CONSTANTS_COUNT, POLICY_CONSTANTS_FILE, \
-    STRATIFIED, STRATIFIED_MAP, TRACE_TARGET_FORMAT
+    STRATIFIED, STRATIFIED_MAP, TRACE_TARGET_FORMAT, MODE_KEY, OOO_MODES
 from Infrastructure.printing import print_headline, print_footline
 
 
@@ -348,6 +348,17 @@ def find_trace_path(mon: BaseMonitorTemplate, path_manager: PathManager, trace_s
     trace_target_format = None
     conversion_distance = None
     supported_formats = mon.supported_trace_formats()
+    if (str(mon.params.get(MODE_KEY, "")).lower() in OOO_MODES
+            and InputOutputTraceFormats.OOO_CSV in supported_formats
+            and trace_source_format != InputOutputTraceFormats.OOO_CSV):
+        res = AutoTraceConverter.reachable(path_manager, trace_source_format, InputOutputTraceFormats.OOO_CSV)
+        if res is None:
+            raise ValueError(
+                f"{mon.name}: params request OOO mode "
+                f"'{mon.params.get(MODE_KEY)}' but no conversion path from "
+                f"{trace_source_format} to OOO_CSV exists")
+        _, target, dist = res
+        return target, dist
     if trace_source_format in supported_formats:
         return trace_source_format, 0
 

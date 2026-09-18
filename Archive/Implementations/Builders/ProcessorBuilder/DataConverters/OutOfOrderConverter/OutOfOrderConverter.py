@@ -18,18 +18,21 @@ class Modes(Enum):
     OutOfOrderEvents = 4
 
 
+OOO_MODE_NAMES = {
+    "reverse": Modes.Reverse,
+    "delayed": Modes.Delayed,
+    "oootps": Modes.OutOfOrderTimePoints,
+    "oooevents": Modes.OutOfOrderEvents,
+}
+
+
 def str_to_mode(mode_str: AnyStr) -> Modes:
-    mode_str = mode_str.lower()
-    if mode_str == "reverse":
-        return Modes.Reverse
-    elif mode_str == "delayed":
-        return Modes.Delayed
-    elif mode_str == "oootps":
-        return Modes.OutOfOrderTimePoints
-    elif mode_str == "oooevents":
-        return Modes.OutOfOrderEvents
-    else:
-        return Modes.Delayed
+    try:
+        return OOO_MODE_NAMES[str(mode_str).lower()]
+    except KeyError:
+        raise ValueError(
+            f"OutOfOrderConverter: unknown mode '{mode_str}' "
+            f"(expected one of {sorted(OOO_MODE_NAMES)})")
 
 
 def group_by_tp(events: List) -> List[List]:
@@ -180,14 +183,14 @@ def ooo_convert_inner(input_file, output_file, params):
     elif mode == Modes.OutOfOrderEvents:
         result = ooo_events_mode(events, watermarks, seed)
     else:
-        result = lines
+        raise ValueError(f"OutOfOrderConverter: unhandled mode {mode}")
 
     with open(output_file, "w") as f:
         f.write("\n".join(result))
 
 
-def retrieve_settings(params) -> Tuple[str, int, int, float]:
-    mode = params.get("mode", "delayed")
+def retrieve_settings(params) -> Tuple[Modes, int, int, float]:
+    mode = str_to_mode(params.get("mode", "delayed"))
     seed = params.get("seed", DEFAULT_SEED)
     max_distance = params.get("max_distance", MAX_DISTANCE)
     percentage_delayed = params.get("percentage_delayed", PERCENTAGE_DELAYED)

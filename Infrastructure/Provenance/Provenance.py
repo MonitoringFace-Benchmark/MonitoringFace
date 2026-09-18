@@ -145,7 +145,16 @@ def framework_commit(path_to_project: str) -> Optional[str]:
             ["git", "-C", path_to_project, "rev-parse", "HEAD"],
             capture_output=True, text=True, timeout=5
         )
-        return res.stdout.strip() if res.returncode == 0 else None
+        if res.returncode != 0:
+            return None
+        commit = res.stdout.strip()
+        status = subprocess.run(
+            ["git", "-C", path_to_project, "status", "--porcelain"],
+            capture_output=True, text=True, timeout=5
+        )
+        if status.returncode != 0 or status.stdout.strip():
+            return f"{commit}-dirty"
+        return commit
     except Exception:
         return None
 

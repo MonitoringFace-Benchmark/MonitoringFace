@@ -1,3 +1,4 @@
+import random
 from dataclasses import fields
 from typing import AnyStr
 
@@ -19,14 +20,22 @@ class MfotlPolicyGenerator(PolicyGeneratorTemplate):
         policy_contract = (MfotlPolicyContract()
                            .instantiate_contract({k: v for k, v in policy_contract_params.items() if k in valid_fields}))
 
+        if policy_contract.seed is None:
+            policy_contract.seed = random.randint(1, 100000)
+
         inner_dict = dict()
         inner_dict[COMMAND_KEY] = ["python3", "gen_for.py"] + policy_contract_to_commands(policy_contract)
         inner_dict[ENTRYPOINT_KEY] = ""
         out, code = self.image.run(inner_dict, time_on=time_on, time_out=time_out)
         if code != 0:
             raise GeneratorException()
-        else:
-            return parse_gen_output(out)
+
+        seed_reported, formula, sig = parse_gen_output(out)
+        if str(seed_reported) != str(policy_contract.seed):
+            raise GeneratorException(
+                f"MfotlPolicyGenerator seed mismatch: passed {policy_contract.seed}, "
+                f"tool reports {seed_reported}")
+        return seed_reported, formula, sig
 
     @staticmethod
     def output_format() -> InputOutputPolicyFormats:

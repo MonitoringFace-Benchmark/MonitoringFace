@@ -23,12 +23,14 @@ class DataGolfGenerator(DataGeneratorTemplate):
         data_golf_contract = DataGolfContract(
             **{k: v for k, v in data_golf_contract_params.items() if k in valid_fields})
 
+        if data_golf_contract.seed is None:
+            data_golf_contract.seed = DEFAULT_SEED
+        seed = data_golf_contract.seed
+
         inner_contract = dict()
         inner_contract[COMMAND_KEY] = ["/usr/local/bin/datagolf"] + data_golf_contract_to_command(data_golf_contract)
         inner_contract[VOLUMES_KEY] = {data_golf_contract.path: {'bind': '/data', 'mode': 'rw'}}
         inner_contract[WORKDIR_KEY] = WORKDIR_VAL
-
-        seed = data_golf_contract.seed if data_golf_contract.seed else DEFAULT_SEED
 
         out, code = self.image.run(inner_contract, time_on=time_on, time_out=time_out)
         if code != 0:
@@ -126,7 +128,7 @@ def data_golf_contract_to_command(contract) -> list[AnyStr]:
     args += ["-nonewlastts", "-tup-ts", ",".join(map(str, contract.tup_ts)), "-tup-amt",
              str(contract.tup_amt), "-tup-val", str(contract.tup_val)]
 
-    if contract.seed:
+    if contract.seed is not None:
         args += ["-dgseed", str(contract.seed)]
         args += ["-tgseed", str(contract.seed)]
 

@@ -15,7 +15,12 @@ ENV WDIR=/home/dejavu/work
 WORKDIR /home/dejavu
 
 # DejaVu
-RUN git clone https://github.com/havelund/dejavu.git
+# Honor a pinned commit: the image name carries it, so the build must too
+# (the old clone silently built the branch HEAD regardless of GIT_COMMIT).
+ARG GIT_BRANCH=master
+ARG GIT_COMMIT=""
+RUN git clone --branch "$GIT_BRANCH" https://github.com/havelund/dejavu.git \
+    && if [ -n "$GIT_COMMIT" ]; then cd /home/dejavu/dejavu && git checkout "$GIT_COMMIT"; fi
 RUN cp /home/dejavu/dejavu/out/artifacts/dejavu_jar/dejavu.jar /home/dejavu/dejavu.jar
 
 COPY --chown=dejavu:dejavu build.sh /home/dejavu/build.sh

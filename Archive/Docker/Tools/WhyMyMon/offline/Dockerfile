@@ -20,8 +20,10 @@
 #             -sig f.sig -formula f.mfotl -log /dev/stdin   < trace.log
 ###############################################################################
 
-ARG WHYMYMON_BRANCH=main
-ARG WHYMYMON_COMMIT=""
+# GIT_BRANCH/GIT_COMMIT are the platform's standard pin args (ToolImageManager
+# passes exactly these names); private names here would silently ignore the pin.
+ARG GIT_BRANCH=main
+ARG GIT_COMMIT=""
 # MonPoly commit pinned by whymymon/third-party/download.sh
 ARG MONPOLY_COMMIT=d0dc92d40ecab5fe088470125a0681a010e2a12b
 ARG DEJAVU_REPO=https://github.com/leonardolima/dejavu-online.git
@@ -38,10 +40,10 @@ FROM ocaml/opam:alpine-3.20-ocaml-5.1 AS ocaml-builder
 RUN sudo apk add --update --no-cache gmp-dev libffi-dev m4 perl pkgconfig git bash linux-headers
 RUN sudo mkdir -p /usr/src/app && sudo chown opam:opam /usr/src/app
 
-ARG WHYMYMON_BRANCH
-ARG WHYMYMON_COMMIT
-RUN git clone --branch "$WHYMYMON_BRANCH" https://github.com/nDylmer/whymymon.git /usr/src/app/whymymon \
-    && if [ -n "$WHYMYMON_COMMIT" ]; then cd /usr/src/app/whymymon && git checkout "$WHYMYMON_COMMIT"; fi
+ARG GIT_BRANCH
+ARG GIT_COMMIT
+RUN git clone --branch "$GIT_BRANCH" https://github.com/nDylmer/whymymon.git /usr/src/app/whymymon \
+    && if [ -n "$GIT_COMMIT" ]; then cd /usr/src/app/whymymon && git checkout "$GIT_COMMIT"; fi
 
 WORKDIR /usr/src/app/whymymon
 

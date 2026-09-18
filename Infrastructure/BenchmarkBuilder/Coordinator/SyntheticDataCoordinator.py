@@ -68,6 +68,8 @@ class SyntheticDataCoordinator(Coordinator):
 
     def build(self):
         self.fresh_build = True
+        base_gen_seed = self.data_setup.get(SEEDS_KEY)
+        base_policy_seed = self.policy_setup.get(SEEDS_KEY)
         for num_ops in self.experiment.num_operators:
             ops_path = f"{self.path_to_folder}/operators_{num_ops}"
             os.makedirs(ops_path, exist_ok=True)
@@ -98,10 +100,12 @@ class SyntheticDataCoordinator(Coordinator):
                                 [num_ops, num_set, data_set_size]
                             ], seed_dict=self.seeds)
 
-                            if gen_seed is not None:
-                                self.data_setup[SEEDS_KEY] = gen_seed
-                            if policy_seed is not None:
-                                self.policy_setup[SEEDS_KEY] = policy_seed
+                            if gen_seed is None and policy_seed is None:
+                                print(f"    WARNING: no seed entry for setting "
+                                      f"[{num_ops}, {num_fv}, {num_set}, {data_set_size}]; "
+                                      f"falling back to the experiment-level seeds")
+                            self.data_setup[SEEDS_KEY] = gen_seed if gen_seed is not None else base_gen_seed
+                            self.policy_setup[SEEDS_KEY] = policy_seed if policy_seed is not None else base_policy_seed
 
                         constraint = constraint if constraint is None or (constraint.lower_bound is not None or constraint.upper_bound is not None) else None
                         data_file, policy_file, sig_file, result_file = guarded_synthetic_experiment(
