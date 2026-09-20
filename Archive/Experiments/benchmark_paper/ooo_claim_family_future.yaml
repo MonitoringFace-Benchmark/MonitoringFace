@@ -1,0 +1,119 @@
+# Future-operator claim family (offline validation matrix): bounded
+# EVENTUALLY/UNTIL formulas over the same disordered claim stream, all four
+# lanes as in ooo_claim_family.yaml. The disorder is per event and total
+# (every event drawn a delay, fraction_displaced 1.0), so the stream carries
+# no residual time-point blocking. Six candidate settings; the four healthy
+# ones (nonzero verdicts, exact 4-way agreement) graduated to the online run:
+# seeds 53 / 97 / 109 / 77 (settings 3-6).
+
+experiment_name: ooo_claim_family_future
+
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: &disorder
+          seed: 271828
+          displacement_bound: 20
+          delay_distribution: uniform
+          fraction_displaced: 1.0
+          granularity: event
+          lag: 8
+          claim_order: independent
+      - identifier: Sorter
+        stage: static
+  - identifier: TimelyMon
+    name: TimelyMon common
+    branch: development
+    commit: f6e7e6d1255b86abb3c31e00d1a8398eb4f2a4e3
+    params:
+      worker: 1
+      output_mode: 1
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+      - identifier: PrefixRebuilder
+        stage: static
+  - identifier: TimelyMon
+    name: TimelyMon tp-interval
+    branch: tp-interval-timestamp
+    commit: 652c1351b712c43f2e64b8b1652938a266b3c1f8
+    params:
+      worker: 1
+      output_mode: 1
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+  - identifier: OOOMon
+    name: OOOMon
+    branch: ooomon_rework
+    commit: 6218df6528f36ba24416ec9bd7066512ad1b6d27
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+
+runtime_constraints:
+  upper_bound: 120
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    event_rate: 10
+
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_eand: 0
+    prob_rand: 0
+    prob_let: 0
+    prob_matchF: 0
+    prob_matchP: 0
+    prob_next: 0
+    prob_eventually: 0.35
+    prob_until: 0.35
+    lb: 0
+    ub: 5
+    delta: 10
+    unbounded: False
+
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [3, 4, 5, 6]
+    num_data_set_sizes: [100]
+
+experiment_type: Signature
+
+tools_to_build:
+  - MonPoly
+  - TimelyMon common
+  - TimelyMon tp-interval
+  - OOOMon
+
+oracle:
+  enabled: false
+
+seeds:
+  '[5, 2, 3, 100]': [314159265, 53]
+  '[5, 2, 4, 100]': [314159265, 97]
+  '[5, 2, 5, 100]': [314159265, 109]
+  '[5, 2, 6, 100]': [314159265, 77]
+
+components:
+  - identifier: SignatureGenerator
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: MfotlPolicyGenerator
+    commit: fef5f8f5551a36dac4aa45cc7c48bef09964a265
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672

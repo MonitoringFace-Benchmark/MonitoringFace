@@ -1,4 +1,6 @@
-# Online claim-family experiment: the progress-curve run. The driver
+# Online FUTURE claim-family experiment: bounded EVENTUALLY/UNTIL formulas
+# (validated offline in ooo_claim_family_future.yaml), same lanes.
+# Base design: The driver
 # (protocol 2, chain accounting) feeds the disordered claim stream line by
 # line; dynamic stages adapt it in-chain, and the per-round frames
 # (results/<run>/frames/) carry fed/delivered/held plus the harvested tool
@@ -11,7 +13,7 @@
 #                      only, native ELAPSED point claims (frontend 6218df6),
 #                      lockstep via -ack (Event count N per input line)
 
-experiment_name: ooo_claim_family_online
+experiment_name: ooo_claim_family_future_online
 runtime_setting: online
 
 OnlineExperimentContractGeneral:
@@ -119,10 +121,12 @@ policy_setup:
     prob_matchF: 0
     prob_matchP: 0
     prob_next: 0
-    prob_eventually: 0
-    prob_until: 0
-    ub: 0
-    unbounded: True
+    prob_eventually: 0.35
+    prob_until: 0.35
+    lb: 0
+    ub: 5
+    delta: 10
+    unbounded: False
 
 synthetic_config:
   data_source: SignatureGenerator
@@ -130,8 +134,8 @@ synthetic_config:
   experiment:
     num_operators: [5]
     num_fvs: [2]
-    num_setting: [1, 2]
-    num_data_set_sizes: [50, 100]
+    num_setting: [3, 4, 5, 6]
+    num_data_set_sizes: [100]
 
 experiment_type: Signature
 
@@ -145,10 +149,10 @@ oracle:
   enabled: false
 
 seeds:
-  '[5, 2, 1, 50]': [314159265, 53339]
-  '[5, 2, 1, 100]': [314159265, 53339]
-  '[5, 2, 2, 50]': [314159265, 34134]
-  '[5, 2, 2, 100]': [314159265, 34134]
+  '[5, 2, 3, 100]': [314159265, 53]
+  '[5, 2, 4, 100]': [314159265, 97]
+  '[5, 2, 5, 100]': [314159265, 109]
+  '[5, 2, 6, 100]': [314159265, 77]
 
 components:
   - identifier: SignatureGenerator
