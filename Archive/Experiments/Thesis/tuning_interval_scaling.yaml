@@ -1,0 +1,167 @@
+# Companion to tuning_temporal_clean_up.yaml: the INTERVAL-SIZE axis.
+# Identical 10 clean-up lanes and the same 10 formula-search winner seeds, but
+# the generator contract's interval bound is scaled x10 (ub 100 -> 1000).
+# Phase 3 of formula_search.py verified that all 10 winner seeds regenerate
+# STRUCTURALLY IDENTICAL formulas under ub 1000 (only the interval constants
+# widen), so cells here differ from the base experiment in window width alone.
+# Two sizes suffice for the axis question (does wider retention amplify the
+# theta-effects and their trend?); the base file carries the fine size grid.
+
+experiment_name: tuning_interval_scaling
+
+monitors:
+  - identifier: TimelyMon
+    name: TM t0.0 static
+    branch: perf-audit-2026-09
+    commit: ad3309310dff1390fd38fe1519ee53e9011185ff
+    params: &lane
+      worker: 1
+      output_mode: 1
+      future_temporal_clean_up: 0.0
+      past_temporal_clean_up: 0.0
+      relational_clean_up: 0.1
+      clean_up_step: 0.0
+  - identifier: TimelyMon
+    name: TM t0.0 adaptive
+    branch: perf-audit-2026-09
+    commit: ad3309310dff1390fd38fe1519ee53e9011185ff
+    params:
+      <<: *lane
+      clean_up_step: 0.025
+  - identifier: TimelyMon
+    name: TM t0.1 static
+    branch: perf-audit-2026-09
+    commit: ad3309310dff1390fd38fe1519ee53e9011185ff
+    params:
+      <<: *lane
+      future_temporal_clean_up: 0.1
+      past_temporal_clean_up: 0.1
+  - identifier: TimelyMon
+    name: TM t0.1 adaptive
+    branch: perf-audit-2026-09
+    commit: ad3309310dff1390fd38fe1519ee53e9011185ff
+    params:
+      <<: *lane
+      future_temporal_clean_up: 0.1
+      past_temporal_clean_up: 0.1
+      clean_up_step: 0.025
+  - identifier: TimelyMon
+    name: TM t0.3 static
+    branch: perf-audit-2026-09
+    commit: ad3309310dff1390fd38fe1519ee53e9011185ff
+    params:
+      <<: *lane
+      future_temporal_clean_up: 0.3
+      past_temporal_clean_up: 0.3
+  - identifier: TimelyMon
+    name: TM t0.3 adaptive
+    branch: perf-audit-2026-09
+    commit: ad3309310dff1390fd38fe1519ee53e9011185ff
+    params:
+      <<: *lane
+      future_temporal_clean_up: 0.3
+      past_temporal_clean_up: 0.3
+      clean_up_step: 0.025
+  - identifier: TimelyMon
+    name: TM t0.6 static
+    branch: perf-audit-2026-09
+    commit: ad3309310dff1390fd38fe1519ee53e9011185ff
+    params:
+      <<: *lane
+      future_temporal_clean_up: 0.6
+      past_temporal_clean_up: 0.6
+  - identifier: TimelyMon
+    name: TM t0.6 adaptive
+    branch: perf-audit-2026-09
+    commit: ad3309310dff1390fd38fe1519ee53e9011185ff
+    params:
+      <<: *lane
+      future_temporal_clean_up: 0.6
+      past_temporal_clean_up: 0.6
+      clean_up_step: 0.025
+  - identifier: TimelyMon
+    name: TM t0.9 static
+    branch: perf-audit-2026-09
+    commit: ad3309310dff1390fd38fe1519ee53e9011185ff
+    params:
+      <<: *lane
+      future_temporal_clean_up: 0.9
+      past_temporal_clean_up: 0.9
+  - identifier: TimelyMon
+    name: TM t0.9 adaptive
+    branch: perf-audit-2026-09
+    commit: ad3309310dff1390fd38fe1519ee53e9011185ff
+    params:
+      <<: *lane
+      future_temporal_clean_up: 0.9
+      past_temporal_clean_up: 0.9
+      clean_up_step: 0.025
+
+runtime_constraints:
+  upper_bound: 300
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    event_rate: 10
+
+# Same contract as the base experiment except ub; do not add omitted fields.
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    lb: 0
+    ub: 1000
+    delta: 30
+    prob_once: 0.25
+    prob_since: 0.15
+    prob_eventually: 0.25
+    prob_until: 0.15
+    prob_eand: 0.1
+
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    num_data_set_sizes: [10000, 100000]
+
+experiment_type: Signature
+
+tools_to_build:
+  - TM t0.0 static
+  - TM t0.0 adaptive
+  - TM t0.1 static
+  - TM t0.1 adaptive
+  - TM t0.3 static
+  - TM t0.3 adaptive
+  - TM t0.6 static
+  - TM t0.6 adaptive
+  - TM t0.9 static
+  - TM t0.9 adaptive
+
+oracle:
+  enabled: false
+
+seeds:
+  '[5, 2, 0]': [314159265, 12]
+  '[5, 2, 1]': [314159265, 22]
+  '[5, 2, 2]': [314159265, 45]
+  '[5, 2, 3]': [314159265, 135]
+  '[5, 2, 4]': [314159265, 146]
+  '[5, 2, 5]': [314159265, 161]
+  '[5, 2, 6]': [314159265, 168]
+  '[5, 2, 7]': [314159265, 174]
+  '[5, 2, 8]': [314159265, 182]
+  '[5, 2, 9]': [314159265, 185]
+
+components:
+  - identifier: SignatureGenerator
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: MfotlPolicyGenerator
+    commit: fef5f8f5551a36dac4aa45cc7c48bef09964a265
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
