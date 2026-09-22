@@ -1,15 +1,14 @@
-from typing import Tuple
-
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractComparator import time_point_pdt_pdt_check, pdt_to_verdicts_inner, time_point_pdt_check
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.PDTHelper import equality_between_pdts
+from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison, Strength
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PropositionTree
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 
 
-def as_oracle(pdt: PropositionTree, other: AbstractOutputStructure) -> Tuple[bool, str]:
+def as_oracle(pdt: PropositionTree, other: AbstractOutputStructure) -> Comparison:
     if isinstance(other, PropositionTree):
         return pdt_to_pdt_comp(pdt, other)
     elif isinstance(other, OooVerdicts):
@@ -22,47 +21,66 @@ def as_oracle(pdt: PropositionTree, other: AbstractOutputStructure) -> Tuple[boo
         raise Exception(f"Unknown type compare with type {other}")
 
 
-def pdt_to_pdt_comp(oracle: PropositionTree, other: PropositionTree) -> Tuple[bool, str]:
-    verdict, txt = time_point_pdt_pdt_check(oracle, other)
-    if not verdict: return False, txt
+def pdt_to_pdt_comp(oracle: PropositionTree, other: PropositionTree) -> Comparison:
+    strength = Strength.EQUIVALENT
+    ok, txt = time_point_pdt_pdt_check(oracle, other)
+    if not ok:
+        return Comparison(False, txt, strength)
 
-    for oracle_tp in oracle.time_points():
+    time_points = 0
+    values = 0
+    for oracle_tp in sorted(oracle.time_points()):
         oracle_pdt = oracle.retrieve(oracle_tp)
         other_pdt = other.retrieve(oracle_tp)
         if other_pdt is None and oracle_pdt is None:
             continue
         elif other_pdt is None and oracle_pdt is not None:
-            return False, f"Tool is missing PDT at time point {oracle_tp}"
+            return Comparison(False, f"Tool is missing PDT at time point {oracle_tp}",
+                              strength, time_points, values)
         elif other_pdt is not None and oracle_pdt is None:
-            return False, f"Tool has additional PDT at time point {oracle_tp}"
-        try:
-            if not equality_between_pdts(len(oracle_pdt.terms), oracle_pdt, other_pdt):
-                return False, "Structures are not equivalent"
-        except Exception as e: return False, str(e)
-    return True, "Verified: Structures are equivalent"
+            return Comparison(False, f"Tool has additional PDT at time point {oracle_tp}",
+                              strength, time_points, values)
+
+        time_points += 1
+        values += 1
+        if not equality_between_pdts(oracle_pdt.terms, oracle_pdt, other_pdt):
+            return Comparison(False, f"Structures are not equivalent at time point {oracle_tp}",
+                              strength, time_points, values)
+    return Comparison(True, "Structures are equivalent", strength, time_points, values)
 
 
-def pdt_to_verdicts_comp(oracle: PropositionTree, other: Verdicts) -> Tuple[bool, str]:
+def pdt_to_verdicts_comp(oracle: PropositionTree, other: Verdicts) -> Comparison:
     return pdt_to_verdicts_inner(oracle, other)
 
 
-def pdt_to_ooo_verdicts_comp(oracle: PropositionTree, other: OooVerdicts) -> Tuple[bool, str]:
+def pdt_to_ooo_verdicts_comp(oracle: PropositionTree, other: OooVerdicts) -> Comparison:
     return pdt_to_verdicts_inner(oracle, other)
 
 
-def pdt_to_prop_comp(oracle: PropositionTree, other: PropositionList) -> Tuple[bool, str]:
-    verdict, txt = time_point_pdt_check(oracle, other)
-    if not verdict: return False, txt
+def pdt_to_prop_comp(oracle: PropositionTree, other: PropositionList) -> Comparison:
+    strength = Strength.CONSISTENT
+    ok, txt = time_point_pdt_check(oracle, other)
+    if not ok:
+        return Comparison(False, txt, strength)
 
     intersection_set = set(oracle.time_points().keys()) & set(other.time_points().keys())
-    for tp in intersection_set:
+    time_points = 0
+    values = 0
+    for tp in sorted(intersection_set):
         oracle_pdt = oracle.retrieve(tp)
-        other_prop = other.retrieve(tp)
+        other_prop = other.prop_list.get(tp)
         if other_prop is None and oracle_pdt is None:
             continue
         elif other_prop is None and oracle_pdt is not None:
-            return False, f"Tool is missing PDT at time point {tp}"
-        if oracle_pdt.is_false_leave():
-            return False, f"Tool has additional PDT at time point {tp}"
+            return Comparison(False, f"Tool is missing PDT at time point {tp}",
+                              strength, time_points, values)
+        elif other_prop is not None and oracle_pdt is None:
+            return Comparison(False, f"Oracle has no tree at time point {tp}",
+                              strength, time_points, values)
 
-    return True, "Check: Tool output is a subset"
+        time_points += 1
+        values += 1
+        if oracle_pdt.is_false_leave():
+            return Comparison(False, f"Tool has additional PDT at time point {tp}",
+                              strength, time_points, values)
+    return Comparison(True, "Tool output is a subset", strength, time_points, values)

@@ -1,3 +1,4 @@
+from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 from abc import ABC, abstractmethod
 from typing import AnyStr, List, Set, Tuple, Dict, Any
 
@@ -28,6 +29,12 @@ class PDTSet(PDTSets):
     def __repr__(self):
         return f"PDTSet({repr(self.set)})"
 
+    def __eq__(self, other):
+        return isinstance(other, PDTSet) and self.set == other.set
+
+    def __hash__(self):
+        return hash(("PDTSet", frozenset(self.set)))
+
     def is_member(self, value) -> bool:
         return value in self.set
 
@@ -38,6 +45,12 @@ class PDTComplementSet(PDTSets):
 
     def __repr__(self):
         return f"PDTComplementSet({repr(self.complement_set)})"
+
+    def __eq__(self, other):
+        return isinstance(other, PDTComplementSet) and self.complement_set == other.complement_set
+
+    def __hash__(self):
+        return hash(("PDTComplementSet", frozenset(self.complement_set)))
 
     def is_member(self, value) -> bool:
         return value not in self.complement_set
@@ -149,7 +162,7 @@ class PropositionTree(AbstractOutputStructure):
     def retrieve_order(self):
         return self.variable_order.retrieve_order()
 
-    def as_oracle(self, other: 'AbstractOutputStructure') -> Tuple[bool, str]:
+    def as_oracle(self, other: 'AbstractOutputStructure') -> Comparison:
         from Infrastructure.DataTypes.Verification.OutputStructures.Compare.PropositionTreeComparator import as_oracle
         return as_oracle(self, other)
 
@@ -157,6 +170,10 @@ class PropositionTree(AbstractOutputStructure):
         if time_point in self.forest:
             return self.forest[time_point]
         return None
+
+    def has_verdicts(self, time_point: int) -> bool:
+        tree = self.retrieve(time_point)
+        return tree is not None and not tree.is_false_leave()
 
     def time_points(self) -> Dict[int, int]:
         return self.tp_to_ts

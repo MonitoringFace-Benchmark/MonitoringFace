@@ -337,7 +337,8 @@ def run_tools_offline(
     debug_path = coordinator.get_path(PATH_TO_DEBUG)
     timeout_value = coordinator.time_out()
     try:
-        prep, compiled, runtime, prop, outputs, distinct_outputs = run_monitor_offline(
+        (prep, compiled, runtime, prop, outputs, distinct_outputs,
+         verification_strength, values_checked) = run_monitor_offline(
             mon=tool, path_to_folder=path_to_folder, data_file=data_file, signature_file=signature_file,
             policy_file=policy_file, cli_args=cli_args, trace_source_format=data_type, policy_source_format=policy_type,
             result_file=result_file, timeout_value=timeout_value,
@@ -359,7 +360,7 @@ def run_tools_offline(
 
         result_aggregator.add_valid(
             tool.name, setting_id, prep, compiled, runtime, prop, wall_time, max_mem, cpu,
-            outputs, distinct_outputs
+            outputs, distinct_outputs, verification_strength, values_checked
         )
         return RunToolResult.OK
     except TimedOut as e:

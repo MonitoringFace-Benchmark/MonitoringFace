@@ -1,10 +1,11 @@
+from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Tuple
 
 
 class AbstractOutputStructure(ABC):
     @abstractmethod
-    def as_oracle(self, other: 'AbstractOutputStructure') -> Tuple[bool, str]:
+    def as_oracle(self, other: 'AbstractOutputStructure') -> Comparison:
         pass
 
     @abstractmethod
@@ -14,6 +15,9 @@ class AbstractOutputStructure(ABC):
     @abstractmethod
     def time_points(self) -> Dict[int, int]:
         pass
+
+    def has_verdicts(self, time_point: int) -> bool:
+        return time_point in self.time_points()
 
     def output_counts(self) -> Tuple[Optional[int], Optional[int]]:
         """(total emitted verdicts, distinct (tp, value) verdicts); the gap

@@ -1,3 +1,4 @@
+from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 from abc import ABC, abstractmethod
 from typing import AnyStr, Tuple, Optional
 
@@ -30,5 +31,5 @@ class AbstractOracleTemplate(ABC):
     @abstractmethod
     def verify(
             self, path_to_result_folder: str, data_file: str, tool_verdicts: AbstractOutputStructure,
-            sig_file: Optional[str], policy_file: str, result_file: str) -> Tuple[bool, AnyStr]:
+            sig_file: Optional[str], policy_file: str, result_file: str) -> Comparison:
         pass

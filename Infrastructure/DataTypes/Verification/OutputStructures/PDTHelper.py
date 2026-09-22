@@ -60,18 +60,43 @@ def equality_between_pdts(vars, left_tree: PDTTree, right_tree: PDTTree) -> bool
 
 
 def single_level_tree(left_tree: PDTComponents, right_tree: PDTComponents) -> bool:
-    if isinstance(left_tree, PDTLeaf) and isinstance(right_tree, PDTLeaf):
-        return left_tree.value and right_tree.value
-    elif isinstance(left_tree, PDTNode) and isinstance(right_tree, PDTNode):
-        l_comp = None
-        for x in left_tree.values:
-            if isinstance(x[1], PDTComplementSet): l_comp = x[1]
-        r_comp = None
-        for x in right_tree.values:
-            if isinstance(x[1], PDTComplementSet): r_comp = x[1]
-        return l_comp == r_comp
-    else:
-         return False
+    return _single_level_signature(left_tree) == _single_level_signature(right_tree)
+
+
+def _single_level_signature(tree: PDTComponents):
+    """The function the level denotes, as (default, exceptions): the value
+    taken by everything the level does not name, and the values that depart
+    from it.
+
+    Normalising to this rather than to the raw partition is what lets trees
+    of different shape that denote the same function compare equal. A tree
+    lowered from Verdicts names only satisfying values and sends the rest to
+    a single complement block, whereas a monitor prints every value it
+    observed, including the violating ones, each in its own block. Those
+    blocks agree with the default and carry no information, so they must not
+    make the comparison fail.
+    """
+    if isinstance(tree, PDTLeaf):
+        return bool(tree.value), frozenset()
+
+    if isinstance(tree, PDTNode):
+        true_values = set()
+        false_values = set()
+        default = None
+        for guard, subtree in tree.values:
+            value = bool(collapse_pdt(subtree))
+            if isinstance(guard, PDTSet):
+                (true_values if value else false_values).update(guard.set)
+            elif isinstance(guard, PDTComplementSet):
+                default = value
+            else:
+                raise PDTCompareError("Unknown PDTSets type during single_level_tree")
+        # a level with no complement block names its whole domain; everything
+        # outside it has no choice and is unsatisfiable, i.e. false
+        default = bool(default)
+        return default, frozenset(false_values if default else true_values)
+
+    raise PDTCompareError("Unknown PDTComponents type during single_level_tree")
 
 
 def setc_union(set1: PDTSets, set2: PDTSets) -> PDTSets:
@@ -192,9 +217,11 @@ def apply2_reduce_inner(vars: list, f, left_node: PDTComponents, right_node: PDT
         )
 
     if isinstance(left_node, PDTNode) and isinstance(right_node, PDTLeaf):
+        # mirror of the leaf/node branch above: apply1_reduce supplies the leaf
+        # value to the unary function, and the subtree is what we map over
         return PDTNode(
             left_node.term,
-            _map_dedup(left_node.values, lambda l1: apply1_reduce(vars, lambda l2: f(l1, right_node.value), l1))
+            _map_dedup(left_node.values, lambda l1: apply1_reduce(vars, lambda l2: f(l2, right_node.value), l1))
         )
 
     if isinstance(left_node, PDTNode) and isinstance(right_node, PDTNode):
@@ -212,7 +239,11 @@ def apply2_reduce_inner(vars: list, f, left_node: PDTComponents, right_node: PDT
             )
 
             if len(sub_list) == 1:
-                return PDTLeaf(isinstance(sub_list[0], PDTComplementSet))
+                # the variable stopped mattering only if the one remaining block
+                # covers the whole domain; a lone PDTSet still partitions it
+                guard, subtree = sub_list[0]
+                if isinstance(guard, PDTComplementSet) and not guard.complement_set:
+                    return subtree
             return PDTNode(current_var, sub_list)
 
         if left_node.term == current_var:
