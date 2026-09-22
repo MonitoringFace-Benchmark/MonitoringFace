@@ -382,7 +382,7 @@ The complete, runnable versions of these live under `Archive/Experiments/`:
 | [`examples/example_patterns.yaml`](../../../Archive/Experiments/examples/example_patterns.yaml) | Patterns generator + time-guarded generation. |
 | [`examples/example_case_study.yaml`](../../../Archive/Experiments/examples/example_case_study.yaml) | A fixed case-study (Nokia) benchmark. |
 | [`examples/experiments_suite.yaml`](../../../Archive/Experiments/examples/experiments_suite.yaml) | Grouping several experiments into a suite. |
-| [`benchmark_paper/timely_regression_testing.yaml`](../../../Archive/Experiments/benchmark_paper/timely_regression_testing.yaml) | Comparing two pinned commits of one tool (`repeats`, `seeds`). |
+| [`benchmark_paper/timely_regression_testing.yaml`](../../../Archive/Experiments/benchmark_paper/use_case_5_2_regression_testing.yaml) | Comparing two pinned commits of one tool (`repeats`, `seeds`). |
 | [`benchmark_paper/timelymon_online_nokia.yaml`](../../../Archive/Experiments/benchmark_paper/timelymon_online_nokia.yaml) | An online experiment on a real-world trace. |
 
 ### Parameter sweeps
