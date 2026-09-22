@@ -8,7 +8,17 @@ experiment_name: tessla_demo
 #   TimelyMon        MFOTL   + CSV           (no conversion)
 #   TeSSLa           srv-policy + srv-trace  (TeSSLaPolicyConverter,
 #                                             TeSSLaTraceConverter)
-# Tools are pinned by branch so the already-built local images are reused.
+# Tools are pinned by commit (resolved 2026-09-22 from the branches this
+# file previously tracked: monpoly/verimon master, whymon main, timelymon
+# development). NOTE: these pins do NOT reproduce the published
+# srv_integration results. That run recorded commit=None for all four tools,
+# so the commits it actually used are unrecoverable, and timelymon's
+# development branch has moved since. Treat a run under this file as a new
+# experiment, not a re-execution of the earlier one.
+#
+# The converters named above (NegateMFOTLConverter, TeSSLaPolicyConverter,
+# TeSSLaTraceConverter) take no components: entry: they are self-contained
+# Python in the Archive, so their version is the framework commit itself.
 #
 # Three settings at two trace lengths keeps the whole run to a few minutes.
 # The benchmark data is pre-generated under experiments/tessla_demo/; the
@@ -28,17 +38,21 @@ monitors:
   - identifier: MonPoly
     name: MonPoly
     branch: master
+    commit: 025a142321e4cd9174164568e38c399ec336a076
   - identifier: VeriMon
     name: VeriMon
     branch: master
+    commit: 025a142321e4cd9174164568e38c399ec336a076
   - identifier: WhyMon
     name: WhyMon
     branch: main
+    commit: 86684beecbfc14ed3367eb5c042f610ca8a60119
     params:
       mode: light
   - identifier: TimelyMon
     name: TimelyMon
     branch: development
+    commit: e0b6e36ca35dbdb242f3c17c6d24871f5c0ff7ff
     params:
       worker: 1
       output_mode: 1
