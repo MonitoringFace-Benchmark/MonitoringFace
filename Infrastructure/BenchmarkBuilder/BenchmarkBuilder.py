@@ -147,6 +147,7 @@ class BenchmarkBuilder:
                     "identifier": mon.__class__.__name__,
                     "branch": getattr(image, "branch", None),
                     "commit": getattr(image, "commit", None) or None,
+                    "resolved_version": getattr(image, "resolved_version", None),
                     "image": getattr(image, "image_name", None),
                 }
                 stream_spec = getattr(mon, "params", {}).get(STREAM_PIPELINE_KEY)
