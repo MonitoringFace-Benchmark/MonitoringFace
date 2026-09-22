@@ -1,3 +1,4 @@
+from Infrastructure.DataTypes.Verification.OutputStructures.Strength import GATEABLE, parse_strength
 import argparse
 import shutil
 import sys
@@ -156,6 +157,17 @@ Examples:
             help='Run automated analysis on the results after execution'
         )
 
+        parser.add_argument(
+            '--min-verification-strength',
+            choices=[s.value for s in GATEABLE],
+            default=None,
+            help='Fail a run whose oracle comparison establishes less than this. '
+                 'Relation strength depends on the oracle/tool output format pair: '
+                 '\'equivalent\' proves the outputs agree, \'subset\' only that the tool '
+                 'claimed nothing the oracle denies, \'consistent\' only that declared '
+                 'witnesses hold (default: off; the strength is always recorded)'
+        )
+
         return parser
 
     def run(self, argv: List[str] = None):
@@ -169,6 +181,9 @@ Examples:
             clean_all=args.clean_all,
             analyze=args.analyze,
             provenance=(args.provenance or args.debug),  # --debug implies --provenance
+            min_verification_strength=(
+                parse_strength(args.min_verification_strength)
+                if args.min_verification_strength else None),
         )
 
         config_name = args.config

@@ -15,11 +15,20 @@ def term_and_set(str_: AnyStr) -> Tuple[AnyStr, PDTSets]:
     return term_, pdt_set
 
 
+def literal_set(str_: str) -> set:
+    """ast.literal_eval("{}") is an empty dict, not an empty set, and a level
+    that partitions on nothing prints exactly that: "Complement of {}". Left
+    as a dict it reaches the set algebra in PDTHelper and raises there, so it
+    is normalised here at the boundary."""
+    value = ast.literal_eval(str_)
+    return value if isinstance(value, set) else set(value)
+
+
 def resolve_set(str_: str) -> PDTSets:
     if str_.__contains__(COMPLEMENT_OF):
-        return PDTComplementSet(ast.literal_eval(str_.removeprefix(COMPLEMENT_OF).strip()))
+        return PDTComplementSet(literal_set(str_.removeprefix(COMPLEMENT_OF).strip()))
     else:
-        return PDTSet(ast.literal_eval(str_.strip()))
+        return PDTSet(literal_set(str_.strip()))
 
 
 COMPLEMENT_OF = "Complement of "

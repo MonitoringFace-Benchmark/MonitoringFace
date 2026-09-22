@@ -1,3 +1,4 @@
+from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 from typing import Dict, List, Optional, Tuple
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
@@ -17,7 +18,7 @@ class PropositionList(AbstractOutputStructure):
     def time_points(self) -> Dict[int, int]:
         return self.tp_to_ts
 
-    def as_oracle(self, other: 'AbstractOutputStructure') -> Tuple[bool, str]:
+    def as_oracle(self, other: 'AbstractOutputStructure') -> Comparison:
         from Infrastructure.DataTypes.Verification.OutputStructures.Compare.PropositionListComparator import as_oracle
         return as_oracle(self, other)
 

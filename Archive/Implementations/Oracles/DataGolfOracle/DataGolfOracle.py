@@ -1,3 +1,4 @@
+from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 import re
 from pathlib import Path
 from typing import AnyStr, Optional, Tuple
@@ -26,7 +27,7 @@ class DataGolfOracle(AbstractOracleTemplate):
     def post_process_data(self, std_out_str, output_file_name):
         pass
 
-    def verify(self, path_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure, sig_file, formula_file, result_file) -> tuple[bool, AnyStr]:
+    def verify(self, path_to_result_folder: AnyStr, data_file: AnyStr, tool_verdicts: AbstractOutputStructure, sig_file, formula_file, result_file) -> Comparison:
         oracle_verdicts = get_oracle_verdicts(path_to_result_folder, data_file)
         return comparing(oracle_verdicts, tool_verdicts)
 

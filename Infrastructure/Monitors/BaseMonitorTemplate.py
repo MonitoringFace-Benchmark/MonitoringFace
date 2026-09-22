@@ -16,6 +16,7 @@ from Infrastructure.DataTypes.Types.StratificationIndex import StratificationInd
 from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
+from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Strength
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.MonitorExceptions import ToolException, ResultErrorException, TimedOut
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
@@ -328,7 +329,7 @@ def run_monitor_online(
 def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
                         path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
                         result_file, cli_args: CLIArgs, oracle: Optional[AbstractOracleTemplate] = None,
-                        provenance: Optional[ProvenanceSession] = None) -> Tuple[float, float, float, float, Optional[int], Optional[int]]:
+                        provenance: Optional[ProvenanceSession] = None) -> Tuple[float, float, float, float, Optional[int], Optional[int], Optional[str], Optional[int]]:
     print_headline(f"Run (Offline) {mon.name}")
 
     for entry in (mon.params.get(STREAM_PIPELINE_KEY) or []):
@@ -383,19 +384,36 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
     if outputs is not None:
         print(f"Outputs:     {outputs} ({distinct_outputs} distinct)")
 
+    verification_strength = None
+    values_checked = None
     if oracle is not None:
+        timings = (preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed)
         try:
-            verified, msg = oracle.verify(path_to_folder, data_file, res, signature_file, f"scratch/{policy_file}", result_file)
+            comparison = oracle.verify(path_to_folder, data_file, res, signature_file, f"scratch/{policy_file}", result_file)
         except Exception as e:
             if cli_args.verbose:
                 print(f"Oracle verification failed with exception: {e}")
-            raise ResultErrorException((preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed), str(e))
-        print_headline(f"Verified: {verified}")
-        if not verified:
-            raise ResultErrorException((preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed), msg)
+            raise ResultErrorException(timings, str(e))
+
+        verification_strength = comparison.strength.value
+        values_checked = comparison.values_checked
+        print_headline(f"Verified: {comparison.ok} ({comparison.summary()})")
+        if comparison.strength in (Strength.NONE, Strength.UNSUPPORTED):
+            print(f"    WARNING: the {comparison.strength.value} relation between this oracle "
+                  f"and {mon.name} establishes nothing about the tool's verdicts")
+        if not comparison.ok:
+            raise ResultErrorException(timings, comparison.message)
+
+        minimum = getattr(cli_args, "min_verification_strength", None)
+        if not comparison.meets(minimum):
+            raise ResultErrorException(
+                timings,
+                f"verification strength '{comparison.strength.value}' is below the "
+                f"required '{minimum.value}' ({comparison.summary()})")
 
     print_footline()
-    return preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed, outputs, distinct_outputs
+    return (preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed,
+            outputs, distinct_outputs, verification_strength, values_checked)
 
 
 def find_trace_path(mon: BaseMonitorTemplate, path_manager: PathManager, trace_source_format: InputOutputTraceFormats) -> Tuple[Optional[InputOutputTraceFormats], Optional[int]]:

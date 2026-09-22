@@ -1,3 +1,4 @@
+from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 from typing import Dict, List, Optional, Tuple
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
@@ -20,7 +21,7 @@ class Verdicts(AbstractOutputStructure):
     def retrieve_order(self):
         return self.variable_order.retrieve_order()
 
-    def as_oracle(self, other: 'AbstractOutputStructure') -> Tuple[bool, str]:
+    def as_oracle(self, other: 'AbstractOutputStructure') -> Comparison:
         from Infrastructure.DataTypes.Verification.OutputStructures.Compare.VerdictsComparator import as_oracle
         return as_oracle(self, other)
 

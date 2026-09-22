@@ -1,3 +1,4 @@
+from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 from typing import Dict, Tuple
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
@@ -18,7 +19,7 @@ class DatagolfVerdicts(AbstractOutputStructure):
     def retrieve_order(self):
         return self.variable_order.retrieve_order()
 
-    def as_oracle(self, other: 'AbstractOutputStructure') -> Tuple[bool, str]:
+    def as_oracle(self, other: 'AbstractOutputStructure') -> Comparison:
         from Infrastructure.DataTypes.Verification.OutputStructures.Compare.DataGolfComparator import as_oracle
         return as_oracle(self, other)
 
