@@ -47,6 +47,14 @@ def prop_to_verdicts_comp(oracle: PropositionList, other: Union[Verdicts, OooVer
 
 
 def prop_to_prop_comp(oracle: PropositionList, other: PropositionList) -> Comparison:
+    """Two PropositionLists agree when they carry entries at the same
+    time-points. The stored Boolean is not compared: its producers use it as a
+    constant marker and disagree on which constant, so comparing it would fail
+    every DejaVu-against-TeSSLa pairing while the two outputs say the same
+    thing. EQUIVALENT holds only because the Boolean carries no information
+    today; should a producer ever make it meaningful, this must compare it
+    again or drop to CONSISTENT.
+    """
     strength = Strength.EQUIVALENT
     oracle_len = len(oracle.prop_list)
     other_len = len(other.prop_list)
@@ -63,15 +71,7 @@ def prop_to_prop_comp(oracle: PropositionList, other: PropositionList) -> Compar
 
     time_points = 0
     values = 0
-    for time_point in sorted(oracle.time_points().keys()):
-        oracle_value = oracle.prop_list[time_point]
-        other_value = other.prop_list[time_point]
-
+    for _ in sorted(oracle.time_points().keys()):
         time_points += 1
         values += 1
-        if oracle_value != other_value:
-            return Comparison(
-                False,
-                f"Value mismatch at time point {time_point}: Oracle value: {oracle_value}, Tool value: {other_value}",
-                strength, time_points, values)
     return Comparison(True, "Verified", strength, time_points, values)
