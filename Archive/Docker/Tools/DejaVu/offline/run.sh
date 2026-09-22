@@ -28,12 +28,47 @@ DEJAVU=/home/dejavu
 SPECHASH=$(cat $SPEC | md5sum | cut -d' ' -f1)
 SPECFOLDER=${OUTDIR}/$(basename $SPEC)-$SPECHASH
 
+dejavu_diagnose() {
+    {
+        echo "--- DejaVu run.sh diagnostics ---"
+        echo "pwd:         $(pwd)"
+        echo "OUTDIR:      ${OUTDIR}"
+        echo "SPECFOLDER:  ${SPECFOLDER}"
+        echo "outdir -d:   $(test -d "${OUTDIR}" && echo yes || echo NO)"
+        echo "outdir -w:   $(test -w "${OUTDIR}" && echo yes || echo NO)"
+        echo "ls -la .:";          ls -la . 2>&1 | sed 's/^/    /'
+        echo "ls -la ${OUTDIR}:";  ls -la "${OUTDIR}" 2>&1 | sed 's/^/    /'
+        echo "--- end diagnostics ---"
+    } >&2
+}
+
+# Create it, and honour the caller's OUTDIR instead of a hardcoded path.
+if ! mkdir -p "${OUTDIR}"; then
+    echo "DejaVu: cannot create output directory ${OUTDIR}" >&2
+    dejavu_diagnose
+    exit 1
+fi
+
+# Prove the stats file is writable before /usr/bin/time tries, so the failure
+# is attributed here rather than surfacing as a monitoring error.
+if ! : > "${OUTDIR}/stats.txt" 2>/dev/null; then
+    echo "DejaVu: cannot write ${OUTDIR}/stats.txt" >&2
+    dejavu_diagnose
+    exit 1
+fi
+
 # Run the compiled monitor on trace:
-exec /usr/bin/time -v -o scratch/stats.txt scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG | egrep "\*\*\*"
+exec /usr/bin/time -v -o "${OUTDIR}/stats.txt" scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG | egrep "\*\*\*"
 
 res=${PIPESTATUS[0]}
 if [ $res -ne 0 ]; then
     echo "DejaVu: Error during trace monitoring."
+    # 125 is /usr/bin/time's "could not run the command": the monitor never
+    # started, so the message above is about time, not about monitoring.
+    if [ $res -eq 125 ]; then
+        echo "DejaVu: exit 125 comes from /usr/bin/time, the monitor never ran" >&2
+        dejavu_diagnose
+    fi
     exit $res
 fi
 rm -rf dejavu-results

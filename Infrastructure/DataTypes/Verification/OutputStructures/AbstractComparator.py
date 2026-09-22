@@ -82,15 +82,23 @@ def verdicts_to_verdicts_inner(oracle: Union[Verdicts, OooVerdicts], other: Unio
 
 
 def verdicts_to_prop_list_inner(oracle: Union[Verdicts, OooVerdicts], other: PropositionList) -> Comparison:
-    """A PropositionList records one Boolean per time-point where the monitor
-    reported something. It agrees with a verdict-bearing oracle when that
-    Boolean holds exactly where the oracle's verdict set at the time-point is
-    non-empty. `prop_list` is read directly because PropositionList.retrieve
-    returns (tp, ts, prop) while Verdicts.retrieve returns (ts, tp, values).
+    """A PropositionList records one entry per time-point at which the monitor
+    reported something. It agrees with a verdict-bearing oracle when it has an
+    entry exactly where the oracle's verdict set is non-empty. `prop_list` is
+    read directly because PropositionList.retrieve returns (tp, ts, prop) while
+    Verdicts.retrieve returns (ts, tp, values).
+
+    The stored Boolean is deliberately not compared. Its producers use it as a
+    constant marker rather than a truth value, and they disagree on which
+    constant: DejaVu inserts False at every violation it reports, TeSSLa True
+    at every point it reports. It could not be compared in principle either,
+    since an oracle's verdict set carries no polarity: the same trace position
+    is a violation under one policy and a satisfaction under its negation, and
+    the platform does not record which was written.
 
     CONSISTENT, not EQUIVALENT: a PropositionList carries no assignments, so
-    the strongest available statement is that its Booleans agree with where
-    the oracle has verdicts, never that the two outputs agree.
+    the strongest available statement is that the two agree on where output was
+    produced, never on what that output was.
     """
     strength = Strength.CONSISTENT
     ok, txt = time_point_check(oracle, other)
@@ -114,19 +122,13 @@ def verdicts_to_prop_list_inner(oracle: Union[Verdicts, OooVerdicts], other: Pro
 
         time_points += 1
         values += 1
-        expected = len(oracle_val[2]) > 0
-        if bool(other_val.value) != expected:
-            return Comparison(
-                False,
-                f"Tool proposition {other_val.value} at time point {time_point} contradicts "
-                f"the oracle's {len(oracle_val[2])} verdicts",
-                strength, time_points, values)
     return Comparison(True, "Verified", strength, time_points, values)
 
 
 def prop_list_to_verdicts_inner(oracle: PropositionList, other: Union[Verdicts, OooVerdicts]) -> Comparison:
     """Mirror of verdicts_to_prop_list_inner with the PropositionList as the
-    oracle: its Boolean must hold exactly where the tool reports verdicts.
+    oracle: it must have an entry exactly where the tool reports verdicts. The
+    Boolean is not compared, for the reasons given there, and the strength is
     CONSISTENT for the same reason: the oracle cannot see assignments."""
     strength = Strength.CONSISTENT
     ok, txt = time_point_check(oracle, other)
@@ -150,12 +152,6 @@ def prop_list_to_verdicts_inner(oracle: PropositionList, other: Union[Verdicts, 
 
         time_points += 1
         values += 1
-        if bool(oracle_val.value) != (len(other_val[2]) > 0):
-            return Comparison(
-                False,
-                f"Tool reports {len(other_val[2])} verdicts at time point {time_point} but "
-                f"the oracle proposition is {oracle_val.value}",
-                strength, time_points, values)
     return Comparison(True, "Verified", strength, time_points, values)
 
 
