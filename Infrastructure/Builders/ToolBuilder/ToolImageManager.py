@@ -14,6 +14,37 @@ from Infrastructure.constants import (IMAGE_POSTFIX, BUILD_ARG_GIT_BRANCH, VOLUM
                                       META_FILE_VALUE, VERSION_KEY, SYMLINK_KEY, BUILD_ARG_GIT_COMMIT)
 
 
+def measured_command(tool_cmd: str) -> list:
+    """Wrap a tool invocation in GNU time, writing the report to container-local
+    /tmp and copying it onto the mount afterwards.
+
+    The leading probe is deliberate. /data is a Docker bind mount whose contents
+    the host wipes and rewrites immediately before this container starts
+    (BenchmarkBuilder clears scratch per tool, so a seven-tool experiment makes
+    seven such transitions per setting). That boundary has been observed to
+    return a spurious ENOENT when creating a file in a directory that exists and
+    is writable; since /usr/bin/time opens its -o file before forking, such a
+    blip kills the run before the tool starts. Creating a probe file first, with
+    retries, absorbs a short-lived blip here instead. The probe is left behind on
+    purpose: deleting it would be one more delete on that directory, and the next
+    per-tool wipe removes it anyway.
+    """
+    return ["/bin/sh", "-c",
+            # `touch`, not `: >`: a redirection failure on the special builtin
+            # `:` terminates a non-interactive shell outright, which would make
+            # the probe abort the run it exists to protect. touch is external,
+            # so a failure is just a non-zero status. The loop can never fail
+            # the command: if all attempts fail the tool still runs, and the
+            # retries are reported on stderr for the results to record.
+            "for i in 1 2 3 4 5; do mkdir -p /data/scratch 2>/dev/null; m=$?; "
+            "touch /data/scratch/.mfprobe 2>/dev/null && break; "
+            "echo \"#mfprobe retry $i mkdir_rc=$m id=[$(id -u):$(id -g)] "
+            "dir=[$(ls -ld /data/scratch 2>&1)] data=[$(ls -a /data 2>&1 | tr '\\n' ' ')]\" >&2; "
+            "sleep 0.2; done; "
+            f"/usr/bin/time -v -o /tmp/stats.txt {tool_cmd}; "
+            f"e=$?; cp /tmp/stats.txt /data/scratch/stats.txt 2>/dev/null; exit $e"]
+
+
 def to_file(path, name, content):
     with open(path + f"{name}", mode='w') as f:
         f.write(content)
@@ -108,9 +139,7 @@ class IndirectToolImageManager(AbstractToolImageManager):
         inner_name = name if name is not None else self.binary_name
         if measure and self.cli_args.measure:
             tool_cmd = " ".join([inner_name] + parameters)
-            inner_contract_[COMMAND_KEY] = ["/bin/sh", "-c",
-                                            f"mkdir -p /data/scratch && /usr/bin/time -v -o /tmp/stats.txt {tool_cmd}; "
-                                            f"e=$?; cp /tmp/stats.txt /data/scratch/stats.txt 2>/dev/null; exit $e"]
+            inner_contract_[COMMAND_KEY] = measured_command(tool_cmd)
         else:
             inner_contract_[COMMAND_KEY] = [inner_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
@@ -183,9 +212,7 @@ class DirectToolImageManager(AbstractToolImageManager):
         inner_name = name if name is not None else self.name.lower()
         if measure and self.cli_args.measure:
             tool_cmd = " ".join([inner_name] + parameters)
-            inner_contract_[COMMAND_KEY] = ["/bin/sh", "-c",
-                                            f"mkdir -p /data/scratch && /usr/bin/time -v -o /tmp/stats.txt {tool_cmd}; "
-                                            f"e=$?; cp /tmp/stats.txt /data/scratch/stats.txt 2>/dev/null; exit $e"]
+            inner_contract_[COMMAND_KEY] = measured_command(tool_cmd)
         else:
             inner_contract_[COMMAND_KEY] = [inner_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"

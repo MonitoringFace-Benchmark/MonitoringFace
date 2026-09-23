@@ -49,18 +49,22 @@ if ! mkdir -p "${OUTDIR}"; then
     exit 1
 fi
 
-# Prove the stats file is writable before /usr/bin/time tries, so the failure
-# is attributed here rather than surfacing as a monitoring error.
-if ! : > "${OUTDIR}/stats.txt" 2>/dev/null; then
-    echo "DejaVu: cannot write ${OUTDIR}/stats.txt" >&2
-    dejavu_diagnose
-    exit 1
-fi
+# Keep the stats off OUTDIR entirely. OUTDIR is a bind mount, and
+# /usr/bin/time opens its -o file before forking, so any hiccup creating that
+# file aborts the run before the monitor starts. Nothing reads this file: the
+# framework wraps this whole script in its own /usr/bin/time and copies its
+# result over OUTDIR/stats.txt after we exit, so anything written here is
+# overwritten. It is kept only so the script still reports timings when run
+# standalone, outside the platform.
+STATS_TMP="$(mktemp -t dejavu-stats.XXXXXX)"
 
 # Run the compiled monitor on trace:
-exec /usr/bin/time -v -o "${OUTDIR}/stats.txt" scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG | egrep "\*\*\*"
+/usr/bin/time -v -o "${STATS_TMP}" scala -J-Xmx16g -cp .:$DEJAVU/dejavu.jar:${SPECFOLDER} TraceMonitor $LOG $BDDSIZE $DEBUG | egrep "\*\*\*"
 
 res=${PIPESTATUS[0]}
+
+rm -f "${STATS_TMP}"
+
 if [ $res -ne 0 ]; then
     echo "DejaVu: Error during trace monitoring."
     # 125 is /usr/bin/time's "could not run the command": the monitor never
