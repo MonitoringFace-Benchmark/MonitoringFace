@@ -97,6 +97,34 @@ lane at 4 workers shows the F2 frontier-stall pathology (Linear: 2.3 GB RSS vs 2
 null checks. `distinct_outputs` must agree across all lanes in every cell; any deviation is
 a caught regression.
 
+## Experiment 2b — framework-version regression (`regression_framework_versions.yaml`)
+
+Same matrix and workers as experiment 2 (settings 0–3, sizes 10 K / 50 K / 100 K tps,
+workers {1, 4}), but the lanes isolate the **timely dataflow dependency**: three branches
+share the TimelyMon source at `a71920e9` (= lane 5's `f6e7e6d1` + `e0b6e36c` float parsing +
+`a71920e9` ungrouped-aggregation fix) and differ only in `Cargo.toml`/`Cargo.lock`.
+3 lanes × 2 workers × 4 settings × 3 sizes = 72 runs.
+
+| Lane | Branch (commit) | timely |
+|---|---|---|
+| 1 | `framework_version_29` @ `a71920e9` | 0.29.0 (baseline) |
+| 2 | `framework_version_30` @ `d639b6e7` | 0.30.0 |
+| 3 | `framework_version_31` @ `d635bcda` | 0.31.0 |
+
+All three branches are pushed on `git.ku.dk`, so — unlike the tuning experiment's
+`perf-audit-2026-09` pin and experiment 2's missing sixth lane — every lane is reachable.
+
+Correctness is checked two ways. `distinct_outputs` must be identical across the three
+lanes in every cell; any deviation is a semantic regression introduced by the framework
+upgrade. In addition — unlike experiment 2, which runs oracle-free — the **VeriMon oracle**
+(pin `bc752d37`, as in use cases 5.1/5.3; VeriMon also runs as a lane, as the oracle
+machinery expects) gives ground truth per cell; VeriMon may exceed the 300 s cap on the
+largest size, where the cross-lane equality check still covers the cell. Runtime and peak
+RSS quantify the upgrade's performance effect. Caveat carried over from the TimelyMon-side measurements
+(2026-09-24/25, timelymon `verify_reports/harness/`): separate release builds with default
+codegen units plus per-process variance move single cells by up to ~10–20 %, so only
+effects beyond that, or consistent across settings and sizes, count as a regression.
+
 ## Notes and caveats
 
 - Peak memory is recorded per run; there is no continuous memory profile.

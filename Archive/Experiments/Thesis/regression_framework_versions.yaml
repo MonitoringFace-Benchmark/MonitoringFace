@@ -1,0 +1,149 @@
+# Thesis evaluation, development-support use case 2b: REGRESSION TESTING over
+# framework upgrades. Three pinned TimelyMon states that differ ONLY in the
+# timely dataflow dependency (Cargo.toml/Cargo.lock; TimelyMon source identical
+# at a71920e9 on every lane), each at 1 and 4 workers, on the identical
+# policy/data matrix (same cells and seeds) as regression_perf_audit.yaml and
+# tuning_temporal_clean_up.yaml.
+#
+#   lane 1  framework_version_29 @ a71920e9  timely 0.29.0 (baseline; the
+#           development-branch state e0b6e36c + a71920e9 on top of the
+#           regression experiment's lane-5 head f6e7e6d1)
+#   lane 2  framework_version_30 @ d639b6e7  timely 0.30.0
+#   lane 3  framework_version_31 @ d635bcda  timely 0.31.0
+#
+# All three branches are pushed on git.ku.dk, so every lane is reachable.
+#
+# Correctness is checked two ways: distinct_outputs must be identical across
+# ALL lanes in every cell (any deviation is a semantic regression introduced
+# by the framework upgrade), and the VeriMon oracle (same pin as use case 5.1
+# and 5.3, bc752d37) gives ground truth per cell. VeriMon may exceed the
+# 300 s cap on the largest size; oracle verdicts then exist only where it
+# finishes, while the cross-lane equality check covers every cell.
+# Runtime and peak-memory differences are the framework's performance effect,
+# with the same caveat as the other regression experiment: lanes are separate
+# release builds (default codegen units), and TimelyMon-side measurements put
+# build-layout plus per-process variance at up to ~10-20 % on single cells, so
+# only effects beyond that band, or consistent across settings and sizes,
+# count as a framework regression.
+
+experiment_name: regression_framework_versions
+
+monitors:
+  # Lane 1: timely 0.29.0 -- baseline.
+  - identifier: TimelyMon
+    name: TM timely29 w1
+    branch: framework_version_29
+    commit: a71920e9922eab886e63e53f64f70386df27039b
+    params:
+      worker: 1
+      output_mode: 1
+  - identifier: TimelyMon
+    name: TM timely29 w4
+    branch: framework_version_29
+    commit: a71920e9922eab886e63e53f64f70386df27039b
+    params:
+      worker: 4
+      output_mode: 1
+  # Lane 2: timely 0.30.0 -- Cargo.toml/Cargo.lock change only.
+  - identifier: TimelyMon
+    name: TM timely30 w1
+    branch: framework_version_30
+    commit: d639b6e74c56a44c311d4bfe94af5407b98d6f71
+    params:
+      worker: 1
+      output_mode: 1
+  - identifier: TimelyMon
+    name: TM timely30 w4
+    branch: framework_version_30
+    commit: d639b6e74c56a44c311d4bfe94af5407b98d6f71
+    params:
+      worker: 4
+      output_mode: 1
+  # Lane 3: timely 0.31.0 -- Cargo.toml/Cargo.lock change only.
+  - identifier: TimelyMon
+    name: TM timely31 w1
+    branch: framework_version_31
+    commit: d635bcda4afb0026022ef8fbf8ab7a3ef80e91b8
+    params:
+      worker: 1
+      output_mode: 1
+  - identifier: TimelyMon
+    name: TM timely31 w4
+    branch: framework_version_31
+    commit: d635bcda4afb0026022ef8fbf8ab7a3ef80e91b8
+    params:
+      worker: 4
+      output_mode: 1
+  # Oracle monitor: VeriMon, same pin as use_case_5_1/5_3.
+  - identifier: VeriMon
+    name: VeriMon
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+
+oracles:
+  - identifier: VeriMonOracle
+    name: VeriMonOracle
+    monitor_name: VeriMon
+
+runtime_constraints:
+  upper_bound: 300
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    event_rate: 10
+
+# Flag-identical to the formula_search.py contract (see the tuning
+# experiment); fields not listed must stay absent.
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    lb: 0
+    ub: 100
+    delta: 30
+    prob_once: 0.25
+    prob_since: 0.15
+    prob_eventually: 0.25
+    prob_until: 0.15
+    prob_eand: 0.1
+
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [0, 1, 2, 3]
+    num_data_set_sizes: [10000, 50000, 100000]
+
+experiment_type: Signature
+
+tools_to_build:
+  - TM timely29 w1
+  - TM timely29 w4
+  - TM timely30 w1
+  - TM timely30 w4
+  - TM timely31 w1
+  - TM timely31 w4
+  - VeriMon
+
+oracle:
+  enabled: true
+  name: VeriMonOracle
+
+# Settings 0-3 = the first four formula-search winners, identical to the
+# tuning and regression experiments' settings 0-3.
+seeds:
+  '[5, 2, 0]': [314159265, 12]
+  '[5, 2, 1]': [314159265, 22]
+  '[5, 2, 2]': [314159265, 45]
+  '[5, 2, 3]': [314159265, 135]
+
+components:
+  - identifier: SignatureGenerator
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: MfotlPolicyGenerator
+    commit: fef5f8f5551a36dac4aa45cc7c48bef09964a265
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
