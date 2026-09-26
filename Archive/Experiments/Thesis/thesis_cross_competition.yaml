@@ -1,0 +1,174 @@
+experiment_name: cross_competition
+
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon 1
+    commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
+    params:
+      worker: 1
+      output_mode: 1
+  - identifier: TimelyMon
+    name: TimelyMon 6
+    commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
+    params:
+      worker: 6
+      output_mode: 1
+  - identifier: MonPoly
+    name: MonPoly
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+  - identifier: VeriMon
+    name: VeriMon
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+  - identifier: WhyMon
+    name: WhyMon
+    commit: 86684beecbfc14ed3367eb5c042f610ca8a60119
+    params:
+      mode: light
+  - identifier: DejaVu
+    name: DejaVu
+    commit: 2b5052d89e3a961de7344a2bdcb7adf1308f2bca
+    params:
+      stratified: True
+  - identifier: EnfGuard
+    name: EnfGuard
+    commit: 9e6ec02c04dbcf8fa43b9e3223cad882a6d462f3
+    params:
+      monitoring: true
+  - identifier: TeSSLa
+    name: TeSSLa
+    commit: b1964bd445286832bd2cb120ca7586858e941ceb
+  - identifier: TeSSLa
+    name: TeSSLa Rust
+    commit: b1964bd445286832bd2cb120ca7586858e941ceb
+    params:
+      backend: rust
+  - identifier: StaticMon
+    name: StaticMon
+    branch: master
+    commit: 70accf73fdd2da4db9b3adcaf1c2ae0bcb1a1b36
+
+# Oracles configuration (optional)
+oracles:
+  - identifier: VeriMonOracle
+    name: VeriMonOracle
+    monitor_name: VeriMon
+
+# Time guard configuration
+runtime_constraints:
+  upper_bound: 60
+
+# Data setup - Hydra structured format
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    event_rate: 1000
+
+# Policy setup
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+    num_preds: 4
+    prob_eand: 0
+    prob_rand: 0
+    prob_let: 0
+    prob_matchF: 0
+    prob_matchP: 0
+    prob_next: 0
+    prob_eventually: 0
+    prob_until: 0
+    ub: 0
+    unbounded: True
+
+# Synthetic benchmark specific configuration
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [5]
+    num_fvs: [2]
+    num_setting: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    num_data_set_sizes: [10, 50, 100, 500, 1000]
+
+# Experiment execution settings
+experiment_type: Signature  # Pattern, Signature, or CaseStudy
+
+# Tools to build and run (list of monitor names)
+tools_to_build:
+  #- TimelyMon 1
+  #- TimelyMon 6
+  #- VeriMon
+  #- MonPoly
+  #- WhyMon
+  #- DejaVu
+  #- EnfGuard
+  - TeSSLa
+  - TeSSLa Rust
+  - StaticMon
+
+# Oracle to use (optional)
+oracle:
+  enabled: true
+  name: VeriMonOracle
+
+seeds:
+  '[5, 2, 0, 10]': [314159265, 87006]
+  '[5, 2, 0, 50]': [314159265, 87006]
+  '[5, 2, 0, 100]': [314159265, 87006]
+  '[5, 2, 0, 500]': [314159265, 87006]
+  '[5, 2, 0, 1000]': [314159265, 87006]
+  '[5, 2, 1, 10]': [314159265, 53339]
+  '[5, 2, 1, 50]': [314159265, 53339]
+  '[5, 2, 1, 100]': [314159265, 53339]
+  '[5, 2, 1, 500]': [314159265, 53339]
+  '[5, 2, 1, 1000]': [314159265, 53339]
+  '[5, 2, 2, 10]': [314159265, 34134]
+  '[5, 2, 2, 50]': [314159265, 34134]
+  '[5, 2, 2, 100]': [314159265, 34134]
+  '[5, 2, 2, 500]': [314159265, 34134]
+  '[5, 2, 2, 1000]': [314159265, 34134]
+  '[5, 2, 3, 10]': [314159265, 16519]
+  '[5, 2, 3, 50]': [314159265, 16519]
+  '[5, 2, 3, 100]': [314159265, 16519]
+  '[5, 2, 3, 500]': [314159265, 16519]
+  '[5, 2, 3, 1000]': [314159265, 16519]
+  '[5, 2, 4, 10]': [314159265, 41414]
+  '[5, 2, 4, 50]': [314159265, 41414]
+  '[5, 2, 4, 100]': [314159265, 41414]
+  '[5, 2, 4, 500]': [314159265, 41414]
+  '[5, 2, 4, 1000]': [314159265, 41414]
+  '[5, 2, 5, 10]': [314159265, 99113]
+  '[5, 2, 5, 50]': [314159265, 99113]
+  '[5, 2, 5, 100]': [314159265, 99113]
+  '[5, 2, 5, 500]': [314159265, 99113]
+  '[5, 2, 5, 1000]': [314159265, 99113]
+  '[5, 2, 6, 10]': [314159265, 98765]
+  '[5, 2, 6, 50]': [314159265, 98765]
+  '[5, 2, 6, 100]': [314159265, 98765]
+  '[5, 2, 6, 500]': [314159265, 98765]
+  '[5, 2, 6, 1000]': [314159265, 98765]
+  '[5, 2, 7, 10]': [314159265, 65359]
+  '[5, 2, 7, 50]': [314159265, 65359]
+  '[5, 2, 7, 100]': [314159265, 65359]
+  '[5, 2, 7, 500]': [314159265, 65359]
+  '[5, 2, 7, 1000]': [314159265, 65359]
+  '[5, 2, 8, 10]': [314159265, 11320]
+  '[5, 2, 8, 50]': [314159265, 11320]
+  '[5, 2, 8, 100]': [314159265, 11320]
+  '[5, 2, 8, 500]': [314159265, 11320]
+  '[5, 2, 8, 1000]': [314159265, 11320]
+  '[5, 2, 9, 10]': [314159265, 53326]
+  '[5, 2, 9, 50]': [314159265, 53326]
+  '[5, 2, 9, 100]': [314159265, 53326]
+  '[5, 2, 9, 500]': [314159265, 53326]
+  '[5, 2, 9, 1000]': [314159265, 53326]
+
+components:
+  - identifier: SignatureGenerator
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: MfotlPolicyGenerator
+    commit: fef5f8f5551a36dac4aa45cc7c48bef09964a265
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: QTLConverter
+    commit: 9fa865a5db71e1d46f1d7b48b281f609ce36ac43
