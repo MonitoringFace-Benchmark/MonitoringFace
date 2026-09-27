@@ -41,8 +41,16 @@ def measured_command(tool_cmd: str) -> list:
             "echo \"#mfprobe retry $i mkdir_rc=$m id=[$(id -u):$(id -g)] "
             "dir=[$(ls -ld /data/scratch 2>&1)] data=[$(ls -a /data 2>&1 | tr '\\n' ' ')]\" >&2; "
             "sleep 0.2; done; "
-            f"/usr/bin/time -v -o /tmp/stats.txt {tool_cmd}; "
-            f"e=$?; cp /tmp/stats.txt /data/scratch/stats.txt 2>/dev/null; exit $e"]
+            f"/usr/bin/time -v -o /tmp/stats.txt {tool_cmd}; e=$?; "
+            # the trailing copy crosses the same blippy mount boundary the
+            # probe protects, but AFTER the tool ran; a single silent cp lost
+            # the wall/mem/cpu stats of a few percent of perfectly good runs.
+            # Same retry discipline as the probe, same never-fail-the-run rule.
+            "for i in 1 2 3 4 5; do "
+            "cp /tmp/stats.txt /data/scratch/stats.txt 2>/dev/null && break; "
+            "echo \"#mfstats retry $i cp_failed dir=[$(ls -ld /data/scratch 2>&1)]\" >&2; "
+            "sleep 0.2; done; "
+            "exit $e"]
 
 
 def to_file(path, name, content):
