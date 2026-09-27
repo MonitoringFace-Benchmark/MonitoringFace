@@ -27,7 +27,9 @@ COPY --chown=dejavu:dejavu build.sh /home/dejavu/build.sh
 COPY --chown=dejavu:dejavu run.sh /home/dejavu/run.sh
 
 USER root
-RUN chmod 755 /home/dejavu/build.sh /home/dejavu/run.sh && \
+# strip CRs: from a CRLF (Windows) checkout the shebang reads "#!/bin/bash\r"
+RUN sed -i 's/\r$//' /home/dejavu/build.sh /home/dejavu/run.sh && \
+    chmod 755 /home/dejavu/build.sh /home/dejavu/run.sh && \
     ln -s /home/dejavu/build.sh /usr/local/bin/build && \
     ln -s /home/dejavu/run.sh /usr/local/bin/run
 

@@ -26,7 +26,9 @@ RUN cd qtl-translator && \
 RUN cp /home/qtl-translator/qtl-translator/target/spec-parser-1.0-SNAPSHOT.jar /home/qtl-translator/qtl-translator.jar
 ADD qtl-translator.sh /home/qtl-translator/qtl-translator.sh
 USER root
-RUN ln -s /home/qtl-translator/qtl-translator.sh /usr/local/bin/qtl-translator
+# strip CRs: from a CRLF (Windows) checkout the shebang reads "#!/bin/bash\r"
+RUN sed -i 's/\r$//' /home/qtl-translator/qtl-translator.sh && \
+    ln -s /home/qtl-translator/qtl-translator.sh /usr/local/bin/qtl-translator
 
 USER qtl-translator
 WORKDIR ${WDIR}
