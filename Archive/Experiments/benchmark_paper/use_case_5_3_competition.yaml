@@ -91,13 +91,13 @@ experiment_type: Signature  # Pattern, Signature, or CaseStudy
 
 # Tools to build and run (list of monitor names)
 tools_to_build:
-  #- TimelyMon 1
-  #- TimelyMon 6
-  #- VeriMon
-  #- MonPoly
-  #- WhyMon
-  #- DejaVu
-  #- EnfGuard
+  - TimelyMon 1
+  - TimelyMon 6
+  - VeriMon
+  - MonPoly
+  - WhyMon
+  - DejaVu
+  - EnfGuard
   - TeSSLa
   - TeSSLa Rust
 
