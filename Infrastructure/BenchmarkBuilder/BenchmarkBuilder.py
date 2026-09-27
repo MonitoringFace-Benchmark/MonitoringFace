@@ -23,7 +23,7 @@ from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitor
 from Infrastructure.Builders.ProcessorBuilder.ComponentPins import all_pins
 from Infrastructure.Provenance.Provenance import ProvenanceFactory, ProvenanceSession, framework_commit, read_fingerprint
 from Infrastructure.constants import LENGTH, PATH_TO_NAMED_EXPERIMENT, PATH_TO_INFRA, PATH_TO_EXPERIMENTS, PATH_TO_DEBUG, PATH_TO_PROJECT, \
-    STREAM_PIPELINE_KEY
+    STREAM_PIPELINE_KEY, NOMEASURE
 from Infrastructure.printing import print_headline, print_footline, normal_line
 
 
@@ -353,7 +353,9 @@ def run_tools_offline(
         if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
 
-        stats = StatsHandler(path_to_folder).get_stats()
+        # wait for the stats file only when measurement was actually on
+        stats = StatsHandler(path_to_folder).get_stats(
+            wait=cli_args.measure and not tool.params.get(NOMEASURE))
         if stats is not None:
             wall_time, max_mem, cpu = stats
         else:
@@ -383,7 +385,9 @@ def run_tools_offline(
         print(f"ResultErrorException for monitor {tool.name}: {e.args[1]}")
         if cli_args.debug and sfh is not None:
             sfh.copy_to_debug(debug_path, setting_id, tool.name)
-        stats = StatsHandler(path_to_folder).get_stats()
+        # wait for the stats file only when measurement was actually on
+        stats = StatsHandler(path_to_folder).get_stats(
+            wait=cli_args.measure and not tool.params.get(NOMEASURE))
         if stats is not None:
             wall_time, max_mem, cpu = stats
         else:

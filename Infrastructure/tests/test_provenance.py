@@ -320,6 +320,79 @@ def test_framework_commit_helper():
     print("ok test_framework_commit_helper")
 
 
+def test_timeout_still_verifies(tmp):
+    """A timeout raises from INSIDE run_offline; the post-run input re-hash
+    must run anyway (try/finally), so timed-out runs never keep
+    input_unchanged_after_run: null."""
+    import json as _json
+    from Infrastructure.Monitors.BaseMonitorTemplate import run_monitor_offline
+    from Infrastructure.Monitors.MonitorExceptions import TimedOut
+    from Infrastructure.Frontend.CLI.cli_args import CLIArgs
+    from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats as TF
+    from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats as PF
+
+    class TimingOutImage:
+        def run_offline(self, **kwargs):
+            raise TimedOut("simulated container timeout")
+
+    class TimingOutMonitor(IdentityMonitor):
+        def construct_offline_command(self):
+            return ["run", "data_10.csv"], None
+
+        def offline_compile(self):
+            pass
+
+    setting = make_setting(tmp)
+    factory, results = make_factory(tmp, setting)
+    mon = TimingOutMonitor(image=TimingOutImage(), name="TimelyMon 1", params={})
+    session = factory.session("5_2_0_10", setting, mon)
+    pm = PathManager()
+    pm.add_path(PATH_TO_PROJECT, "/nonexistent")
+    try:
+        run_monitor_offline(
+            mon=mon, timeout_value=1, path_to_folder=setting,
+            data_file="data_10.csv", signature_file="signature.sig",
+            policy_file="policy.policy", path_manager=pm,
+            trace_source_format=TF.CSV, policy_source_format=PF.MFOTL,
+            result_file=None, cli_args=CLIArgs(), oracle=None,
+            provenance=session,
+        )
+        raise AssertionError("TimedOut must propagate")
+    except TimedOut:
+        pass
+    manifest = _json.load(open(session.manifest_path))
+    assert manifest["input_unchanged_after_run"] is True, \
+        "timed-out run must still get its inputs verified"
+    print("ok test_timeout_still_verifies")
+
+
+def test_stats_handler_robustness(tmp):
+    import threading, time as _time
+    from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
+    folder = os.path.join(tmp, "setting")
+    os.makedirs(os.path.join(folder, "scratch"))
+    sh = StatsHandler(folder)
+    # absent + wait=False: immediate None
+    assert sh.get_stats(wait=False) is None
+    # malformed file: None, never an exception (an OK run must stay OK)
+    with open(os.path.join(folder, "scratch/stats.txt"), "w") as f:
+        f.write("garbage without the expected fields\n")
+    assert sh.get_stats(wait=False) is None
+    # file appearing late (bind-mount visibility lag): retried and parsed
+    os.remove(os.path.join(folder, "scratch/stats.txt"))
+    def write_late():
+        _time.sleep(0.4)
+        with open(os.path.join(folder, "scratch/stats.txt"), "w") as f:
+            f.write('\tCommand being timed: "run data_10.csv"\n'
+                    "\tPercent of CPU this job got: 97%\n"
+                    "\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:01.23\n"
+                    "\tMaximum resident set size (kbytes): 12345\n")
+    threading.Thread(target=write_late).start()
+    stats = sh.get_stats(wait=True)
+    assert stats == ("0:01.23", "12345", "97%"), stats
+    print("ok test_stats_handler_robustness")
+
+
 def main():
     tests = [
         test_identity_records,
@@ -332,6 +405,8 @@ def main():
         test_source_mutation_detected,
         test_jsonable_exotic_params,
         test_stale_tmp_swept,
+        test_timeout_still_verifies,
+        test_stats_handler_robustness,
     ]
     for t in tests:
         tmp = tempfile.mkdtemp(prefix="prov-test-")

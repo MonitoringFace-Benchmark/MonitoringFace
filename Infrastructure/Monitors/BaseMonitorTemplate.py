@@ -306,14 +306,18 @@ def run_monitor_online(
     tool_command, name = mon.construct_online_command()
     if provenance is not None and pre is not None:
         provenance.record_invocation(tool_command)
-    output, total_elapsed_s, total_count, latency_err_msg, code = run_online_image(
-        image_name=target_name, tool_command=tool_command,
-        online_experiment_contract=online_experiment_contract,
-        tool_online_experiment_contract=tool_online_experiment_contract,
-        verbose=cli_args.verbose, stream_spec=dynamic_stream_spec
-    )
-    if provenance is not None and pre is not None:
-        provenance.verify_after_run(pre.records)
+    try:
+        output, total_elapsed_s, total_count, latency_err_msg, code = run_online_image(
+            image_name=target_name, tool_command=tool_command,
+            online_experiment_contract=online_experiment_contract,
+            tool_online_experiment_contract=tool_online_experiment_contract,
+            verbose=cli_args.verbose, stream_spec=dynamic_stream_spec
+        )
+    finally:
+        # a timeout or crash may raise from inside the run; the post-run
+        # input re-hash must still happen (the inputs survive the kill)
+        if provenance is not None and pre is not None:
+            provenance.verify_after_run(pre.records)
 
     print(f"Prep:        {preprocessing_elapsed}\nBuilding: {build_comp_elapsed}")
     print(f"Runtime:     {total_elapsed_s}\nTotal Count: {total_count}")
@@ -366,11 +370,16 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
         provenance.record_invocation(cmd)
     measure = False if mon.params.get(NOMEASURE) else True
     start = time.perf_counter()
-    out, code = mon.image.run_offline(parameters=cmd, path_to_data=path_to_folder, time_out=timeout_value, name=name, measure=measure)
-    end = time.perf_counter()
+    try:
+        out, code = mon.image.run_offline(parameters=cmd, path_to_data=path_to_folder, time_out=timeout_value, name=name, measure=measure)
+        end = time.perf_counter()
+    finally:
+        # a timeout raises from INSIDE run_offline (BuilderUtilities), so the
+        # post-run input re-hash must live in a finally or timed-out runs
+        # keep input_unchanged_after_run: null forever
+        if provenance is not None:
+            provenance.verify_after_run(pre.records)
     run_offline_elapsed = end - start
-    if provenance is not None:
-        provenance.verify_after_run(pre.records)
 
     if code != 0:
         raise TimedOut(f"Timed out: {mon.name}") if code == 124 else ToolException(out)
