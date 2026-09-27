@@ -143,12 +143,13 @@ class AnalysisOffline(AbstractAnalysis):
             # Remove repetition token for semantic interpretation.
             core = parts[:-1]
 
-            # Rule from benchmark format:
-            # - if core length is 4, second-to-last token is dataset size
-            # - otherwise, no dataset size
+            # Rule from benchmark format (BenchmarkBuilder.run):
+            # - synthetic core is ops_fvs_num_size: last token is dataset size,
+            #   the rest identifies the formula
+            # - case-study and script core is a single index: no dataset size
             if len(core) == 4:
-                dataset_size = pd.to_numeric(core[-2], errors="coerce")
-                setting_prefix = "_".join(core[:-2])
+                dataset_size = pd.to_numeric(core[-1], errors="coerce")
+                setting_prefix = "_".join(core[:-1])
             else:
                 dataset_size = pd.NA
                 setting_prefix = "_".join(core) if core else s

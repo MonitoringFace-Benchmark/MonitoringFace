@@ -22,6 +22,12 @@ def dom_file_name(cmd_params: List[str]) -> str:
     return DEFAULT_DOM_PREDICATE + DOM_FILE_SUFFIX
 
 
+def failure_message(result: subprocess.CompletedProcess) -> str:
+    """The translator's own error output, so that a failed conversion says why."""
+    detail = (result.stderr or result.stdout or "").strip()
+    return f"QTLTranslator Failed (exit code {result.returncode})" + (f": {detail}" if detail else "")
+
+
 def count_registration_events(path: str) -> int:
     """Number of events the constants file registers: one per argument tuple, so
     `_dom(1)(2)(5)` registers three. Parentheses are counted outside of the
@@ -58,7 +64,7 @@ class QTLConverter(PolicyConverterTemplate):
                 for line in result.stdout.splitlines():
                     f.write(line + "\n")
         else:
-            raise QTLConverterException("QTLTranslator Failed")
+            raise QTLConverterException(failure_message(result))
 
     def auto_convert(self, path_to_folder: str, input_file: str, path_to_output_folder: str, output_file: str,
                      source: InputOutputPolicyFormats, target: InputOutputPolicyFormats, params: Dict[str, Any]):
@@ -82,7 +88,7 @@ class QTLConverter(PolicyConverterTemplate):
                 for line in result.stdout.splitlines():
                     f.write(line + "\n")
         else:
-            raise QTLConverterException("QTLTranslator Failed")
+            raise QTLConverterException(failure_message(result))
 
         # Hand the extracted constants
         # to the trace conversion, to prepend them to the trace.
