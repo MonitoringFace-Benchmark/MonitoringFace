@@ -1,15 +1,23 @@
 experiment_name: test_synthetic_experiment
 
 monitors:
+  - identifier: TeSSLa
+    name: TeSSLa
+    commit: b1964bd445286832bd2cb120ca7586858e941ceb
+  - identifier: TeSSLa
+    name: TeSSLa Rust
+    commit: b1964bd445286832bd2cb120ca7586858e941ceb
+    params:
+      backend: rust
   - identifier: TimelyMon
     name: TimelyMon 1
-    commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
+    commit: f6e7e6d1255b86abb3c31e00d1a8398eb4f2a4e3
     params:
       worker: 1
       output_mode: 1
   - identifier: TimelyMon
     name: TimelyMon 6
-    commit: 3ff38d25fba09eb7810793faf6eddfcbe5648b99
+    commit: f6e7e6d1255b86abb3c31e00d1a8398eb4f2a4e3
     params:
       worker: 6
       output_mode: 1
@@ -83,13 +91,15 @@ experiment_type: Signature  # Pattern, Signature, or CaseStudy
 
 # Tools to build and run (list of monitor names)
 tools_to_build:
-  - TimelyMon 1
-  - TimelyMon 6
-  - VeriMon
-  - MonPoly
-  - WhyMon
-  - DejaVu
-  - EnfGuard
+  #- TimelyMon 1
+  #- TimelyMon 6
+  #- VeriMon
+  #- MonPoly
+  #- WhyMon
+  #- DejaVu
+  #- EnfGuard
+  - TeSSLa
+  - TeSSLa Rust
 
 # Oracle to use (optional)
 oracle:

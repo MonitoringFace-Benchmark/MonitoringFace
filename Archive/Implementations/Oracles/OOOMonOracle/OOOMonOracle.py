@@ -33,6 +33,9 @@ class OOOMonOracle(AbstractOracleTemplate):
         self.ooomon.name = "OOOMon"
         self.parameters = parameters
 
+    def supported_policy_formats(self):
+        return self.ooomon.supported_policy_formats()
+
     def pre_process_data(
             self, path_to_folder: str, trace_source_format: InputOutputTraceFormats,
             policy_source_format: InputOutputPolicyFormats, data_file: str, signature_file: str, policy_file: str,

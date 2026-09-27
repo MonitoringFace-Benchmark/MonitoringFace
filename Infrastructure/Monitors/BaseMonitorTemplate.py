@@ -8,6 +8,7 @@ from typing import Dict, AnyStr, Any, Tuple, List, Optional, Union
 from Infrastructure.AutoConversion.AutoPolicyConverter import AutoPolicyConverter
 from Infrastructure.AutoConversion.AutoTraceConverter import AutoTraceConverter
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
+from Infrastructure.AutoConversion.PolicyAlternatives import PolicyAlternatives
 from Infrastructure.Builders.BuilderUtilities import run_online_image
 from Infrastructure.Builders.OnlineExperiementPipeline import build_pipeline
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
@@ -445,9 +446,28 @@ def find_trace_path(mon: BaseMonitorTemplate, path_manager: PathManager, trace_s
 
 
 def find_policy_path(mon: BaseMonitorTemplate, path_manager: PathManager, policy_source_format: InputOutputPolicyFormats) -> Tuple[Optional[InputOutputPolicyFormats], Optional[int]]:
+    return find_policy_path_for(mon.supported_policy_formats(), path_manager, policy_source_format)
+
+
+def select_policy(
+        supported_formats: Optional[List[InputOutputPolicyFormats]], path_manager: PathManager,
+        policy_file, policy_type: Optional[InputOutputPolicyFormats]
+) -> Tuple[str, InputOutputPolicyFormats]:
+    if not isinstance(policy_file, PolicyAlternatives):
+        return policy_file, policy_type
+    if supported_formats is None:
+        return policy_file.options[0]
+    best, best_distance = None, None
+    for file, fmt in policy_file.options:
+        _, distance = find_policy_path_for(supported_formats, path_manager, fmt)
+        if distance is not None and (best_distance is None or distance < best_distance):
+            best, best_distance = (file, fmt), distance
+    return best if best is not None else policy_file.options[0]
+
+
+def find_policy_path_for(supported_formats: List[InputOutputPolicyFormats], path_manager: PathManager, policy_source_format: InputOutputPolicyFormats) -> Tuple[Optional[InputOutputPolicyFormats], Optional[int]]:
     policy_target_format = None
     conversion_distance = None
-    supported_formats = mon.supported_policy_formats()
     if policy_source_format in supported_formats:
         return policy_source_format, 0
 

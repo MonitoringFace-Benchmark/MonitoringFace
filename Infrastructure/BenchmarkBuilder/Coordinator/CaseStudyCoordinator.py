@@ -4,6 +4,7 @@ from typing import Optional, List, Tuple, Dict
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import str_to_policy_inout_format, InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import str_to_trace_inout_format, InputOutputTraceFormats
+from Infrastructure.AutoConversion.PolicyAlternatives import ALTERNATIVE_SEPARATOR, parse_policy_alternatives
 from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyImageGenerator import CaseStudyImageGenerator
 from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
@@ -12,6 +13,7 @@ from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import Scrat
 from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finger_print
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Types.custome_type import OnlineOffline
+from Infrastructure.Monitors.BaseMonitorTemplate import select_policy
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import TRACE_KEY, POLICY_KEY, PATH_KEY, BENCHMARK_BUILDING_OFFSET, \
     SIGNATURE_KEY, FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, FINGERPRINT_COMPONENTS, PATH_TO_NAMED_DATA, \
@@ -95,7 +97,13 @@ class CaseStudyCoordinator(Coordinator):
             inner_res = dict()
             for (pos, raw_value) in enumerate(line.strip().split(",")):
                 raw_value = raw_value.strip()
-                if ":" in raw_value:
+                if ALTERNATIVE_SEPARATOR in raw_value:
+                    if header[pos] != POLICY_KEY:
+                        raise Exception(
+                            f"Only the {POLICY_KEY} column accepts alternatives, "
+                            f"got '{raw_value}' in column {header[pos]}")
+                    inner_res[header[pos]] = (parse_policy_alternatives(raw_value), None)
+                elif ":" in raw_value:
                     raw_val_type = raw_value.split(":")
                     val = raw_val_type[0].strip()
                     val_type = raw_val_type[1].strip()
@@ -146,7 +154,9 @@ class CaseStudyCoordinator(Coordinator):
 
             if self.oracle is not None:
                 try:
-                    self.oracle.pre_process_data(named_path_to_data, data_type, policy_type, data_file, sig, policy_file, self.path_manager)
+                    oracle_policy, oracle_policy_type = select_policy(
+                        self.oracle.supported_policy_formats(), self.path_manager, policy_file, policy_type)
+                    self.oracle.pre_process_data(named_path_to_data, data_type, oracle_policy_type, data_file, sig, oracle_policy, self.path_manager)
                     out, code = self.oracle.compute_result(time_on=None, time_out=run_time_out)
                     if code != 0:
                         raise RunOracleException(out)
@@ -158,8 +168,10 @@ class CaseStudyCoordinator(Coordinator):
             if generation_constraint is not None and generation_constraint.guard_type == TimeGuardingTool.Monitor:
                 try:
                     mon = generation_constraint.guard
+                    guard_policy, guard_policy_type = select_policy(
+                        mon.supported_policy_formats(), self.path_manager, policy_file, policy_type)
                     mon.preprocessing(
-                        named_path_to_data, data_type, policy_type, data_file, sig, policy_file,
+                        named_path_to_data, data_type, guard_policy_type, data_file, sig, guard_policy,
                         self.path_manager, verbose=False
                     )
                     cmd, name = mon.construct_offline_command()
