@@ -1,6 +1,6 @@
 from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 from abc import ABC, abstractmethod
-from typing import AnyStr, Tuple, Optional
+from typing import AnyStr, Tuple, Optional, List
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
@@ -11,6 +11,9 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 class AbstractOracleTemplate(ABC):
     def __init__(self, monitor, params):
         pass
+
+    def supported_policy_formats(self) -> Optional[List[InputOutputPolicyFormats]]:
+        return None
 
     @abstractmethod
     def pre_process_data(

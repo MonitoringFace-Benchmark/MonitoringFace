@@ -17,7 +17,7 @@ from Infrastructure.DataTypes.FileRepresenters.FingerPrintHandler import FingerP
 from Infrastructure.DataTypes.FileRepresenters.ScratchFolderHandler import ScratchFolderHandler
 from Infrastructure.DataTypes.FileRepresenters.StatsHandler import StatsHandler
 
-from Infrastructure.Monitors.BaseMonitorTemplate import run_monitor_offline, run_monitor_online
+from Infrastructure.Monitors.BaseMonitorTemplate import run_monitor_offline, run_monitor_online, select_policy
 from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException, ResultErrorException
 from Infrastructure.Monitors.MonitorManager import InvalidReturnType, GetMonitorsReturnType, ValidReturnType
 from Infrastructure.Builders.ProcessorBuilder.ComponentPins import all_pins
@@ -189,6 +189,9 @@ class BenchmarkBuilder:
                         # provenance (and its debug copy) then contain exactly
                         # its own inputs, never another tool's leftovers
                         sfh.clean_up_folder()
+                        tool_policy_file, tool_policy_type = select_policy(
+                            tool.tool.supported_policy_formats(), self.coordinator.get_path_manager(),
+                            policy_file, policy_type)
                         provenance = provenance_factory.session(setting_key, path_to_folder, tool.tool) \
                             if provenance_factory is not None else None
 
@@ -196,8 +199,8 @@ class BenchmarkBuilder:
                             run_tools_online(
                                 result_aggregator=result_aggregator, path_to_folder=path_to_folder, tool=tool.tool,
                                 _result_file=result, setting_id=tmp_setting_id, data_file=data_file,
-                                signature_file=signature, policy_file=policy_file, sfh=sfh, cli_args=self.cli_args,
-                                coordinator=self.coordinator, policy_type=policy_type, data_type=data_type,
+                                signature_file=signature, policy_file=tool_policy_file, sfh=sfh, cli_args=self.cli_args,
+                                coordinator=self.coordinator, policy_type=tool_policy_type, data_type=data_type,
                                 online_experiment_contract=self.coordinator.get_online_settings(),
                                 provenance=provenance,
                                 frames_dir=(os.path.join(self.result_folder, "frames")
@@ -207,8 +210,8 @@ class BenchmarkBuilder:
                             run_tools_offline(
                                 result_aggregator=result_aggregator, path_to_folder=path_to_folder, tool=tool.tool,
                                 result_file=result, setting_id=tmp_setting_id, data_file=data_file, signature_file=signature,
-                                policy_file=policy_file, sfh=sfh, cli_args=self.cli_args,
-                                coordinator=self.coordinator, policy_type=policy_type, data_type=data_type,
+                                policy_file=tool_policy_file, sfh=sfh, cli_args=self.cli_args,
+                                coordinator=self.coordinator, policy_type=tool_policy_type, data_type=data_type,
                                 provenance=provenance
                             )
                     else:
@@ -237,7 +240,7 @@ class BenchmarkBuilder:
                 return None
 
         seed_dict = dict()
-        path_to_named_experiment = self.path_manager.get_path(PATH_TO_NAMED_EXPERIMENT)
+        path_to_named_experiment = self.coordinator.get_path(PATH_TO_NAMED_EXPERIMENT)
         for (_, path_to_data, _, _, _, _, _, _) in self.coordinator.iterate_settings():
             gen_seed_path = f"{path_to_data}/Seeds/generator.seed"
             policy_seed_path = f"{path_to_data}/Seeds/policy.seed"
