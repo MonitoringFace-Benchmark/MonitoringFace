@@ -5,7 +5,8 @@ from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTra
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
-from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PropositionTree
+from Infrastructure.DataTypes.Verification.OutputStructures.PDTHelper import negate_pdt
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PropositionTree, PDTTree
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
 from Infrastructure.DataTypes.Verification.PDTParser import str_to_proposition_tree
 from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable, OnlineRunnable
@@ -61,8 +62,10 @@ class WhyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         if not stdout_input:
             return PropositionTree(DefaultVariableOrder())
-        else:
-            return str_to_proposition_tree(stdout_input.strip())
+        explanations = str_to_proposition_tree(stdout_input.strip())
+        for time_point, tree in explanations.forest.items():
+            explanations.forest[time_point] = PDTTree(negate_pdt(tree.tree))
+        return explanations
 
     @staticmethod
     def supported_policy_formats() -> List[InputOutputPolicyFormats]:

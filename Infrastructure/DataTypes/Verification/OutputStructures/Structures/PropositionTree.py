@@ -16,6 +16,12 @@ class InvalidPDTChoice(Exception):
     pass
 
 
+def pdt_value(value):
+    if isinstance(value, str) and len(value) >= 2 and value[0] == value[-1] == '"':
+        return value[1:-1]
+    return value
+
+
 class PDTSets:
     @abstractmethod
     def is_member(self, value) -> bool:
@@ -122,7 +128,7 @@ class PDTTree:
         def _get_value(terms_vals: List[Tuple[Any, AnyStr]], term: AnyStr):
             for (value, var) in terms_vals:
                 if var == term:
-                    return value
+                    return pdt_value(value)
             raise InvalidPDTTerm(f"Term {term} not in Assignment")
 
         def _make_choice(value, choices: List[Tuple[PDTSets, PDTComponents]]):
@@ -181,7 +187,7 @@ class PropositionTree(AbstractOutputStructure):
 
     def has_verdicts(self, time_point: int) -> bool:
         tree = self.retrieve(time_point)
-        return tree is not None and not tree.is_false_leave()
+        return tree is not None and bool(tree.has_satisfaction())
 
     def time_points(self) -> Dict[int, int]:
         return self.tp_to_ts
