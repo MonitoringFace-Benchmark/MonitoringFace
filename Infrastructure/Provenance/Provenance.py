@@ -285,7 +285,9 @@ class ProvenanceSession:
             entries.append({
                 "kind": rec.kind,
                 "source": {
-                    "file": os.path.relpath(source_abs, self.experiment_root),
+                    # POSIX separators like every other path in the manifest, so
+                    # manifests do not depend on the OS that produced them
+                    "file": os.path.relpath(source_abs, self.experiment_root).replace(os.sep, "/"),
                     "format": rec.source_format,
                     "sha256": source_sha,
                 },
