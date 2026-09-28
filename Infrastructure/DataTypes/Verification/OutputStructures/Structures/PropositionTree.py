@@ -1,9 +1,10 @@
 from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 from abc import ABC, abstractmethod
-from typing import AnyStr, List, Set, Tuple, Dict, Any
+from typing import AnyStr, List, Set, Tuple, Dict, Any, Union
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Proposition import Proposition
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, \
     VariableOrdering
 
@@ -103,7 +104,14 @@ class PDTTree:
         _inner_collect_terms_list(self.tree)
         return result
 
-    def check_assignment(self, assignment: Assignment) -> bool:
+    def check_assignment(self, assignment: Union[Assignment, Proposition]) -> bool:
+        if isinstance(assignment, Proposition):
+            # a closed formula's verdict binds no variable, so the tree must
+            # decide it without partitioning on one
+            try:
+                return self.walk_tree([]) == assignment.value
+            except InvalidPDTTerm:
+                return False
         reordered_assignment = assignment.retrieve_order(VariableOrder(self.terms))
         try:
             return self.walk_tree(reordered_assignment.to_representation())

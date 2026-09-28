@@ -36,11 +36,13 @@ class OooVerdicts(AbstractOutputStructure):
 
     def insert(self, value, time_point, time_stamp):
         self.tp_to_ts[time_point] = time_stamp
-        values = value if isinstance(value, list) else [value]
-        if self.variable_order:
-            values = list(map(lambda va: Assignment(va, self.variable_order), values))
+        # must match Verdicts.insert: an oracle and a tool on the same closed
+        # formula have to hold the same value type, or they cannot be compared
+        if not self.variable_order.retrieve_order():
+            values = [Proposition(True)]  # needs to consider negation eventually
         else:
-            values = list(map(lambda va: Proposition(va), values))
+            values = value if isinstance(value, list) else [value]
+            values = list(map(lambda va: Assignment(va, self.variable_order), values))
         if self._max_tp_seen is not None and time_point < self._max_tp_seen:
             self.out_of_order_inserts += 1
         else:
