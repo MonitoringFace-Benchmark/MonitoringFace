@@ -44,6 +44,38 @@ monitors:
     params:
       worker: 4
       output_mode: 1
+  - identifier: TimelyMon
+    name: TM timely29 w1 ooo
+    branch: framework_version_29
+    commit: a71920e9922eab886e63e53f64f70386df27039b
+    params:
+      worker: 1
+      output_mode: 1
+      mode: oootps
+  - identifier: TimelyMon
+    name: TM timely29 w4 ooo
+    branch: framework_version_29
+    commit: a71920e9922eab886e63e53f64f70386df27039b
+    params:
+      worker: 4
+      output_mode: 1
+      mode: oootps
+  - identifier: TimelyMon
+    name: TM timely29 w1 delay
+    branch: framework_version_29
+    commit: a71920e9922eab886e63e53f64f70386df27039b
+    params:
+      worker: 1
+      output_mode: 1
+      mode: delayed
+  - identifier: TimelyMon
+    name: TM timely29 w4 delay
+    branch: framework_version_29
+    commit: a71920e9922eab886e63e53f64f70386df27039b
+    params:
+      worker: 4
+      output_mode: 1
+      mode: delayed
   # Lane 2: timely 0.30.0 -- Cargo.toml/Cargo.lock change only.
   - identifier: TimelyMon
     name: TM timely30 w1
@@ -59,6 +91,38 @@ monitors:
     params:
       worker: 4
       output_mode: 1
+  - identifier: TimelyMon
+    name: TM timely30 w1 ooo
+    branch: framework_version_30
+    commit: d639b6e74c56a44c311d4bfe94af5407b98d6f71
+    params:
+      worker: 1
+      output_mode: 1
+      mode: oootps
+  - identifier: TimelyMon
+    name: TM timely30 w4 ooo
+    branch: framework_version_30
+    commit: d639b6e74c56a44c311d4bfe94af5407b98d6f71
+    params:
+      worker: 4
+      output_mode: 1
+      mode: oootps
+  - identifier: TimelyMon
+    name: TM timely30 w1 delay
+    branch: framework_version_30
+    commit: d639b6e74c56a44c311d4bfe94af5407b98d6f71
+    params:
+      worker: 1
+      output_mode: 1
+      mode: delayed
+  - identifier: TimelyMon
+    name: TM timely30 w4 delay
+    branch: framework_version_30
+    commit: d639b6e74c56a44c311d4bfe94af5407b98d6f71
+    params:
+      worker: 4
+      output_mode: 1
+      mode: delayed
   # Lane 3: timely 0.31.0 -- Cargo.toml/Cargo.lock change only.
   - identifier: TimelyMon
     name: TM timely31 w1
@@ -74,6 +138,38 @@ monitors:
     params:
       worker: 4
       output_mode: 1
+  - identifier: TimelyMon
+    name: TM timely31 w1 ooo
+    branch: framework_version_31
+    commit: d635bcda4afb0026022ef8fbf8ab7a3ef80e91b8
+    params:
+      worker: 1
+      output_mode: 1
+      mode: oootps
+  - identifier: TimelyMon
+    name: TM timely31 w4 ooo
+    branch: framework_version_31
+    commit: d635bcda4afb0026022ef8fbf8ab7a3ef80e91b8
+    params:
+      worker: 4
+      output_mode: 1
+      mode: oootps
+  - identifier: TimelyMon
+    name: TM timely31 w1 delay
+    branch: framework_version_31
+    commit: d635bcda4afb0026022ef8fbf8ab7a3ef80e91b8
+    params:
+      worker: 1
+      output_mode: 1
+      mode: delayed
+  - identifier: TimelyMon
+    name: TM timely31 w4 delay
+    branch: framework_version_31
+    commit: d635bcda4afb0026022ef8fbf8ab7a3ef80e91b8
+    params:
+      worker: 4
+      output_mode: 1
+      mode: delayed
   # Oracle monitor: VeriMon, same pin as use_case_5_1/5_3.
   - identifier: VeriMon
     name: VeriMon
@@ -112,10 +208,10 @@ synthetic_config:
   data_source: SignatureGenerator
   policy_source: MfotlPolicyGenerator
   experiment:
-    num_operators: [5]
-    num_fvs: [2]
-    num_setting: [0, 1, 2, 3]
-    num_data_set_sizes: [10000, 50000, 100000]
+    num_operators: [5, 10]
+    num_fvs: [2, 4]
+    num_setting: [0, 1, 2, 3, 4, 5]
+    num_data_set_sizes: [100, 500, 1000]
 
 experiment_type: Signature
 
@@ -126,19 +222,49 @@ tools_to_build:
   - TM timely30 w4
   - TM timely31 w1
   - TM timely31 w4
+  - TM timely29 w1 ooo
+  - TM timely29 w4 ooo
+  - TM timely30 w1 ooo
+  - TM timely30 w4 ooo
+  - TM timely31 w1 ooo
+  - TM timely31 w4 ooo
+  - TM timely29 w1 delay
+  - TM timely29 w4 delay
+  - TM timely30 w1 delay
+  - TM timely30 w4 delay
+  - TM timely31 w1 delay
+  - TM timely31 w4 delay
   - VeriMon
 
 oracle:
   enabled: true
   name: VeriMonOracle
 
-# Settings 0-3 = the first four formula-search winners, identical to the
-# tuning and regression experiments' settings 0-3.
 seeds:
-  '[5, 2, 0]': [314159265, 12]
-  '[5, 2, 1]': [314159265, 22]
-  '[5, 2, 2]': [314159265, 45]
-  '[5, 2, 3]': [314159265, 135]
+  '[5, 2, 0]': [314159265, 86383]
+  '[5, 2, 1]': [314159265, 61390]
+  '[5, 2, 2]': [314159265, 2658]
+  '[5, 2, 3]': [314159265, 28466]
+  '[5, 2, 4]': [314159265, 9924]
+  '[5, 2, 5]': [314159265, 28055]
+  '[5, 4, 0]': [314159265, 45070]
+  '[5, 4, 1]': [314159265, 18357]
+  '[5, 4, 2]': [314159265, 16076]
+  '[5, 4, 3]': [314159265, 26474]
+  '[5, 4, 4]': [314159265, 4867]
+  '[5, 4, 5]': [314159265, 78737]
+  '[10, 2, 0]': [314159265, 56160]
+  '[10, 2, 1]': [314159265, 97781]
+  '[10, 2, 2]': [314159265, 99289]
+  '[10, 2, 3]': [314159265, 65810]
+  '[10, 2, 4]': [314159265, 78457]
+  '[10, 2, 5]': [314159265, 84244]
+  '[10, 4, 0]': [314159265, 34754]
+  '[10, 4, 1]': [314159265, 9718]
+  '[10, 4, 2]': [314159265, 82282]
+  '[10, 4, 3]': [314159265, 31159]
+  '[10, 4, 4]': [314159265, 70357]
+  '[10, 4, 5]': [314159265, 69513]
 
 components:
   - identifier: SignatureGenerator

@@ -47,8 +47,8 @@ class Assignment(ValueType):
     def retrieve_order(self, new_order: VariableOrdering) -> 'Assignment':
         if self.order == new_order.retrieve_order():
             return self
-        mapping = {v: val for v, val in zip(self.values, self.order)}
-        if set(self.values) != set(new_order.retrieve_order()):
+        mapping = {var: val for var, val in zip(self.order, self.values)}
+        if set(self.order) != set(new_order.retrieve_order()):
             raise ValueError("New order must contain exactly the same variable names.")
         return Assignment([mapping[v] for v in new_order.retrieve_order()], new_order)
 
