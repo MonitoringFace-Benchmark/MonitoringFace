@@ -5,8 +5,7 @@ from typing import AnyStr, List, Set, Tuple, Dict, Any, Union
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Proposition import Proposition
-from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, \
-    VariableOrdering
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering
 
 
 class InvalidPDTTerm(Exception):
@@ -112,9 +111,10 @@ class PDTTree:
                 return self.walk_tree([]) == assignment.value
             except InvalidPDTTerm:
                 return False
-        reordered_assignment = assignment.retrieve_order(VariableOrder(self.terms))
         try:
-            return self.walk_tree(reordered_assignment.to_representation())
+            # walk_tree looks every term up by name, so the assignment's order
+            # is irrelevant and a variable the tree never partitions on is ignored
+            return self.walk_tree(assignment.to_representation())
         except InvalidPDTTerm:
             return False
 
