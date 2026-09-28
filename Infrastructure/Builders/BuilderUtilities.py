@@ -1,3 +1,4 @@
+import codecs
 import time
 import re
 from typing import Dict, AnyStr, Any, List, Optional
@@ -208,6 +209,22 @@ def input_points(payload: str, batch_delimiter: str = "#") -> List[List[Optional
     return points
 
 
+def _whole_lines(chunks):
+    """Docker's log stream splits lines longer than 16 KB into several chunks,
+    and only the last one ends the line; a round's input or output can be
+    that long, so chunks are joined back into whole lines here."""
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="ignore")
+    pending = ""
+    for chunk in chunks:
+        pending += decoder.decode(chunk) if isinstance(chunk, (bytes, bytearray)) else str(chunk)
+        while "\n" in pending:
+            line, pending = pending.split("\n", 1)
+            yield line + "\n"
+    pending += decoder.decode(b"", final=True)
+    if pending:
+        yield pending
+
+
 def parse_online_logs(chunks, batch_delimiter: str = "#"):
     """Parses the OnlineExperimentDriver's log stream. Protocol 2 adds
     [Driver Protocol], [Delivered], [Held], [Origins k], [Stage k Stats] and
@@ -230,8 +247,7 @@ def parse_online_logs(chunks, batch_delimiter: str = "#"):
     final_error = None
     unexpected_error = None
 
-    for chunk in chunks:
-        text = chunk.decode("utf-8", errors="ignore") if isinstance(chunk, (bytes, bytearray)) else str(chunk)
+    for text in _whole_lines(chunks):
         if text.startswith("[Error"):
             unexpected_error = text.strip()
             break
