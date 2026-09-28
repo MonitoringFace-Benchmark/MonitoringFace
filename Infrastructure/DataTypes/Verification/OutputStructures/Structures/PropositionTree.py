@@ -1,11 +1,11 @@
 from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 from abc import ABC, abstractmethod
-from typing import AnyStr, List, Set, Tuple, Dict, Any
+from typing import AnyStr, List, Set, Tuple, Dict, Any, Union
 
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
-from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, \
-    VariableOrdering
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Proposition import Proposition
+from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering
 
 
 class InvalidPDTTerm(Exception):
@@ -14,6 +14,12 @@ class InvalidPDTTerm(Exception):
 
 class InvalidPDTChoice(Exception):
     pass
+
+
+def pdt_value(value):
+    if isinstance(value, str) and len(value) >= 2 and value[0] == value[-1] == '"':
+        return value[1:-1]
+    return value
 
 
 class PDTSets:
@@ -103,10 +109,18 @@ class PDTTree:
         _inner_collect_terms_list(self.tree)
         return result
 
-    def check_assignment(self, assignment: Assignment) -> bool:
-        reordered_assignment = assignment.retrieve_order(VariableOrder(self.terms))
+    def check_assignment(self, assignment: Union[Assignment, Proposition]) -> bool:
+        if isinstance(assignment, Proposition):
+            # a closed formula's verdict binds no variable, so the tree must
+            # decide it without partitioning on one
+            try:
+                return self.walk_tree([]) == assignment.value
+            except InvalidPDTTerm:
+                return False
         try:
-            return self.walk_tree(reordered_assignment.to_representation())
+            # walk_tree looks every term up by name, so the assignment's order
+            # is irrelevant and a variable the tree never partitions on is ignored
+            return self.walk_tree(assignment.to_representation())
         except InvalidPDTTerm:
             return False
 
@@ -114,7 +128,7 @@ class PDTTree:
         def _get_value(terms_vals: List[Tuple[Any, AnyStr]], term: AnyStr):
             for (value, var) in terms_vals:
                 if var == term:
-                    return value
+                    return pdt_value(value)
             raise InvalidPDTTerm(f"Term {term} not in Assignment")
 
         def _make_choice(value, choices: List[Tuple[PDTSets, PDTComponents]]):
@@ -173,7 +187,7 @@ class PropositionTree(AbstractOutputStructure):
 
     def has_verdicts(self, time_point: int) -> bool:
         tree = self.retrieve(time_point)
-        return tree is not None and not tree.is_false_leave()
+        return tree is not None and bool(tree.has_satisfaction())
 
     def time_points(self) -> Dict[int, int]:
         return self.tp_to_ts

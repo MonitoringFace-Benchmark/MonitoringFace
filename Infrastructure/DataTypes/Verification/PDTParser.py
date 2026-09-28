@@ -1,10 +1,8 @@
 import re
-import ast
 
 from typing import AnyStr, List, Tuple
 
-from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTSets, PDTComplementSet, \
-    PDTSet, PDTNode, PDTLeaf, PropositionTree, PDTTree
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTSets, PDTComplementSet, PDTSet, PDTNode, PDTLeaf, PropositionTree, PDTTree, pdt_value
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrdering, VariableOrder, DefaultVariableOrder
 
 
@@ -16,12 +14,8 @@ def term_and_set(str_: AnyStr) -> Tuple[AnyStr, PDTSets]:
 
 
 def literal_set(str_: str) -> set:
-    """ast.literal_eval("{}") is an empty dict, not an empty set, and a level
-    that partitions on nothing prints exactly that: "Complement of {}". Left
-    as a dict it reaches the set algebra in PDTHelper and raises there, so it
-    is normalised here at the boundary."""
-    value = ast.literal_eval(str_)
-    return value if isinstance(value, set) else set(value)
+    inner = str_.strip().removeprefix("{").removesuffix("}").strip()
+    return {pdt_value(element.strip()) for element in inner.split(", ")} if inner else set()
 
 
 def resolve_set(str_: str) -> PDTSets:
