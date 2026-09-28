@@ -1,6 +1,6 @@
 import time
 import re
-from typing import Dict, AnyStr, Any, List
+from typing import Dict, AnyStr, Any, List, Optional
 
 import docker
 from docker.errors import APIError, BuildError
@@ -165,13 +165,55 @@ def run_offline_image(image_name, generic_contract: Dict[AnyStr, Any], verbose=F
 
 def _empty_block():
     return {"output": None, "processed": None, "elapsed_ns": None,
-            "delivered": None, "held": None, "origins": None}
+            "delivered": None, "held": None, "origins": None, "input_points": None}
 
 
-def parse_online_logs(chunks):
+_BRIDGE_RE = re.compile(r"^@(\d+)\s+@(\d+)\b")
+_LOG_RE = re.compile(r"^@\s*(\d+)")
+_ELAPSED_RE = re.compile(r"^>ELAPSED\s+(\d+)\s*@\s*(\d+)<")
+
+
+def _csv_field(line: str, key: str):
+    for field in line.split(","):
+        name, sep, value = field.partition("=")
+        if sep and name.strip() == key:
+            value = value.strip()
+            return int(value) if value.isdigit() else None
+    return None
+
+
+def input_points(payload: str, batch_delimiter: str = "#") -> List[List[Optional[int]]]:
+    """The time-points one driver round fed, as [tp, ts] pairs in input order.
+    CSV events, ELAPSED claims and bridge lines name their time-point; a
+    MonPoly log line is a time-point of its own and carries no number (tp
+    None, one entry per line). Watermarks and anything unparsable carry no
+    time-point. Timestamps follow the driver's own extraction rules."""
+    points = []
+    seen = set()
+    for line in payload.split(batch_delimiter) if batch_delimiter else [payload]:
+        line = line.strip()
+        match = _ELAPSED_RE.match(line) or _BRIDGE_RE.match(line)
+        if match:
+            tp, ts = int(match[1]), int(match[2])
+        elif _LOG_RE.match(line):
+            points.append([None, int(_LOG_RE.match(line)[1])])
+            continue
+        else:
+            tp, ts = _csv_field(line, "tp"), _csv_field(line, "ts")
+            if tp is None or ts is None:
+                continue
+        if (tp, ts) not in seen:
+            seen.add((tp, ts))
+            points.append([tp, ts])
+    return points
+
+
+def parse_online_logs(chunks, batch_delimiter: str = "#"):
     """Parses the OnlineExperimentDriver's log stream. Protocol 2 adds
     [Driver Protocol], [Delivered], [Held], [Origins k], [Stage k Stats] and
-    [Total Delivered]; logs from older drivers parse exactly as before."""
+    [Total Delivered]; logs from older drivers parse exactly as before. Each
+    round also keeps the time-points its input carried (input_points), so
+    verdicts can later be placed in log time."""
     footer_acc_elapsed_s = None
     footer_wall_clock_s = None
     footer_total_count = None
@@ -231,6 +273,7 @@ def parse_online_logs(chunks):
             break
 
         if text.startswith("[Input"):
+            current_block["input_points"] = input_points(text.split("]", 1)[1].strip(), batch_delimiter)
             continue
 
         if text.startswith("[Output"):
@@ -346,7 +389,8 @@ def run_online_image(
             detach=True, remove=False,
         )
 
-        parsed = parse_online_logs(container.logs(stream=True, follow=True, stdout=True, stderr=True))
+        parsed = parse_online_logs(container.logs(stream=True, follow=True, stdout=True, stderr=True),
+                                   batch_delimiter=online_experiment_contract.batch_delimiter or "#")
         parsed_blocks = parsed["blocks"]
         footer_acc_elapsed_s = parsed["acc_elapsed_s"]
         footer_total_count = parsed["total_count"]

@@ -1,0 +1,8 @@
+experiments:
+  - path: Thesis/thesis_ahead_motivation_timely.yaml
+    enabled: true
+    description: "Late replication on the Nokia log, TimelyMon prefix build"
+
+  - path: Thesis/thesis_ahead_motivation_monpoly.yaml
+    enabled: true
+    description: "Late replication on the Nokia log, MonPoly and VeriMon"

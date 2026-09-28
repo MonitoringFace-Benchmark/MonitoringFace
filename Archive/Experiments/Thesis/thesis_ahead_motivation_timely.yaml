@@ -1,0 +1,44 @@
+# Ahead-of-in-order motivation, TimelyMon lane: the prefix (watermark) build
+# on the full Nokia log with the single late-replication formula (case-study
+# branch late-replication). The log is in order and carries no settled
+# time-points, so no tp-interval lane. Input is aggregated per time-point
+# (a batch ends at its >WATERMARK line), giving one round per time-point like
+# the MonPoly/VeriMon lanes of thesis_ahead_motivation_monpoly.yaml.
+
+experiment_name: thesis_ahead_motivation_timely
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  mode: accelerated
+  timestamp_units: seconds
+  accumulative_time: 3600
+  maximum_latency: 60000
+
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon
+    branch: development
+    commit: b09cd68ce0b0417449330014766a1fdb24c8b87c
+    params:
+      worker: 1
+      output_mode: 1
+      OnlineExperimentContractTool:
+        format: csv
+        response_mode: event-count
+        output_collection_mode: before-delimiter
+        input_aggregation_pattern: ">W"
+
+tools_to_build:
+  - TimelyMon
+
+data_setup:
+  type: CaseStudy
+  name: NokiaCsvOnline
+
+components:
+  - identifier: NokiaCsvOnline
+    branch: late-replication
+    commit: 1704cab167859e04485ecb1e23fb99d1250dd4b1
+  - identifier: OnlineExperimentDriver
+    commit: 655c9b541c75060442180da3ebd5eae34fbc6690

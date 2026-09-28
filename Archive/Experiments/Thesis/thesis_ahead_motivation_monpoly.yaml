@@ -1,0 +1,43 @@
+# Ahead-of-in-order motivation, in-order reference lanes: MonPoly and VeriMon
+# on the full Nokia log with the single late-replication formula (case-study
+# branch late-replication). process-step makes every MonPoly input step one
+# round, so verdicts a step decides together (a window closing for several
+# earlier time-points) are all attributed to that step.
+# Pair with thesis_ahead_motivation_timely.yaml; the lead per verdict is
+# computed afterwards from both runs' frames in log time.
+
+experiment_name: thesis_ahead_motivation_monpoly
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  mode: accelerated
+  timestamp_units: seconds
+  accumulative_time: 3600
+  maximum_latency: 60000
+
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        response_mode: process-step
+        output_collection_mode: before-delimiter
+
+tools_to_build:
+  - MonPoly
+
+data_setup:
+  type: CaseStudy
+  name: NokiaLogOnline
+
+components:
+  - identifier: NokiaLogOnline
+    branch: late-replication
+    commit: 1704cab167859e04485ecb1e23fb99d1250dd4b1
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: OnlineExperimentDriver
+    commit: 655c9b541c75060442180da3ebd5eae34fbc6690
