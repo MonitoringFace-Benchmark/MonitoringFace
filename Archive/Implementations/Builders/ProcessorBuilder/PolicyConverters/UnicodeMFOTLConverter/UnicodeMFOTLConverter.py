@@ -32,7 +32,7 @@ class UnicodeMFOTLConverter(PolicyConverterTemplate):
 
     def auto_convert(self, path_to_folder: str, input_file: str, path_to_output_folder: str, output_file: str,
                      source: InputOutputPolicyFormats, target: InputOutputPolicyFormats, params: Dict[str, Any]):
-        with open(f"{path_to_folder}/{input_file}", 'r') as input_file:
+        with open(f"{path_to_folder}/{input_file}", 'r', encoding="utf-8") as input_file:
             src_policy = input_file.read()
 
         unicode_to_mfotl = ((source == InputOutputPolicyFormats.UNICODE_MFOTL or source == InputOutputPolicyFormats.NEGATED_UNICODE_MFOTL)
@@ -47,7 +47,7 @@ class UnicodeMFOTLConverter(PolicyConverterTemplate):
                     src_policy = re.sub(bounded_pattern(unicode_symbol), string_symbol, src_policy)
                 else:
                     src_policy = re.sub(bounded_pattern(string_symbol), unicode_symbol, src_policy)
-            with open(f"{path_to_folder}/{output_file}", 'w') as f:
+            with open(f"{path_to_folder}/{output_file}", 'w', encoding="utf-8") as f:
                 f.write(src_policy)
         else:
             raise UnicodeMFOTLConverterException(f"Incompatible conversion from {source} to {target}")

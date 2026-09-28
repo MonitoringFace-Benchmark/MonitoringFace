@@ -4,7 +4,7 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison, Strength
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.OooVerdicts import OooVerdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
-from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTLeaf, PDTComplementSet, PDTSet, PDTNode, PropositionTree, PDTTree
+from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionTree import PDTLeaf, PDTComplementSet, PDTSet, PDTNode, PropositionTree, PDTTree, pdt_value
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Assignment import Assignment
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.Proposition import Proposition
@@ -221,7 +221,7 @@ def _pdt_subtree_recurse(vars_: List[str], assignments: List[Assignment]):
 
     value_to_assignments = {}
     for assignment in assignments:
-        val = assignment.retrieve_value(var_)
+        val = pdt_value(assignment.retrieve_value(var_))
         if val not in value_to_assignments:
             value_to_assignments[val] = []
         value_to_assignments[val].append(assignment)
