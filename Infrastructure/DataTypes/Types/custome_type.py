@@ -112,11 +112,14 @@ class FormatType(Enum):
 class ResponseMode(Enum):
     EVENT_COUNT = "event-count"
     CURRENT_TIMEPOINT = "current-timepoint"
+    PROCESS_STEP = "process-step"
 
     def to_string(self):
         if self == ResponseMode.EVENT_COUNT:
             return "event-count"
         elif self == ResponseMode.CURRENT_TIMEPOINT:
             return "current-timepoint"
+        elif self == ResponseMode.PROCESS_STEP:
+            return "process-step"
         else:
             raise ValueError(f"Unsupported ResponseMode value: {self}")
