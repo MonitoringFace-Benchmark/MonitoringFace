@@ -1,0 +1,12 @@
+experiments:
+  - path: Thesis/thesis_online_nokia_timelymon.yaml
+    enabled: true
+    description: "Nokia case Online TimelyMon"
+
+  - path: Thesis/thesis_online_nokia_monpoly_verimon.yaml
+    enabled: true
+    description: "Nokia case Online MonPoly and VeriMon"
+
+  - path: Thesis/thesis_online_nokia_whymon.yaml
+    enabled: true
+    description: "Nokia case Online WhyMon"

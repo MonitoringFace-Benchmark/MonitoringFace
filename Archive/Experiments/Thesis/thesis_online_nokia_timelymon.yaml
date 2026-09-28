@@ -1,0 +1,38 @@
+experiment_name: thesis_online_nokia_timelymon
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  mode: real-time
+  timestamp_units: milliseconds
+  accumulative_time: 220
+  maximum_latency: 50000
+
+monitors:
+  - identifier: TimelyMon
+    name: TimelyMon merged
+    branch: new_clean_up
+    commit: b58bcf2a358844aa0e7bdc024dc0fde938c1da51
+    params:
+      worker: 1
+      output_mode: 1
+      merged_connectives: true
+      OnlineExperimentContractTool:
+        format: csv
+        response_mode: event-count
+        input_aggregations: 1
+        output_collection_mode: before-delimiter
+        input_aggregation_pattern: ">W"
+
+tools_to_build:
+  - TimelyMon
+
+data_setup:
+  type: CaseStudy
+  name: NokiaCsvOnline
+
+components:
+  - identifier: NokiaCsvOnline
+    commit: ce2d423c78a22b7711827a3fa742c04bb38e39e1
+  - identifier: OnlineExperimentDriver
+    commit: 138801d3adad967e9bdd46751803857fe6017d03

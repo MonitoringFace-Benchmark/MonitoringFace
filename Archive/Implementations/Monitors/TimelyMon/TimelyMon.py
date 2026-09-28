@@ -59,6 +59,9 @@ class TimelyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
 
         if "relational_clean_up" in self.params:
             cmd += ["--relational-clean-up", str(self.params["relational_clean_up"])]
+
+        if self.params.get("merged_connectives", False):
+            cmd += ["--merged-connectives"]
         return cmd, None
 
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
@@ -85,6 +88,9 @@ class TimelyMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
 
         if "step" in self.params:
             cmd += ["--step", str(self.params["step"])]
+
+        if self.params.get("merged_connectives", False):
+            cmd += ["--merged-connectives"]
 
         cmd += ["-m", "1", "-l"]
         return cmd, None
