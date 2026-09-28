@@ -127,10 +127,11 @@ def validate_stream_contract(spec, tool_contract):
         if getattr(load_stream_processor(entry["identifier"]), "buffering", False)
     ]
     chain_accounting = getattr(tool_contract, "response_accounting", "lockstep") == "chain"
-    if buffering and tool_contract.response_mode != ResponseMode.EVENT_COUNT and not chain_accounting:
+    one_response_per_line = (ResponseMode.EVENT_COUNT, ResponseMode.PROCESS_STEP)
+    if buffering and tool_contract.response_mode not in one_response_per_line and not chain_accounting:
         raise YamlParserException(
             f"Buffering stream processors {buffering} at stage 'dynamic' require response_mode "
-            f"'event-count' (the driver's 1:1 response accounting) or "
+            f"'event-count' or 'process-step' (one tool response per delivered line) or "
             f"response_accounting 'chain'; got {tool_contract.response_mode}")
     if tool_contract.latency_marker:
         raise YamlParserException(
@@ -339,11 +340,15 @@ class YamlParser:
         fmt = FormatType.CSV if str(fmt_raw).lower() == "csv" else FormatType.LOG
 
         resp_raw = raw.pop("response_mode", None)
-        resp_l = str(resp_raw).lower()
-        if resp_l == "current-timepoint":
-            response_mode = ResponseMode.CURRENT_TIMEPOINT
-        else:
+        if resp_raw is None:
             response_mode = ResponseMode.EVENT_COUNT
+        else:
+            try:
+                response_mode = ResponseMode(str(resp_raw).lower())
+            except ValueError:
+                raise YamlParserException(
+                    f"Invalid response_mode {resp_raw!r}, expected one of "
+                    f"{[mode.value for mode in ResponseMode]}")
 
         output_collection = raw.pop("output_collection_mode", None)
         if output_collection is None:
