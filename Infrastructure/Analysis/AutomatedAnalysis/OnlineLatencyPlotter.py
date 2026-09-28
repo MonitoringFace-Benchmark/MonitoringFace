@@ -20,14 +20,37 @@ Result CSV path
     x-axis: step index (0-based); real-time position is unavailable from the
     CSV alone.
 
+Suite results folder
+    Reads the results folder of a suite run (one subfolder per experiment,
+    each with ``<experiment>_valid.csv`` / ``..._timeout_accumulative_latency.csv``
+    / ``..._timeout_maximum_latency.csv`` and a ``provenance`` folder).  Runs
+    of all experiments are pooled and grouped by the formula they ran, which
+    is read from the provenance of their setting.  One figure is written per
+    formula with every tool that ran it.  A figure config (dict, JSON string,
+    or JSON/YAML file) sets title, axis labels, legend, log scale, and so on
+    per figure, keyed by formula name (``"default"`` applies to all figures).
+
 API
 ---
     from Infrastructure.Analysis.AutomatedAnalysis.OnlineLatencyPlotter import (
         plot_latency_over_replay,   # driver-log path
         plot_latency_from_csv,      # result-CSV path
+        plot_suite,                 # suite results folder, one figure per formula
         parse_driver_log,
         parse_result_csv,
+        load_suite,
         LatencyReplaySummary,
+        FIGURE_DEFAULTS,            # every per-figure option and its default
+    )
+
+    # suite folder — one figure per formula, titles per figure
+    summaries = plot_suite(
+        "Infrastructure/results/thesis_online_nokia_suite_<timestamp>",
+        figure_config={
+            "default":        {"y_log": True, "legend_loc": "upper left"},
+            "formula_delete": {"title": "DELETE"},
+            "formula_select": {"title": "SELECT", "out": "select.svg"},
+        },
     )
 
     # driver log — measured wall-clock x-axis
@@ -56,6 +79,19 @@ CLI
 
     python -m Infrastructure.Analysis.AutomatedAnalysis.OnlineLatencyPlotter \\
         --csv /path/to/report/ [--y-log] [--out lat_csv.png]
+
+    python -m Infrastructure.Analysis.AutomatedAnalysis.OnlineLatencyPlotter \\
+        --suite Infrastructure/results/thesis_online_nokia_suite_<timestamp> \\
+        [--out-dir plots] [--format svg] \\
+        [--figure-config '{"default": {"y_log": true}, "formula_delete": {"title": "DELETE"}}']
+        [--figure-config figures.yaml]
+
+    --figure-config takes an inline JSON object or the path of a JSON/YAML file.
+    Keys are formula names (as the provenance names the policy file, without
+    extension), the setting block ("0", "1", ...), or "default". Values are
+    dicts of the options listed in FIGURE_DEFAULTS, e.g. title, xlabel,
+    ylabel, legend, legend_loc, y_log, y_unit, threshold_ms, window, colors,
+    out. Other command-line flags (--y-log, --y-unit, ...) fill "default".
 """
 from __future__ import annotations
 
@@ -75,7 +111,7 @@ matplotlib.use("Agg", force=False)   # headless-safe; never overrides a live bac
 import matplotlib.pyplot as plt
 
 import csv
-csv.field_size_limit(sys.maxsize)
+csv.field_size_limit(min(sys.maxsize, 2**31 - 1))   # sys.maxsize overflows a C long on Windows
 
 __all__ = [
     # data types
@@ -85,12 +121,17 @@ __all__ = [
     # parsing
     "parse_driver_log",
     "parse_result_csv",
+    "load_suite",
+    "formula_of_setting",
+    "load_figure_config",
     # plotting
     "plot_latency_over_replay",
     "plot_latency_from_csv",
+    "plot_suite",
     # constants
     "TS_UNIT_SECONDS",
     "Y_UNIT_FROM_NS",
+    "FIGURE_DEFAULTS",
     # CLI
     "main",
 ]
@@ -137,6 +178,53 @@ _CSV_FILES: List[Tuple[str, str]] = [
     ("timeout_accumulative_latency_details.csv", _STATUS_ATO),
     ("timeout_maximum_latency_details.csv",      _STATUS_MTO),
 ]
+# Suffixes of the files ResultAggregatorOnline.save writes into an experiment
+# folder: <experiment_name><suffix>
+_SUITE_SUFFIXES: List[Tuple[str, str]] = [
+    ("_valid.csv",                        _STATUS_OK),
+    ("_timeout_accumulative_latency.csv", _STATUS_ATO),
+    ("_timeout_maximum_latency.csv",      _STATUS_MTO),
+]
+
+# Default colour per tool; a figure config may override or extend it
+_SERIES_COLORS: Dict[str, str] = {
+    "WhyMon":    "tab:blue",
+    "TimelyMon": "tab:orange",
+    "MonPoly":   "tab:green",
+    "VeriMon":   "tab:red",
+    "EnfGuard":  "tab:purple",
+}
+
+#: Every option a figure config may set, with its default. "default" in a
+#: config applies to all figures; a formula's entry overrides it.
+FIGURE_DEFAULTS: Dict[str, object] = {
+    "title":           None,           # figure title; None for no title
+    "xlabel":          "Step index",
+    "ylabel":          None,           # None: "Per-step latency (<y_unit>)"
+    "y_unit":          "ms",           # one of Y_UNIT_FROM_NS
+    "y_log":           False,
+    "y_tick_format":   "auto",         # "auto": matplotlib's (10^k on a log axis); "plain": 0.1, 1, 10, ...
+    "ylim":            None,           # [low, high]; None for auto
+    "xlim":            None,           # [low, high]; None for [0, auto]
+    "threshold_ms":    None,           # horizontal dashed line, in ms
+    "drop_warmup":     0,              # steps dropped at the start of every run
+    "max_points":      400_000,        # downsampling cap per run
+    "window":          100,            # rolling-mean window in steps; 1 for raw
+    "linewidth":       1.5,
+    "alpha":           0.8,
+    "colors":          {},             # tool name -> matplotlib colour, on top of the defaults
+    "labels":          {},             # tool name -> legend label
+    "legend":          True,
+    "legend_loc":      "upper right",
+    "legend_fontsize": 16,
+    "fontsize":        20,             # axis label size
+    "title_fontsize":  20,
+    "tick_fontsize":   None,           # None keeps matplotlib's default
+    "figsize":         [12, 5],
+    "grid":            True,
+    "mark_timeouts":   True,           # "x" at the last step of a timed-out run
+    "out":             None,           # file name or path; None: <formula>.<format>
+}
 
 _TS_RE      = re.compile(r"ts\s*=\s*(\d+)")
 _ELAPSED_RE = re.compile(r"^\[Elapsed\]\s+(\d+)")
@@ -396,26 +484,147 @@ def parse_result_csv(source: CsvSource) -> List[RunSeries]:
     path = os.fspath(source)
     if os.path.isdir(path):
         series = []
-        for fname, status in _CSV_FILES:
-            full = os.path.join(path, fname)
-            if os.path.exists(full):
-                df = pd.read_csv(full)
-                print(f"DEBUG: Read {fname} — {len(df)} rows")
-                series.extend(_df_to_series(df, status))
+        for full, status in _discover_csvs(path):
+            series.extend(_df_to_series(pd.read_csv(full), status))
         return series
 
-    # Single CSV — infer status from filename.
+    df = pd.read_csv(path)
+    return _df_to_series(df, _status_of_filename(path))
+
+
+def _status_of_filename(path: str) -> str:
+    """Status group of a result CSV by its name (report names and suite suffixes)."""
     basename = os.path.basename(path).lower()
-    status = _STATUS_OK
     for fname, st in _CSV_FILES:
         if fname.lower() in basename or basename in fname.lower():
-            status = st
-            break
-    df = pd.read_csv(path)
-    print(f"DEBUG: Read CSV — {len(df)} rows before filtering")  # Add this
-    series = _df_to_series(df, status)
-    print(f"DEBUG: After _df_to_series — {len(series)} series")  # Add this
-    return series
+            return st
+    for suffix, st in _SUITE_SUFFIXES:
+        if basename.endswith(suffix):
+            return st
+    return _STATUS_OK
+
+
+def _discover_csvs(folder: str) -> List[Tuple[str, str]]:
+    """(path, status) of the result CSVs directly in ``folder``: the report files
+    of AnalysisOnline.save_report and the suffixed files of ResultAggregatorOnline."""
+    found: List[Tuple[str, str]] = []
+    for fname, status in _CSV_FILES:
+        full = os.path.join(folder, fname)
+        if os.path.exists(full):
+            found.append((full, status))
+    for entry in sorted(os.listdir(folder)):
+        for suffix, status in _SUITE_SUFFIXES:
+            if entry.endswith(suffix):
+                found.append((os.path.join(folder, entry), status))
+    return found
+
+
+# =========================================================================== #
+# Parsing — suite results folder
+# =========================================================================== #
+
+def _setting_block(setting: str) -> str:
+    """'1_0' -> '1': the setting without its trailing repeat index."""
+    parts = str(setting).split("_")
+    return "_".join(parts[:-1]) if len(parts) > 1 else parts[0]
+
+
+def formula_of_setting(experiment_dir: Union[str, "os.PathLike[str]"], setting: str) -> str:
+    """Name of the policy file a setting ran, from ``provenance/<block>/<tool>/provenance.json``.
+
+    Falls back to ``setting <block>`` when the experiment folder has no
+    provenance for the setting.
+    """
+    block = _setting_block(setting)
+    prov_dir = os.path.join(os.fspath(experiment_dir), "provenance", block)
+    if not os.path.isdir(prov_dir):
+        return f"setting {block}"
+    for tool in sorted(os.listdir(prov_dir)):
+        record = os.path.join(prov_dir, tool, "provenance.json")
+        if not os.path.exists(record):
+            continue
+        with open(record, "r", encoding="utf-8") as fh:
+            entries = json.load(fh).get("entries", [])
+        for entry in entries:
+            if entry.get("kind") != "policy":
+                continue
+            source = entry.get("source") or {}
+            policy = (source.get("file") if isinstance(source, dict) else None) or entry.get("as_seen_by_tool")
+            if policy:
+                return os.path.splitext(os.path.basename(str(policy)))[0]
+    return f"setting {block}"
+
+
+def load_suite(suite_dir: Union[str, "os.PathLike[str]"]) -> Dict[str, List[RunSeries]]:
+    """Runs of every experiment in a suite results folder, grouped by formula.
+
+    ``suite_dir`` is the results folder of a suite run (one subfolder per
+    experiment) or a single experiment folder.  Returns an ordered dict
+    ``formula name -> runs`` in the order of the settings; the runs of a
+    formula are sorted by tool name, then setting.
+    """
+    root = os.fspath(suite_dir)
+    if not os.path.isdir(root):
+        raise ValueError(f"{root}: not a folder")
+    experiments = [root] if _discover_csvs(root) else sorted(
+        os.path.join(root, d) for d in os.listdir(root)
+        if os.path.isdir(os.path.join(root, d)) and _discover_csvs(os.path.join(root, d))
+    )
+    if not experiments:
+        raise ValueError(f"{root}: no result CSVs found in the folder or its subfolders")
+
+    keyed: Dict[Tuple[int, str], List[RunSeries]] = {}
+    for exp in experiments:
+        for run in parse_result_csv(exp):
+            block = _setting_block(run.setting)
+            order = int(block) if block.isdigit() else sys.maxsize
+            key = (order, formula_of_setting(exp, run.setting))
+            keyed.setdefault(key, []).append(run)
+
+    grouped: Dict[str, List[RunSeries]] = {}
+    for (_, formula), runs in sorted(keyed.items(), key=lambda kv: kv[0]):
+        grouped.setdefault(formula, []).extend(sorted(runs, key=lambda r: (r.name, r.setting)))
+    return grouped
+
+
+def load_figure_config(spec) -> Dict[str, Dict[str, object]]:
+    """Figure config from a dict, an inline JSON string, or a JSON/YAML file path."""
+    if spec is None:
+        return {}
+    if isinstance(spec, dict):
+        config = spec
+    else:
+        text = str(spec).strip()
+        if os.path.exists(text):
+            with open(text, "r", encoding="utf-8") as fh:
+                if text.lower().endswith((".yaml", ".yml")):
+                    import yaml
+                    config = yaml.safe_load(fh)
+                else:
+                    config = json.load(fh)
+        else:
+            try:
+                config = json.loads(text)
+            except ValueError as exc:
+                raise ValueError(f"figure config is neither a file nor valid JSON: {exc}") from exc
+    if not isinstance(config, dict):
+        raise ValueError("figure config must be a mapping of figure name -> options")
+    unknown = {k for opts in config.values() if isinstance(opts, dict) for k in opts} - set(FIGURE_DEFAULTS)
+    if unknown:
+        raise ValueError(f"unknown figure option(s): {', '.join(sorted(unknown))}; "
+                         f"known: {', '.join(FIGURE_DEFAULTS)}")
+    return {str(k): dict(v or {}) for k, v in config.items()}
+
+
+def _figure_options(config: Dict[str, Dict[str, object]], *names: str,
+                    overrides: Optional[Dict[str, object]] = None) -> Dict[str, object]:
+    """FIGURE_DEFAULTS <- overrides <- config['default'] <- config[name] for each name."""
+    opts = dict(FIGURE_DEFAULTS)
+    opts.update({k: v for k, v in (overrides or {}).items() if v is not None})
+    opts.update(config.get("default", {}))
+    for name in names:
+        opts.update(config.get(name, {}))
+    return opts
 
 
 # =========================================================================== #
@@ -439,11 +648,13 @@ def _downsample(x: np.ndarray, y: np.ndarray, max_points: int):
 
 
 def _save_fig(fig, out: Optional[Union[str, "os.PathLike[str]"]]):
-    parent = os.path.dirname(os.fspath(out)) if out else ""
+    """Save by the extension of ``out`` (svg when it has none), tightly cropped."""
+    out = os.fspath(out)
+    parent = os.path.dirname(out)
     if parent:
         os.makedirs(parent, exist_ok=True)
-    #fig.savefig(os.fspath(out), dpi=150)
-    fig.savefig(os.fspath(out), format='svg', bbox_inches='tight')
+    ext = os.path.splitext(out)[1].lstrip(".").lower()
+    fig.savefig(out, format=ext or "svg", dpi=150, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -568,128 +779,107 @@ def plot_latency_from_csv(
         render: bool = True,
         title: Optional[str] = None,
 ) -> LatencyReplaySummary:
-    if y_unit not in Y_UNIT_FROM_NS:
-        raise ValueError(f"y_unit must be one of {sorted(Y_UNIT_FROM_NS)}")
-
+    """Plot the per-step latency of every run in the CSV source on one figure."""
     all_series = parse_result_csv(source)
-
-    print(f"DEBUG: parse_result_csv returned {len(all_series)} series")
-    for i, s in enumerate(all_series):
-        print(f"  Series {i}: name={s.name}, status={s.status}, steps={s.steps}, "
-              f"latency_ns size={s.latency_ns.size}")
-
     if not all_series:
         raise ValueError("no parseable run series found in source")
+    opts = _figure_options({}, overrides={
+        "y_unit": y_unit, "y_log": y_log, "threshold_ms": threshold_ms,
+        "drop_warmup": drop_warmup, "max_points": max_points, "title": title,
+    })
+    return _render_series(all_series, out if render else None, opts)
 
+
+def _render_series(
+    all_series: List[RunSeries],
+    out: Optional[Union[str, "os.PathLike[str]"]],
+    opts: Dict[str, object],
+) -> LatencyReplaySummary:
+    """Draw the rolling-mean latency of every run over its step index.
+
+    ``opts`` holds every key of :data:`FIGURE_DEFAULTS`.  With ``out`` None,
+    only the summary is computed.
+    """
+    y_unit = str(opts["y_unit"])
+    if y_unit not in Y_UNIT_FROM_NS:
+        raise ValueError(f"y_unit must be one of {sorted(Y_UNIT_FROM_NS)}")
     yfac = Y_UNIT_FROM_NS[y_unit]
+    drop_warmup = int(opts["drop_warmup"] or 0)
 
-    # Aggregate stats across ALL series for the summary (ignoring NaNs)
-    all_lat_ms: List[float] = []
-    for s in all_series:
-        lat = s.latency_ns[drop_warmup:] if drop_warmup else s.latency_ns
-        lat_clean = lat[~np.isnan(lat)]
-        all_lat_ms.extend((lat_clean / 1e6).tolist())
+    def kept(run: RunSeries) -> np.ndarray:
+        return run.latency_ns[drop_warmup:] if drop_warmup < run.steps else run.latency_ns
 
-    lat_ms_arr = np.asarray(all_lat_ms, dtype=np.float64)
-    if lat_ms_arr.size > 0:
-        p50 = float(np.percentile(lat_ms_arr, 50))
-        p99 = float(np.percentile(lat_ms_arr, 99))
-        ymax = float(lat_ms_arr.max())
+    all_lat_ms = np.concatenate([kept(s)[~np.isnan(kept(s))] for s in all_series] or [np.array([])]) / 1e6
+    if all_lat_ms.size:
+        p50, p99, ymax = (float(v) for v in (np.percentile(all_lat_ms, 50), np.percentile(all_lat_ms, 99),
+                                             all_lat_ms.max()))
     else:
         p50 = p99 = ymax = 0.0
-
     total_steps = sum(s.steps for s in all_series)
-    span_steps = max(
-        (s.latency_ns[drop_warmup:].size if drop_warmup < s.steps else 0)
-        for s in all_series
-    )
-
+    span_steps = max((kept(s).size for s in all_series), default=0)
     timed_out = any(s.status in (_STATUS_ATO, _STATUS_MTO) for s in all_series)
 
     out_path: Optional[str] = None
-    if render:
-        if out is None:
-            raise ValueError("out must be set when render=True")
-
-        fig, ax = plt.subplots(figsize=(12, 5))
-        _legend_seen: set = set()
-
-        _SERIES_COLORS = {
-            "WhyMon": "tab:blue",
-            "TimelyMon": "tab:orange",
-            "MonPoly": "tab:green",
-            "VeriMon": "tab:red",
-        }
-
+    if out is not None:
+        colors = dict(_SERIES_COLORS, **(opts["colors"] or {}))
+        labels = opts["labels"] or {}
+        window = max(1, int(opts["window"] or 1))
+        fig, ax = plt.subplots(figsize=tuple(opts["figsize"]))
+        seen: set = set()
         for run in all_series:
-            lat = run.latency_ns[drop_warmup:] if drop_warmup < run.steps else run.latency_ns
-            if lat.size == 0:
-                continue
-
-            # Original unfiltered coordinate scale
+            lat = kept(run)
             x = np.arange(lat.size, dtype=np.float64)
             y = lat * yfac
-
-            # Mask out NaNs so that _downsample respects valid data, index stays correct
             mask = ~np.isnan(y)
-            x_clean, y_clean = x[mask], y[mask]
-
-            if y_clean.size == 0:
+            x, y = x[mask], y[mask]
+            if y.size == 0:
                 continue
+            xs, ys = _downsample(x, y, int(opts["max_points"] or 0))
+            if window > 1:
+                ys = pd.Series(ys).rolling(window=window, center=True, min_periods=1).mean().to_numpy()
+            color = colors.get(run.name, "tab:gray")
+            label = labels.get(run.name, run.name) if run.name not in seen else None
+            seen.add(run.name)
+            ax.plot(xs, ys, linewidth=float(opts["linewidth"]), color=color, label=label,
+                    alpha=float(opts["alpha"]))
+            if opts["mark_timeouts"] and run.status in (_STATUS_ATO, _STATUS_MTO):
+                ax.plot(xs[-1], ys[-1], marker="x", markersize=10, markeredgewidth=2, color=color,
+                        linestyle="none", label="timeout" if "timeout" not in seen else None)
+                seen.add("timeout")
 
-            print(f"DEBUG: Plotting {run.name} — {run.status} — {y_clean.size} points")  # Add this
-
-            xs, ys = _downsample(x_clean, y_clean, max_points)
-            print(f"DEBUG:   After downsample: {xs.size} points")
-            color = _SERIES_COLORS.get(run.name, "tab:gray")
-            legend_key = run.name
-            label_str = (
-                f"{run.name}"
-                if legend_key not in _legend_seen
-                else None
-            )
-            _legend_seen.add(legend_key)
-            # Instead of scatter, compute rolling average and plot as line
-            window_size = 100  # adjust based on data density
-            rolling_avg = pd.Series(ys).rolling(window=window_size, center=True).mean()
-            ax.plot(xs, rolling_avg, linewidth=1.5, color=color, label=label_str, alpha=0.8)
-
-            #ax.scatter(xs, ys, s=3, alpha=0.45, edgecolors="none", rasterized=True, color=color, label=label_str)
-
-        print(f"DEBUG: Legend entries: {len(_legend_seen)}")
-        for i, run in enumerate(all_series):
-            lat = run.latency_ns[drop_warmup:] if drop_warmup < run.steps else run.latency_ns
-            lat_clean = lat[~np.isnan(lat)]
-            if lat_clean.size > 0:
-                print(f"DEBUG: Series {i} ({run.name}): min={lat_clean.min():.2f}ns, "
-                      f"max={lat_clean.max():.2f}ns, mean={lat_clean.mean():.2f}ns")
-
-        if y_log:
+        if opts["y_log"]:
             ax.set_yscale("log")
-        if threshold_ms is not None:
-            ax.axhline(threshold_ms * 1e6 * yfac, color="black", ls="--", lw=1,
-                       label=f"threshold {threshold_ms:g} ms")
-
-        ax.set_xlim(left=0)
-        ax.set_xlabel("Step index", fontsize=20)
-        ax.set_ylabel(f"Per-step latency ({y_unit})", fontsize=20)
-
-        status_counts = {st: sum(1 for s in all_series if s.status == st)
-                         for st in (_STATUS_OK, _STATUS_ATO, _STATUS_MTO)}
-        status_summary = ", ".join(
-            f"{_STATUS_LABEL[st]}={n}" for st, n in status_counts.items() if n > 0
-        )
-
-        #ax.set_title(title or (
-         #   f"Per-step latency — merged results ({status_summary})\n"
-         #   f"{total_steps} total steps, "
-         #   f"p50 {p50:.3f}ms / p99 {p99:.3f}ms / max {ymax:.3f}ms"
-        #))
-        #ax.set_title("a = 1000")
-        ax.grid(True, which="both", alpha=0.3)
-        handles, labels = ax.get_legend_handles_labels()
-        #if handles:
-        #    ax.legend(handles, labels, loc="upper right", fontsize=20, markerscale=3)
+        if opts["y_tick_format"] == "plain":
+            from matplotlib.ticker import FuncFormatter, NullFormatter
+            ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+            ax.yaxis.set_minor_formatter(NullFormatter())
+        elif opts["y_tick_format"] != "auto":
+            raise ValueError(f"y_tick_format must be 'auto' or 'plain', got {opts['y_tick_format']!r}")
+        if opts["threshold_ms"] is not None:
+            thr = float(opts["threshold_ms"])
+            ax.axhline(thr * 1e6 * yfac, color="black", ls="--", lw=1, label=f"threshold {thr:g} ms")
+        if opts["xlim"]:
+            ax.set_xlim(*opts["xlim"])
+        else:
+            ax.set_xlim(left=0)
+        if opts["ylim"]:
+            ax.set_ylim(*opts["ylim"])
+        fontsize = opts["fontsize"]
+        ax.set_xlabel(str(opts["xlabel"]), fontsize=fontsize)
+        ax.set_ylabel(opts["ylabel"] if opts["ylabel"] is not None else f"Per-step latency ({y_unit})",
+                      fontsize=fontsize)
+        if opts["title"]:
+            ax.set_title(str(opts["title"]), fontsize=opts["title_fontsize"])
+        if opts["tick_fontsize"]:
+            ax.tick_params(labelsize=opts["tick_fontsize"])
+        if opts["grid"]:
+            ax.grid(True, which="both", alpha=0.3)
+        handles, names = ax.get_legend_handles_labels()
+        if opts["legend"] and handles:
+            # tools first, then the timeout marker and the threshold line
+            order = sorted(range(len(names)), key=lambda i: names[i] == "timeout" or names[i].startswith("threshold"))
+            ax.legend([handles[i] for i in order], [names[i] for i in order],
+                      loc=str(opts["legend_loc"]), fontsize=opts["legend_fontsize"])
         fig.tight_layout()
         out_path = os.fspath(out)
         _save_fig(fig, out_path)
@@ -706,6 +896,55 @@ def plot_latency_from_csv(
         timeout_message=None,
         footers={},
     )
+
+
+# =========================================================================== #
+# Plot — suite results folder (one figure per formula)
+# =========================================================================== #
+
+def plot_suite(
+    suite_dir: Union[str, "os.PathLike[str]"],
+    out_dir: Optional[Union[str, "os.PathLike[str]"]] = None,
+    *,
+    figure_config=None,
+    fmt: str = "svg",
+    render: bool = True,
+    **common,
+) -> Dict[str, LatencyReplaySummary]:
+    """One latency figure per formula of a suite run, every tool on the same axes.
+
+    Parameters
+    ----------
+    suite_dir:
+        Results folder of the suite run (or one experiment folder).
+    out_dir:
+        Where the figures go; default ``<suite_dir>/latency_plots``.
+    figure_config:
+        Dict, JSON string, or JSON/YAML file: ``{"default": {...}, "<formula>": {...}}``
+        with options from :data:`FIGURE_DEFAULTS`.  Figures are keyed by the
+        formula name from the provenance; the setting block ("0", "1", ...)
+        works as a key too.
+    fmt:
+        Image format for figures whose config sets no ``out``.
+    common:
+        Options from :data:`FIGURE_DEFAULTS` applied below ``figure_config``.
+
+    Returns ``formula name -> summary`` in setting order.
+    """
+    config = load_figure_config(figure_config)
+    grouped = load_suite(suite_dir)
+    out_root = os.fspath(out_dir) if out_dir else os.path.join(os.fspath(suite_dir), "latency_plots")
+
+    summaries: Dict[str, LatencyReplaySummary] = {}
+    for formula, runs in grouped.items():
+        blocks = sorted({_setting_block(r.setting) for r in runs})
+        opts = _figure_options(config, *blocks, formula, overrides=common)
+        out = None
+        if render:
+            name = opts["out"] or f"{formula}.{fmt}"
+            out = name if os.path.isabs(str(name)) else os.path.join(out_root, str(name))
+        summaries[formula] = _render_series(runs, out, opts)
+    return summaries
 
 
 # =========================================================================== #
@@ -728,6 +967,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     src.add_argument("--csv", metavar="PATH",
                      help="result CSV file or folder produced by AnalysisOnline "
                           "(CSV mode — merges all status groups)")
+    src.add_argument("--suite", metavar="DIR",
+                     help="results folder of a suite run: runs of all experiments are "
+                          "grouped by formula and one figure is written per formula")
 
     ap.add_argument("--x-source", choices=["ts", "wall"], default="ts",
                     help="(driver-log only) x-axis: timestamps or wall-clock offset")
@@ -741,9 +983,27 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--out", default=None,
                     help="output image path (default: latency_over_replay.png "
                          "or latency_from_csv.png)")
+    ap.add_argument("--out-dir", default=None,
+                    help="(suite only) folder for the figures (default: <suite>/latency_plots)")
+    ap.add_argument("--format", default="svg",
+                    help="(suite only) image format of figures without an 'out' in the config")
+    ap.add_argument("--figure-config", metavar="JSON|FILE", default=None,
+                    help="(suite only) per-figure options: inline JSON object or JSON/YAML file, "
+                         "keyed by formula name or 'default'; see FIGURE_DEFAULTS")
     args = ap.parse_args(argv)
 
     try:
+        if args.suite:
+            summaries = plot_suite(
+                args.suite, args.out_dir, figure_config=args.figure_config, fmt=args.format,
+                y_unit=args.y_unit, y_log=args.y_log or None, threshold_ms=args.threshold_ms,
+                drop_warmup=args.drop_warmup, max_points=args.max_points,
+            )
+            for formula, summary in summaries.items():
+                print(f"{formula:<24} steps {summary.steps:>8}  p50 {summary.p50_ms:9.3f} ms  "
+                      f"p99 {summary.p99_ms:9.3f} ms  max {summary.max_ms:9.3f} ms"
+                      f"{'  TIMEOUT' if summary.timed_out else ''}  -> {summary.out_path}")
+            return 0
         if args.csv:
             out = args.out or "latency_from_csv.png"
             summary = plot_latency_from_csv(

@@ -10,7 +10,7 @@ OnlineExperimentContractGeneral:
 
 monitors:
   - identifier: TimelyMon
-    name: TimelyMon merged
+    name: TimelyMon
     branch: new_clean_up
     commit: b58bcf2a358844aa0e7bdc024dc0fde938c1da51
     params:
