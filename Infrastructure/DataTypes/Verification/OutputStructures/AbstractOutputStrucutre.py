@@ -34,3 +34,17 @@ class AbstractOutputStructure(ABC):
                 for value in values:
                     distinct.add((tp, str(value)))
         return total, len(distinct)
+
+    def dropped_counts(self) -> Dict[str, int]:
+        """reason -> number of tool output lines a parser deliberately left
+        out of the structure (a verdict past the trace end, a re-emitted
+        tuple, ...). They are not in `output_counts`, so this is the only
+        record that the tool printed more than the structure holds. Empty
+        for parsers that keep everything."""
+        return {}
+
+    def dropped_summary(self) -> Optional[str]:
+        """`reason=count;reason=count` over the non-zero counts, None when
+        nothing was dropped; one cell in the results table."""
+        parts = [f"{reason}={count}" for reason, count in sorted(self.dropped_counts().items()) if count]
+        return ";".join(parts) if parts else None

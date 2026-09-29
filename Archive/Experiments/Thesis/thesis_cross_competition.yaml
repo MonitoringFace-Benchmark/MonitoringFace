@@ -46,6 +46,10 @@ monitors:
     name: StaticMon
     branch: master
     commit: 70accf73fdd2da4db9b3adcaf1c2ae0bcb1a1b36
+  - identifier: OOOMon
+    name: OOOMon
+    branch: ooomon_rework
+    commit: 6218df6528f36ba24416ec9bd7066512ad1b6d27
 
 # Oracles configuration (optional)
 oracles:
@@ -95,16 +99,17 @@ experiment_type: Signature  # Pattern, Signature, or CaseStudy
 
 # Tools to build and run (list of monitor names)
 tools_to_build:
-  - TimelyMon 1
-  - TimelyMon 6
-  - VeriMon
-  - MonPoly
-  - WhyMon
-  - DejaVu
-  - EnfGuard
-  - TeSSLa
-  - TeSSLa Rust
-  - StaticMon
+  #- TimelyMon 1
+  #- TimelyMon 6
+  #- VeriMon
+  #- MonPoly
+  #- WhyMon
+  #- DejaVu
+  #- EnfGuard
+  #- TeSSLa
+  #- TeSSLa Rust
+  #- StaticMon
+  - OOOMon
 
 # Oracle to use (optional)
 oracle:
