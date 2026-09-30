@@ -45,6 +45,7 @@ monitors:
 
 tools_to_build:
   - TimelyMon
+  - TimelyMon w2
 
 data_setup:
   type: CaseStudy
