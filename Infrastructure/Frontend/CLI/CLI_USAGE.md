@@ -224,13 +224,24 @@ repeats: 3                          # repetitions per experiment (default 1)
 
 #### `seeds` (optional — reproducibility)
 
-Fix the generator seeds per synthetic setting. Each key is the stringified setting
-tuple `[num_operators, num_fvs, num_setting]` (omit `num_fvs` for generators without
-free variables); each value is `[policy_seed, trace_seed]`.
+Fix the generator seeds per synthetic setting. Each value is `[trace_seed, policy_seed]`:
+the first seeds the data generator (the trace), the second the policy generator (the
+formula). Each key is a stringified setting tuple of one of three shapes:
+
+| Key | Applies to |
+|-----|------------|
+| `[num_operators, num_fvs, num_setting, size]` | one data-set size of a setting; takes precedence |
+| `[num_operators, num_fvs, num_setting]` | every data-set size of a setting |
+| `[num_operators, num_setting, size]` | one data-set size, without `num_fvs` |
+
+`num_fvs` defaults to `[0]` when `synthetic_config` does not list it, so a generator
+without free variables takes keys like `'[5, 0, 0]'`. A key of any other shape, such as
+`'[5, 0]'`, matches no setting: the build prints a warning and falls back to the
+experiment-level seeds.
 
 ```yaml
 seeds:
-  '[5, 2, 0]': [314159265, 87006]
+  '[5, 2, 0]': [314159265, 87006]   # [trace_seed, policy_seed]
   '[5, 2, 1]': [314159265, 53339]
 ```
 
