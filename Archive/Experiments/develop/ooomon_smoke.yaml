@@ -2,7 +2,7 @@
 #
 # OOOMon is built from git.ku.dk/krq770/formalized_streaming_monitor; the
 # branch below is the source of truth (the Dockerfiles default to
-# ooomon_rework as well) -- switching to main/a commit later is this one line.
+# main as well) -- switching to another branch/a commit is this one line.
 #
 # Policies must be in the "ooo-fragment" format (fragment-direct
 # s-expressions, see formalized_streaming_monitor/frontend/README.md); traces
@@ -15,7 +15,7 @@ experiment_name: ooomon_smoke
 monitors:
   - identifier: OOOMon
     name: OOOMon
-    branch: ooomon_rework
+    branch: main
   - identifier: TimelyMon
     name: TimelyMon
     branch: development

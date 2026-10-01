@@ -4,8 +4,6 @@
 # time-points, so no tp-interval lane. Input is aggregated per time-point
 # (a batch ends at its >WATERMARK line), giving one round per time-point like
 # the MonPoly/VeriMon lanes of thesis_ahead_motivation_monpoly.yaml.
-# The same build runs with 1 and 2 workers to show how parallelism affects
-# the per-step latency; the lanes differ only in `worker`.
 
 experiment_name: thesis_ahead_motivation_timely
 runtime_setting: online
@@ -21,21 +19,9 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon
     branch: development
-    commit: 804a2fbaca5380814d3129aedee2c56119dc02aa
+    commit: 8c11b39fb2d52e38155f46c20040828b9c07aac5
     params:
       worker: 1
-      output_mode: 1
-      OnlineExperimentContractTool:
-        format: csv
-        response_mode: event-count
-        output_collection_mode: before-delimiter
-        input_aggregation_pattern: ">W"
-  - identifier: TimelyMon
-    name: TimelyMon w2
-    branch: development
-    commit: 804a2fbaca5380814d3129aedee2c56119dc02aa
-    params:
-      worker: 2
       output_mode: 1
       OnlineExperimentContractTool:
         format: csv
@@ -45,7 +31,6 @@ monitors:
 
 tools_to_build:
   - TimelyMon
-  - TimelyMon w2
 
 data_setup:
   type: CaseStudy

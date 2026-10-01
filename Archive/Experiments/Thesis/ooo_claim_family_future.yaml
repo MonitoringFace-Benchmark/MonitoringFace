@@ -51,7 +51,7 @@ monitors:
         params: *disorder
   - identifier: OOOMon
     name: OOOMon
-    branch: ooomon_rework
+    branch: main
     commit: 6218df6528f36ba24416ec9bd7066512ad1b6d27
     stream_pipeline:
       - identifier: Disorderer
