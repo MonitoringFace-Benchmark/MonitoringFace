@@ -1,0 +1,188 @@
+# Thesis evaluation, development-support use case 2c: REGRESSION TESTING of the
+# clean-up redesign. Two pinned TimelyMon states on the development branch:
+#
+#   old  b09cd68c  development before the clean-up merge (statistics-trigger
+#                  clean-up: per-key RangeStats, dynamic fraction-outdated
+#                  threshold; no timestamp-history pruning)
+#   new  8c11b39f  development after it (due points per key, timestamp-history
+#                  pruning in every temporal family, the [a,*) maturity index
+#                  and dominance, the anti-join park index, capability-free
+#                  notifications; merge 63b0dd83, insert-walk fix 6e7794e4,
+#                  projection and merged-join due points 544a8553 / 02fd0419)
+#
+# Both commits are on git.ku.dk (origin/development), which the TimelyMon image
+# clones, so both lanes build. b09cd68c is the merge's first parent: the diff
+# is the clean-up line plus the two quantifier commits.
+#
+# FORMULAS (ImmediatePolicyContract, one per setting): one or two per
+# clean-up mechanism, fixed before any run, not tuned on results:
+#   bounded [a,b]   f00-f10: SINCE [0,b] and [a,b], NOT SINCE, UNTIL [0,b] and
+#                   [a,b], NOT UNTIL, ONCE, EVENTUALLY, CNT over SINCE and over
+#                   ONCE, and a SINCE whose key carries many tuples (f10)
+#   [0,*)           f11-f12: SINCE, UNTIL
+#   [a,*), a > 0    f13-f16: SINCE, ONCE, NOT SINCE, EVENTUALLY
+#   one step        f17: PREVIOUS
+#   relational      f18-f19: anti-join, equal-attribute join
+# Every formula except f10 has the same signature, so with one trace seed they
+# all read the same trace at a given size.
+# Left out: NOT UNTIL with an unbounded window. The old state panics on it
+# (pre-existing capability bug, fixed on the clean-up line by 30762474), which
+# would measure a crash, not clean-up.
+#
+# DATA: SignatureGenerator, 10 events per time point, ts = tp. A value is fresh
+# with probability 0.1, else drawn from the 100 most recent values: almost
+# every (x0,x1) tuple is new, about ten keys appear per time point and each
+# dies after some tens of time points (key churn). watermarks: true writes
+# `>WATERMARK tp<` after every time point (the layout of TimelyMon's own traces;
+# a watermark finalizes the time points below it), so TimelyMon advances its
+# frontier once per time point, as it does online; without watermarks a file
+# advances once per 1000-event step and the old trigger's per-advance walk
+# barely shows.
+#
+# LANES: old and new, 1 worker, in order. output_mode 3 makes TimelyMon
+# disregard its verdicts: under churn the [a,*) unary forms (f14-f16) emit
+# O(keys x time points) verdicts, which would swamp stdout and the framework's
+# verdict parser. The lanes measure runtime and peak memory only.
+# Not covered: out-of-order delivery. The OutOfOrderConverter only re-inserts
+# watermarks a trace already has, in O(events x watermarks); TimelyMon's own
+# online campaigns (stdin, four delivery orders) cover it.
+#
+# CALIBRATION (disclosed; it set the sizes and the cap, nothing else): proxy
+# builds d4a8d3fd (old line) and 6e7794e4 (new line), this data at 5K-20K time
+# points, one run each. f00: old 1.1 / 20 / 214 s at 5K / 10K / 20K, new 0.19 /
+# 0.35 / 0.66 s. f05: old 47 s at 5K, past 300 s at 20K, new 0.25-1.0 s. f18:
+# old 1.5 / 6.6 / 29 s and 28 -> 86 MB, new 0.13-0.49 s and 5 MB. f15: old 66 s,
+# new 21 s at 5K.
+#
+# EXPECTED (stated before any run of the pinned commits):
+#   - new is about linear in size on f00-f13, f16-f19;
+#   - old is at least quadratic in time and grows in memory on the SINCE and
+#     UNTIL families, their aggregations and the joins, and hits the cap at
+#     8K-16K on some of them (TIMEOUT rows are results);
+#   - f14-f15 are output-bound in both lanes: ONCE [2,*) and NOT SINCE [2,*)
+#     stay true at every later time point for every key that saw a beta, so
+#     both builds do O(keys x time points) work; clean-up cannot remove that;
+#   - f17 (PREVIOUS) keeps its clean-up; it gains from the capability-free
+#     notifications, which matter most with a file input.
+#
+# CORRECTNESS is not checked here (verdicts are disregarded). TimelyMon's own
+# VeriMon lanes cover it (full gate on the merge: 48,484 cells, 0 failures).
+# For an output cross-check in MonitoringFace, copy this file with
+# output_mode 1, keep f00-f13 and f16-f19, sizes [500, 1000], and compare
+# distinct_outputs per Setting across the lanes: clean-up does not change
+# verdicts, so they must agree.
+#
+# RUN (from the repository root; Docker Desktop must be running; about 1.5 h):
+#   PYTHONPATH=. Infrastructure/environment/venv/bin/python Infrastructure/main.py \
+#     Thesis/thesis_regression_clean_up.yaml
+# Results: Infrastructure/results/regression_clean_up_<timestamp>/
+# regression_clean_up_valid.csv, one row per lane and Setting
+# (<ops>_<fvs>_<formula index>_<size>_<repeat>) with runtime, wall_time,
+# max_mem (KB) and cpu. --dry-run builds the tool images too.
+
+experiment_name: regression_clean_up
+
+monitors:
+  - identifier: TimelyMon
+    name: TM old clean-up
+    branch: development
+    commit: b09cd68ce0b0417449330014766a1fdb24c8b87c
+    params: &lane
+      worker: 1
+      output_mode: 3
+  - identifier: TimelyMon
+    name: TM new clean-up
+    branch: development
+    commit: 8c11b39fb2d52e38155f46c20040828b9c07aac5
+    params:
+      <<: *lane
+
+runtime_constraints:
+  upper_bound: 300
+
+# trace_length is overridden per cell by num_data_set_sizes (time points).
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 1000
+    event_rate: 10
+    fresh_value_rate: 0.1
+    sample_queue: 100
+    watermarks: true
+
+# "<signature>; <formula>": the signature ends at the first ';' (an
+# aggregation's own ';' stays in the formula). Setting k runs formula k
+# (policy seed k, see seeds).
+policy_setup:
+  type: ImmediatePolicyContract
+  ImmediatePolicyContract:
+    format: MFOTL
+    delimiter: ";"
+    f00_since_0_10:       "A(x0:int,x1:int)\nB(x0:int,x1:int); A(x0,x1) SINCE [0,10] B(x0,x1)"
+    f01_since_2_10:       "A(x0:int,x1:int)\nB(x0:int,x1:int); A(x0,x1) SINCE [2,10] B(x0,x1)"
+    f02_negsince_0_10:    "A(x0:int,x1:int)\nB(x0:int,x1:int); (NOT A(x0,x1)) SINCE [0,10] B(x0,x1)"
+    f03_until_0_10:       "A(x0:int,x1:int)\nB(x0:int,x1:int); A(x0,x1) UNTIL [0,10] B(x0,x1)"
+    f04_until_2_10:       "A(x0:int,x1:int)\nB(x0:int,x1:int); A(x0,x1) UNTIL [2,10] B(x0,x1)"
+    f05_neguntil_0_10:    "A(x0:int,x1:int)\nB(x0:int,x1:int); (NOT A(x0,x1)) UNTIL [0,10] B(x0,x1)"
+    f06_once_0_10:        "A(x0:int,x1:int)\nB(x0:int,x1:int); ONCE [0,10] A(x0,x1)"
+    f07_eventually_0_10:  "A(x0:int,x1:int)\nB(x0:int,x1:int); EVENTUALLY [0,10] A(x0,x1)"
+    f08_cnt_since_0_10:   "A(x0:int,x1:int)\nB(x0:int,x1:int); c <- CNT x0; x1 (A(x0,x1) SINCE [0,10] B(x0,x1))"
+    f09_cnt_once_0_10:    "A(x0:int,x1:int)\nB(x0:int,x1:int); c <- CNT x0; x1 ONCE [0,10] A(x0,x1)"
+    f10_since_key_0_10:   "A(x0:int)\nB(x0:int,x1:int); A(x0) SINCE [0,10] B(x0,x1)"
+    f11_since_0_inf:      "A(x0:int,x1:int)\nB(x0:int,x1:int); A(x0,x1) SINCE [0,*) B(x0,x1)"
+    f12_until_0_inf:      "A(x0:int,x1:int)\nB(x0:int,x1:int); A(x0,x1) UNTIL [0,*) B(x0,x1)"
+    f13_since_2_inf:      "A(x0:int,x1:int)\nB(x0:int,x1:int); A(x0,x1) SINCE [2,*) B(x0,x1)"
+    f14_once_2_inf:       "A(x0:int,x1:int)\nB(x0:int,x1:int); ONCE [2,*) A(x0,x1)"
+    f15_negsince_2_inf:   "A(x0:int,x1:int)\nB(x0:int,x1:int); (NOT A(x0,x1)) SINCE [2,*) B(x0,x1)"
+    f16_eventually_2_inf: "A(x0:int,x1:int)\nB(x0:int,x1:int); EVENTUALLY [2,*) A(x0,x1)"
+    f17_prev_0_3:         "A(x0:int,x1:int)\nB(x0:int,x1:int); PREVIOUS [0,3] A(x0,x1)"
+    f18_antijoin:         "A(x0:int,x1:int)\nB(x0:int,x1:int); A(x0,x1) AND NOT B(x0,x1)"
+    f19_join_equal:       "A(x0:int,x1:int)\nB(x0:int,x1:int); A(x0,x1) AND B(x0,x1)"
+
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: ImmediatePolicyGenerator
+  experiment:
+    num_operators: [1]
+    num_fvs: [0]
+    num_setting: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    num_data_set_sizes: [1000, 2000, 4000, 8000, 16000]
+
+experiment_type: Signature
+
+tools_to_build:
+  - TM old clean-up
+  - TM new clean-up
+
+oracle:
+  enabled: false
+
+# '[num_operators, num_fvs, num_setting]': [trace seed, policy seed]. One trace
+# seed for every setting; the policy seed k selects formula k (seed mod 20).
+seeds:
+  '[1, 0, 0]': [314159265, 0]
+  '[1, 0, 1]': [314159265, 1]
+  '[1, 0, 2]': [314159265, 2]
+  '[1, 0, 3]': [314159265, 3]
+  '[1, 0, 4]': [314159265, 4]
+  '[1, 0, 5]': [314159265, 5]
+  '[1, 0, 6]': [314159265, 6]
+  '[1, 0, 7]': [314159265, 7]
+  '[1, 0, 8]': [314159265, 8]
+  '[1, 0, 9]': [314159265, 9]
+  '[1, 0, 10]': [314159265, 10]
+  '[1, 0, 11]': [314159265, 11]
+  '[1, 0, 12]': [314159265, 12]
+  '[1, 0, 13]': [314159265, 13]
+  '[1, 0, 14]': [314159265, 14]
+  '[1, 0, 15]': [314159265, 15]
+  '[1, 0, 16]': [314159265, 16]
+  '[1, 0, 17]': [314159265, 17]
+  '[1, 0, 18]': [314159265, 18]
+  '[1, 0, 19]': [314159265, 19]
+
+components:
+  - identifier: SignatureGenerator
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
