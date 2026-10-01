@@ -3,6 +3,7 @@ from typing import List
 from Archive.Implementations.Builders.ProcessorBuilder.DataGenerators.SignatureGenerator.SignatureContract import \
     signature_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.WatermarkInfusion import infuse_watermarks
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.constants import COMMAND_KEY, ENTRYPOINT_KEY
@@ -33,19 +34,7 @@ class SignatureGenerator(DataGeneratorTemplate):
             raise GeneratorException(f"Signature Generator Failed with code {code} and output: {out}")
 
         if contract_inner.get("watermarks"):
-            out = out.strip()
-            segment_tp = None
-            segments = []
-            for line in out.split("\n"):
-                if segment_tp is None:
-                    segment_tp = parse_tp(line)
-                elif segment_tp == parse_tp(line):
-                    segments.append(line)
-                else:
-                    segments.append(">WATERMARK " + str(segment_tp) + "<")
-                    segment_tp = parse_tp(line)
-                    segments.append(line)
-            out = "\n".join(segments)
+            out = infuse_watermarks(out)
 
         return seed, out
 
@@ -55,7 +44,3 @@ class SignatureGenerator(DataGeneratorTemplate):
     @staticmethod
     def output_format() -> List[InputOutputTraceFormats]:
         return InputOutputTraceFormats.CSV
-
-
-def parse_tp(line):
-    return int(line.split(",")[1].split("=")[1])

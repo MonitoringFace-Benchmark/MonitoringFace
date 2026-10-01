@@ -3,6 +3,7 @@ from typing import AnyStr, List
 from Archive.Implementations.Builders.ProcessorBuilder.DataGenerators.PatternDataGenerator.PatternDataContract import \
     pattern_contract_to_commands
 from Infrastructure.Builders.ProcessorBuilder.DataGenerators.DataGeneratorTemplate import DataGeneratorTemplate
+from Infrastructure.Builders.ProcessorBuilder.DataGenerators.WatermarkInfusion import infuse_watermarks
 from Infrastructure.Builders.ProcessorBuilder.ImageManager import ImageManager, Processor
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
 from Infrastructure.Monitors.MonitorExceptions import GeneratorException
@@ -32,19 +33,7 @@ class PatternDataGenerator(DataGeneratorTemplate):
         if code != 0:
             raise GeneratorException(f"Pattern generator failed (exit_code={code}). Output:\n{out}")
         if contract_inner.get("watermarks"):
-            out = out.strip()
-            segment_tp = None
-            segments = []
-            for line in out.split("\n"):
-                if segment_tp is None:
-                    segment_tp = parse_tp(line)
-                elif segment_tp == parse_tp(line):
-                    segments.append(line)
-                else:
-                    segments.append(">WATERMARK " + str(segment_tp) + "<")
-                    segment_tp = parse_tp(line)
-                    segments.append(line)
-            out = "\n".join(segments)
+            out = infuse_watermarks(out)
         return seed, out
 
     def check_policy(self, path_inner: AnyStr, signature, formula) -> bool:
@@ -53,7 +42,3 @@ class PatternDataGenerator(DataGeneratorTemplate):
     @staticmethod
     def output_format() -> InputOutputTraceFormats:
         return InputOutputTraceFormats.CSV
-
-
-def parse_tp(line):
-    return int(line.split(",")[1].split("=")[1])
