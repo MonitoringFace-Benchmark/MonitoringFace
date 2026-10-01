@@ -274,7 +274,7 @@ tools_to_build:
   - MonPoly
 
 seeds:
-  '[5, 2, 0]': [314159265, 87006]   # deterministic per-setting seeds
+  '[5, 2, 0]': [314159265, 87006]   # per-setting [trace_seed, policy_seed]
   '[5, 2, 1]': [314159265, 53339]
 ```
 
