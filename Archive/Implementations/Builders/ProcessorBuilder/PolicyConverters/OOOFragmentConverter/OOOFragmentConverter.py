@@ -21,7 +21,10 @@ Mapping (rosetta: frontend/tests t1..t6 of formalized_streaming_monitor):
     phi UNTIL[I] psi       -> (UNTIL phi' [I] psi'), NEGUNTIL analogous
 
 Variables: free MFOTL variables sorted by natural name order become x0, x1,
-... at the top level; each EXISTS binds index 0 and shifts the frame.
+... at the top level; each EXISTS binds index 0 and shifts the frame. The
+original names are lost in the fragment, so auto_convert records them, in
+column order, under params[OOO_FREE_VARIABLES] for the monitor adapter to
+restore on its verdicts (the oracle reports the MFOTL names).
 Intervals: [l,r] closed, [l,*) -> [l,*]; a finite half-open [l,r) becomes
 [l,r-1] (integer timestamps)."""
 
@@ -31,6 +34,7 @@ from typing import Any, Dict, List, Tuple
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.PolicyConverterTemplate import (
     PolicyConverterTemplate, PolicyTransformationException)
+from Infrastructure.constants import OOO_FREE_VARIABLES
 
 TOKEN_RE = re.compile(r'"[^"]*"|-?\d+\.\d+|-?\d+|[A-Za-z_][A-Za-z0-9_]*|[()\[\],.*=]')
 TEMPORAL_UNARY = {"ONCE", "EVENTUALLY", "PREVIOUS", "NEXT"}
@@ -314,15 +318,26 @@ class _Emitter:
             "OOOFragmentConverter: equality conjunct relates variables outside the plan")
 
 
-def convert_mfotl_to_fragment(text: str) -> str:
+def _parse_policy(text: str):
     tokens = _Tokens(text.strip())
     ast = _parse_formula(tokens)
     if tokens.peek() is not None:
         raise PolicyTransformationException(
             f"OOOFragmentConverter: trailing tokens after policy: {tokens.peek()!r}")
+    return ast
+
+
+def free_variable_columns(text: str) -> List[str]:
+    """The MFOTL free variables in fragment column order: entry i is the
+    name the fragment (and OOOMon's `-columns`) calls x{i}."""
     free: List[str] = []
-    _collect_free(ast, frozenset(), free)
-    free_index = {name: i for i, name in enumerate(sorted(free, key=_natural_key))}
+    _collect_free(_parse_policy(text), frozenset(), free)
+    return sorted(free, key=_natural_key)
+
+
+def convert_mfotl_to_fragment(text: str) -> str:
+    ast = _parse_policy(text)
+    free_index = {name: i for i, name in enumerate(free_variable_columns(text))}
     return _Emitter(free_index).emit(ast, [])
 
 
@@ -338,6 +353,8 @@ class OOOFragmentConverter(PolicyConverterTemplate):
         with open(f"{path_to_folder}/{input_file}", "r") as f:
             policy = f.read()
         converted = convert_mfotl_to_fragment(policy)
+        if params is not None:
+            params[OOO_FREE_VARIABLES] = free_variable_columns(policy)
         with open(f"{path_to_output_folder}/{output_file}", "w") as f:
             f.write(converted + "\n")
 

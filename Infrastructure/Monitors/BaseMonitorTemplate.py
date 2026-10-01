@@ -26,7 +26,7 @@ from Infrastructure.Builders.ProcessorBuilder.StreamProcessors.StreamRunner impo
 from Infrastructure.Provenance.Provenance import ConversionRecord, ConversionStep, PreprocessingResult, ProvenanceSession
 from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLICY_KEY, PATH_TO_BUILD, PATH_TO_ARCHIVE, \
     PATH_TO_TRACE_INPUT, PATH_TO_TRACE_OUTPUT, PATH_TO_INTERMEDIATE_WORKSPACE, IMAGE_POSTFIX, Policy_File, \
-    Signature_File, NOMEASURE, POLICY_CONSTANTS_APPLIED, POLICY_CONSTANTS_COUNT, POLICY_CONSTANTS_FILE, \
+    Signature_File, NOMEASURE, POLICY_CONSTANTS_APPLIED, POLICY_CONSTANTS_COUNT, POLICY_CONSTANTS_FILE, OOO_FREE_VARIABLES, \
     STRATIFIED, STRATIFIED_MAP, TRACE_TARGET_FORMAT, MODE_KEY, OOO_MODES, PATH_TO_PROJECT, \
     STREAM_PIPELINE_KEY, STREAM_STAGE_STATIC, STREAM_STAGE_DYNAMIC
 from Infrastructure.printing import print_headline, print_footline
@@ -92,7 +92,7 @@ class BaseMonitorTemplate(AutoConvertable):
 
         # per-run derived state: params outlive a setting, and a run whose policy
         # conversion extracts no constants must not inherit the previous policy's
-        for key in (POLICY_CONSTANTS_FILE, POLICY_CONSTANTS_COUNT, POLICY_CONSTANTS_APPLIED):
+        for key in (POLICY_CONSTANTS_FILE, POLICY_CONSTANTS_COUNT, POLICY_CONSTANTS_APPLIED, OOO_FREE_VARIABLES):
             self.params.pop(key, None)
 
         trace_target_format, trace_conversion_distance = find_trace_path(self, path_manager, trace_source_format)
@@ -390,9 +390,12 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
     postprocessing_elapsed = end - start
 
     outputs, distinct_outputs = res.output_counts()
+    dropped_outputs = res.dropped_summary()
     print(f"Prep:        {preprocessing_elapsed}\nCompilation: {compile_elapsed}\nRuntime:     {run_offline_elapsed}\nPost:        {postprocessing_elapsed}")
     if outputs is not None:
         print(f"Outputs:     {outputs} ({distinct_outputs} distinct)")
+    if dropped_outputs is not None:
+        print(f"Dropped:     {dropped_outputs}")
 
     verification_strength = None
     values_checked = None
@@ -423,7 +426,7 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
 
     print_footline()
     return (preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed,
-            outputs, distinct_outputs, verification_strength, values_checked)
+            outputs, distinct_outputs, verification_strength, values_checked, dropped_outputs)
 
 
 def find_trace_path(mon: BaseMonitorTemplate, path_manager: PathManager, trace_source_format: InputOutputTraceFormats) -> Tuple[Optional[InputOutputTraceFormats], Optional[int]]:
