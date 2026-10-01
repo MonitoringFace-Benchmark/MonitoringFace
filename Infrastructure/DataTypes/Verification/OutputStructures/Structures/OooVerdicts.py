@@ -17,9 +17,14 @@ class OooVerdicts(AbstractOutputStructure):
         self.out_of_order_inserts = 0
         self._arrival_counter = 0
         self._max_tp_seen: Optional[int] = None
+        # reason -> number of tool output lines the parser refused to insert
+        self.dropped: Dict[str, int] = dict()
 
     def retrieve_order(self):
         return self.variable_order.retrieve_order()
+
+    def dropped_counts(self) -> Dict[str, int]:
+        return dict(self.dropped)
 
     def time_points(self) -> Dict[int, int]:
         return self.tp_to_ts
