@@ -12,7 +12,7 @@ USER opam
 
 RUN opam install -y ocamlfind zarith stdlib-shims
 
-ARG GIT_BRANCH=ooomon_rework
+ARG GIT_BRANCH=main
 ARG GIT_COMMIT=""
 RUN git clone --branch ${GIT_BRANCH} https://git.ku.dk/krq770/formalized_streaming_monitor.git /home/opam/ooomon \
     && cd /home/opam/ooomon && if [ -n "${GIT_COMMIT}" ]; then git checkout ${GIT_COMMIT}; fi
