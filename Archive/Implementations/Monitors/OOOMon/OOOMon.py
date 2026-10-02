@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Dict, AnyStr, Any, Tuple, List, Optional
 
@@ -47,7 +48,8 @@ class OOOMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
         return cmd, None
 
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
-        return parse_output_structure(stdout_input, self._variable_order())
+        trace = os.path.join(str(self.params[FOLDER_KEY]), str(self.params[TRACE_KEY]))
+        return parse_output_structure(stdout_input, self._variable_order(), last_trace_time_point(trace))
 
     def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
         cmd = ["-formula", "additional/policy.policy", "-format", "timelymon", "-ack"]
@@ -109,52 +111,54 @@ def restore_variable_names(columns: List[str], free_variables: Optional[List[str
     return restored
 
 
-DROPPED_BEYOND_LAST_COMPLETE = "beyond_last_complete"
+DROPPED_BEYOND_TRACE_END = "beyond_trace_end"
 DROPPED_DUPLICATES = "duplicates"
 
 _VERDICT_LINE = re.compile(r'^@(\d+)\s*\((.*)\)\s*$')
-_CLAIM_LINE = re.compile(r'^!complete\s+(?:(\d+)|\[\s*(\d+)\s*,\s*(\d+)\s*\])\s*$')
+# time-points a TimelyMon-format trace names: event `tp=` fields and point
+# claims; a watermark names the point AFTER its prefix, so it does not count
+_TRACE_TIME_POINT = re.compile(r'(?:\btp\s*=\s*|>ELAPSED\s+)(\d+)')
 
 
-def parse_output_structure(input_val: AnyStr, variable_ordering) -> AbstractOutputStructure:
+def parse_output_structure(input_val: AnyStr, variable_ordering,
+                           last_time_point: Optional[int] = None) -> AbstractOutputStructure:
     """Parse `@tp (v1,v2,...)` verdict lines; `# columns` headers and
     `!complete` claims are metadata, not verdicts.
 
     Two kinds of lines are dropped, and counted under `dropped`:
 
-    `beyond_last_complete`: OOOMon reasons over an infinite trace. At end of
-    file the frontend claims every time-point it has seen complete, and the
+    `beyond_trace_end`: OOOMon reasons over an infinite trace. At end of file
+    the frontend claims every time-point it has seen complete, and the
     verified core then fires the verdicts that no longer depend on anything
     unknown. A `PREV [0,*]` verdict for the time-point AFTER the last one is
     such a verdict (it reads the completed last time-point, and the unbounded
     interval is decided without that next timestamp), so the tool reports
-    time-points the finite trace does not contain, one per nested PREV. The
-    upper bound of the completion claims equals the highest time-point in the
-    trace (the EOF claim covers exactly the points seen), so everything past
-    it is speculative and dropped. Without claims (`-no-claims`) nothing is
-    known about the trace end and nothing is dropped.
+    time-points the finite trace does not contain, one per nested PREV. Every
+    verdict above the trace's last time-point (`last_time_point`, from the
+    trace the tool read: last_trace_time_point) is dropped. OOOMon's own
+    `!complete` claims do not mark the trace end: they cover the time-points
+    whose verdict set is final, and under a future operator that stops below
+    the end (its windows reach past it), while the verdicts emitted there are
+    verdicts of the trace. Without `last_time_point` nothing is dropped.
 
     `duplicates`: the core re-emits a small share of verdicts (the same tuple
     at the same time-point, twice, inside the streaming output). The oracle
     comparison is on sorted lists, so a repeat fails an otherwise identical
     verdict set; only the first emission is kept."""
     verdicts = OooVerdicts(variable_order=variable_ordering)
-    verdicts.dropped[DROPPED_BEYOND_LAST_COMPLETE] = 0
+    verdicts.dropped[DROPPED_BEYOND_TRACE_END] = 0
     verdicts.dropped[DROPPED_DUPLICATES] = 0
     if input_val is None or input_val.strip() == "":
         return verdicts
 
-    lines = [line.strip() for line in input_val.strip().split("\n")]
-    last_complete = last_complete_time_point(lines)
-
     seen = set()
-    for line in lines:
-        match = _VERDICT_LINE.match(line)
+    for line in input_val.strip().split("\n"):
+        match = _VERDICT_LINE.match(line.strip())
         if not match:
             continue
         tp = int(match.group(1))
-        if last_complete is not None and tp > last_complete:
-            verdicts.dropped[DROPPED_BEYOND_LAST_COMPLETE] += 1
+        if last_time_point is not None and tp > last_time_point:
+            verdicts.dropped[DROPPED_BEYOND_TRACE_END] += 1
             continue
         values = tuple(_strip_quotes(v) for v in _split_top_level(match.group(2)))
         if (tp, values) in seen:
@@ -166,17 +170,23 @@ def parse_output_structure(input_val: AnyStr, variable_ordering) -> AbstractOutp
     return verdicts
 
 
-def last_complete_time_point(lines: List[str]) -> Optional[int]:
-    """Highest time-point any `!complete tp` / `!complete [lo,hi]` claim
-    (inclusive bounds) covers; None when the output carries no claims."""
+def last_trace_time_point(path: str) -> Optional[int]:
+    """Highest time-point the trace OOOMon read names (events and point
+    claims); None, with a warning, when the file cannot be read or names
+    none, and then no verdict is dropped as beyond the trace end."""
     highest = None
-    for line in lines:
-        match = _CLAIM_LINE.match(line)
-        if not match:
-            continue
-        tp = int(match.group(1) if match.group(1) is not None else match.group(3))
-        if highest is None or tp > highest:
-            highest = tp
+    try:
+        with open(path) as f:
+            for line in f:
+                for match in _TRACE_TIME_POINT.finditer(line):
+                    tp = int(match.group(1))
+                    highest = tp if highest is None or tp > highest else highest
+    except OSError as e:
+        print(f"OOOMon: cannot read the trace for its last time-point ({e}); "
+              f"verdicts past the trace end are kept")
+        return None
+    if highest is None:
+        print(f"OOOMon: {path} names no time-point; verdicts past the trace end are kept")
     return highest
 
 
