@@ -12,6 +12,7 @@ root:
 """
 import argparse
 import os
+import string
 import sys
 import textwrap
 from typing import Dict, List, Optional, Tuple
@@ -23,7 +24,9 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.ticker import FuncFormatter
 
-from Infrastructure.Analysis.EmissionTiming.extract import extract, load_frames
+from collections import Counter
+
+from Infrastructure.Analysis.EmissionTiming.extract import column_order, extract, load_frames, reorder
 from Infrastructure.Analysis.EmissionTiming.sorted_lane import _lane_inputs
 
 # drawn in this order: the reference last, dashed, on top of the lanes that reach it
@@ -36,6 +39,7 @@ LANES: List[Tuple[str, str, dict]] = [
 ]
 REFERENCE = "OOOMon"
 BASELINE = "MonPoly exact"
+POINTS = "TimelyMon tp-interval"
 
 
 TAIL = float("inf")
@@ -66,13 +70,29 @@ def _formula(run_dir: str, setting: str, experiments: str) -> Optional[str]:
         return " ".join(f.read().split())
 
 
-def plot(run_dir: str, out: str, recorded: bool, experiments: str) -> None:
+def _index(setting: str) -> Optional[int]:
+    """The setting index of a synthetic setting name `<ops>_<fvs>_<index>_<size>_<rep>`."""
+    parts = setting.split("_")
+    return int(parts[2]) if len(parts) >= 5 and parts[2].isdigit() else None
+
+
+def _panel_title(setting: str, labels: str) -> str:
+    index = _index(setting)
+    if index is None:
+        return setting
+    if labels == "seed-data":                 # index = policy seed * 10 + data seed number
+        return f"formula {index // 10}, data {index % 10}"
+    return f"formula {index}"
+
+
+def plot(run_dir: str, out: str, recorded: bool, experiments: str, columns: int = 2,
+         labels: str = "index") -> None:
     settings: Dict[str, Dict[str, dict]] = {}
     for frame in load_frames(run_dir):
         settings.setdefault(frame["setting"], {})[frame["tool"]] = frame
     lanes = [lane for lane in LANES if recorded or lane[0] != "MonPoly"]
-    names = sorted(settings)
-    cols = 2 if len(names) > 1 else 1
+    names = sorted(settings, key=lambda s: (_index(s) is None, _index(s) or 0, s))
+    cols = max(1, min(columns, len(names)))
     rows = (len(names) + cols - 1) // cols
     fig, axes = plt.subplots(rows, cols, figsize=(6.4 * cols, 4.9 * rows), squeeze=False)
 
@@ -85,6 +105,12 @@ def plot(run_dir: str, out: str, recorded: bool, experiments: str) -> None:
                 if total not in (None, lines):
                     raise ValueError(f"{setting}: lanes fed different numbers of lines")
                 total = lines
+        if REFERENCE in firsts:
+            # same verdict, same key: put every lane's value columns in the reference's order
+            reference = Counter(firsts[REFERENCE])
+            for tool in [t for t in firsts if t != REFERENCE]:
+                order = column_order(reference, Counter(firsts[tool]))
+                firsts[tool] = {(p, reorder(v, order)): x for (p, v), x in firsts[tool].items()}
         for tool, _, style in lanes:
             if tool not in firsts:
                 continue
@@ -101,20 +127,26 @@ def plot(run_dir: str, out: str, recorded: bool, experiments: str) -> None:
             leads = sorted(base[k] - ref[k] for k in shared if base[k] != TAIL and ref[k] != TAIL)
             at_end = sum(base[k] == TAIL and ref[k] != TAIL for k in shared)
             where = "every verdict" if behind == len(ref) else f"{behind:,} of {len(ref):,} verdicts"
+            trailing = ""
+            if POINTS in firsts:
+                gaps = [firsts[POINTS][k] - ref[k] for k in ref if firsts[POINTS].get(k, ref[k]) > ref[k]]
+                if gaps:
+                    trailing = (f"\nTimelyMon behind the limit on {len(gaps):,} verdicts,\n"
+                                f"by {np.median(gaps):,.0f} lines (median), {max(gaps):,.0f} (max)")
             if leads:
-                ax.text(0.98, 0.04,
+                ax.text(0.02, 0.97,
                         f"MonPoly behind the limit on {where}:\n"
                         f"{np.median(leads):,.0f} lines (median), {leads[-1]:,.0f} (max),\n"
-                        f"and {at_end:,} verdicts only at end of input",
-                        transform=ax.transAxes, ha="right", va="bottom", fontsize=9, color="0.2",
+                        f"and {at_end:,} verdicts only at end of input" + trailing,
+                        transform=ax.transAxes, ha="left", va="top", fontsize=9, color="0.2",
                         bbox=dict(boxstyle="round,pad=0.35", fc="white", ec="0.8", lw=0.8))
 
-        label = setting.rsplit("_", 1)[0].split("_")[2] if setting.count("_") >= 4 else setting
         formula = textwrap.wrap(_formula(run_dir, setting, experiments) or "", 78)
         if formula:
             ax.text(0, 1.015, "\n".join(formula), transform=ax.transAxes,
                     ha="left", va="bottom", fontsize=7.2, family="monospace", color="0.3")
-        ax.set_title(f"({'abcdefghij'[n]}) formula {label}: {verdicts:,} verdicts", fontsize=12, loc="left",
+        letter = string.ascii_lowercase[n] if n < 26 else str(n + 1)
+        ax.set_title(f"({letter}) {_panel_title(setting, labels)}: {verdicts:,} verdicts", fontsize=12, loc="left",
                      pad=6 + 9.5 * len(formula))
         ax.set_xlim(0, total * 1.02)
         ax.set_ylim(0, verdicts * 1.04 + 1)
@@ -146,10 +178,14 @@ def main(argv=None) -> int:
                         help="also draw the sorted lane as the driver recorded it (chain accounting)")
     parser.add_argument("--experiments", default="Infrastructure/experiments",
                         help="folder holding the experiments' generated inputs (for the formula text)")
+    parser.add_argument("--cols", type=int, default=2, help="panels per row (default: 2)")
+    parser.add_argument("--labels", choices=["index", "seed-data"], default="index",
+                        help="panel names: the setting index as the formula, or index = policy seed * 10 "
+                             "+ data seed number (Experiment A)")
     parser.add_argument("--out", help="output file (default: <run_dir>/emission_timing/cumulative_lines_fed.png)")
     args = parser.parse_args(argv)
     out = args.out or os.path.join(args.run_dir, "emission_timing", "cumulative_lines_fed.png")
-    plot(args.run_dir, out, args.recorded, args.experiments)
+    plot(args.run_dir, out, args.recorded, args.experiments, args.cols, args.labels)
     print(f"written to {out}")
     return 0
 

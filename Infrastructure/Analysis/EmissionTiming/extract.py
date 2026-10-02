@@ -13,9 +13,11 @@ timestamp and its position among the time-points sharing that timestamp,
 which each run derives from its own recorded input.
 """
 import glob
+import itertools
 import json
 import os
 import re
+from collections import Counter
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
@@ -137,3 +139,23 @@ def extract(frame: dict) -> ToolRun:
 
 def extract_runs(run_dirs: List[str]) -> List[ToolRun]:
     return [extract(frame) for run_dir in run_dirs for frame in load_frames(run_dir)]
+
+
+def column_order(reference: Counter, verdicts: Counter) -> Tuple[int, ...]:
+    """The permutation of a tool's value columns that matches the most of the
+    reference's verdicts (pairs of time-point and valuation, counted). Tools
+    order free variables differently (MonPoly by its own rule, OOOMon by the
+    fragment converter's sorted names), so the same verdict can carry its
+    values in another order."""
+    arity = max((len(v) for _, v in list(reference) + list(verdicts)), default=0)
+
+    def overlap(order):
+        moved = Counter({(p, tuple(v[i] for i in order) if len(v) == arity else v): n
+                         for (p, v), n in verdicts.items()})
+        return sum((moved & reference).values())
+    identity = tuple(range(arity))
+    return max(itertools.permutations(range(arity)), key=lambda order: (overlap(order), order == identity))
+
+
+def reorder(valuation: Tuple[str, ...], order: Tuple[int, ...]) -> Tuple[str, ...]:
+    return tuple(valuation[i] for i in order) if len(valuation) == len(order) else valuation
