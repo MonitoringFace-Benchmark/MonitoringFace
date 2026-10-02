@@ -21,6 +21,7 @@ from typing import Dict, List, Optional, Tuple
 
 MONPOLY_RE = re.compile(r"^@\d+\s*\(time point (\d+)\):\s*(.*)$")
 TIMELYMON_RE = re.compile(r"^\((.*)\):\s*Time point\(s\)\s*(\d+)(?:-(\d+))?\s*$")
+OOOMON_RE = re.compile(r"^@(\d+) \((.*)\)$")
 TUPLE_RE = re.compile(r"\(([^()]*)\)")
 
 PointId = Tuple[int, int]
@@ -74,6 +75,11 @@ def verdicts_of_line(line: str) -> List[Tuple[int, Tuple[str, ...]]]:
         if payload == "true":
             return [(tp, ())]
         return [(tp, _values(t)) for t in TUPLE_RE.findall(payload) if t.strip()]
+    # OOOMon: one line per verdict, `@tp (v1,v2)`, `@tp ()` for a closed
+    # formula; its `!complete` claims and `# columns` header are not verdicts
+    match = OOOMON_RE.match(line)
+    if match:
+        return [(int(match[1]), _values(match[2]))]
     return []
 
 
