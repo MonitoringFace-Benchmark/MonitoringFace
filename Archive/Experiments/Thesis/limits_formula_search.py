@@ -1,0 +1,532 @@
+#!/usr/bin/env python3
+"""Formula search for Experiment A (limits with past and future operators).
+
+Phase 1 (syntax): generates formulas with the pinned MfotlPolicyGenerator
+image for policy seeds 1..N, with the contract of Experiment A, and keeps the
+formulas that hold at least one bounded past operator (ONCE/SINCE with a
+finite upper bound) and at least one future operator (EVENTUALLY/UNTIL,
+always bounded).
+
+Phase 2 (screen config): writes an offline MonitoringFace config that runs
+the first K survivors through all four tools on the data of Experiment A,
+with a per-run cap, so monitorability, verdict counts and OOOMon's runtime
+come from the pinned tools themselves.
+
+Phase 3 (select): reads that run's results and takes the first six survivors
+in seed order that every tool monitors, with at least --min-verdicts verdicts
+and OOOMon within the cap.
+
+Run from the project root:
+    python Archive/Experiments/Thesis/limits_formula_search.py syntax --seeds 200
+    python Archive/Experiments/Thesis/limits_formula_search.py screen-config --take 30
+    python -m Infrastructure.main Thesis/limits_screen.yaml
+    python Archive/Experiments/Thesis/limits_formula_search.py select <results_dir>
+    python Archive/Experiments/Thesis/limits_formula_search.py final-config <results_dir> S1 .. S6
+    python -m Infrastructure.main Thesis/limits_online.yaml
+
+Phase 4 (final config): writes limits_online.yaml, the online experiment over
+the six selected formulas, each with two data seeds.
+"""
+import argparse
+import csv
+import glob
+import os
+import re
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SYNTAX_CSV = os.path.join(HERE, "limits_formula_search.csv")
+SCREEN_YAML = os.path.join(HERE, "limits_screen.yaml")
+
+GENERATOR_COMMIT = "fef5f8f5551a36dac4aa45cc7c48bef09964a265"
+GENERATOR_IMAGE = f"mfotlpolicygenerator_policygenerators_{GENERATOR_COMMIT}_mf_image"
+SIZE, ARITY = 10, 2
+# MUST match policy_setup of the Experiment A configs (screen and final)
+CONTRACT = {
+    "num_preds": 4, "lb": 0, "ub": 10, "delta": 10, "unbounded": False,
+    "prob_once": 0.2, "prob_since": 0.2, "prob_eventually": 0.2, "prob_until": 0.2,
+    "prob_prev": 0, "prob_next": 0, "prob_eand": 0, "prob_rand": 0, "prob_let": 0,
+    "prob_matchF": 0, "prob_matchP": 0,
+}
+TRACE_SEED = 314159265
+
+OPERATOR_RE = re.compile(r"\b(ONCE|SINCE|EVENTUALLY|UNTIL)\[(\d+),(\d+|\*)[\])]")
+CONNECTIVE_RE = re.compile(r"\b(AND|OR|NOT|EXISTS|ONCE|SINCE|EVENTUALLY|UNTIL)\b|=")
+
+
+def generator_args(seed: int):
+    c = CONTRACT
+    args = ["-pred", str(c["num_preds"]), "-A", str(ARITY), "-S", str(SIZE),
+            "-lb", str(c["lb"]), "-ub", str(c["ub"]), "-delta", str(c["delta"])]
+    for key, value in c.items():
+        if key.startswith("prob_"):
+            args += [f"-{key}", str(value)]
+    return args + ["-seed", str(seed)]
+
+
+def generate(seeds):
+    """{seed: formula} from one container run over all seeds."""
+    script = "; ".join(f"echo '=====SEED {s}====='; python3 gen_for.py {' '.join(generator_args(s))}"
+                       for s in seeds)
+    out = subprocess.run(["docker", "run", "--rm", "--entrypoint", "", GENERATOR_IMAGE, "sh", "-c", script],
+                         capture_output=True, text=True, check=True).stdout
+    formulas = {}
+    for chunk in out.split("=====SEED ")[1:]:
+        head, body = chunk.split("=====", 1)
+        if "MFOTL Formula:" in body:
+            formulas[int(head)] = " ".join(body.split("MFOTL Formula:", 1)[1].split())
+    return formulas
+
+
+def classify(formula: str) -> dict:
+    ops = OPERATOR_RE.findall(formula)
+    bounded_past = [o for o in ops if o[0] in ("ONCE", "SINCE") and o[2] != "*"]
+    future = [o for o in ops if o[0] in ("EVENTUALLY", "UNTIL")]
+    return {
+        "temporal": len(ops),
+        "operators": len(CONNECTIVE_RE.findall(formula)),
+        "bounded_past": len(bounded_past),
+        "future": len(future),
+        "windows": " ".join(f"{o[0][0]}[{o[1]},{o[2]}]" for o in ops),
+        "status": "candidate" if bounded_past and future else "syntax",
+    }
+
+
+def cmd_syntax(args):
+    formulas = generate(range(1, args.seeds + 1))
+    rows = []
+    for seed in range(1, args.seeds + 1):
+        formula = formulas.get(seed)
+        row = {"seed": seed, "formula": formula or ""}
+        row.update(classify(formula) if formula else {"status": "genfail"})
+        rows.append(row)
+    with open(SYNTAX_CSV, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=["seed", "status", "temporal", "operators", "bounded_past", "future",
+                                          "windows", "formula"])
+        w.writeheader()
+        w.writerows(rows)
+    candidates = [r for r in rows if r["status"] == "candidate"]
+    print(f"{len(candidates)} of {len(rows)} seeds hold a bounded past and a future operator -> {SYNTAX_CSV}")
+
+
+def _candidates():
+    with open(SYNTAX_CSV) as f:
+        return [r for r in csv.DictReader(f) if r["status"] == "candidate"]
+
+
+SCREEN_TEMPLATE = """\
+# GENERATED by limits_formula_search.py screen-config: the offline screen of
+# Experiment A's formula search (first {take} syntactic candidates, setting
+# index = policy seed). Same tools, pins, data and disorder as the experiment.
+experiment_name: limits_screen
+
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: &disorder
+{disorder}
+      - identifier: Sorter
+        stage: static
+  - identifier: TimelyMon
+    name: TimelyMon common
+    branch: development
+    commit: 4a0ba6c981be147b85207bfede3399f36502d041
+    params:
+      worker: 1
+      output_mode: 1
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+      - identifier: PrefixRebuilder
+        stage: static
+  - identifier: TimelyMon
+    name: TimelyMon tp-interval
+    branch: tp-interval-timestamp
+    commit: 4e51173a56bfe51a19a239936f65559d3cac6cf5
+    params:
+      worker: 1
+      output_mode: 1
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+  - identifier: OOOMon
+    name: OOOMon
+    branch: main
+    commit: 6218df6528f36ba24416ec9bd7066512ad1b6d27
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+
+runtime_constraints:
+  upper_bound: {cap}
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 100
+    event_rate: 10
+    domain: 30
+
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+{contract}
+
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [{size}]
+    num_fvs: [{arity}]
+    num_setting: [{settings}]
+    num_data_set_sizes: [100]
+
+experiment_type: Signature
+
+tools_to_build:
+  - MonPoly
+  - TimelyMon common
+  - TimelyMon tp-interval
+  - OOOMon
+
+oracle:
+  enabled: false
+
+seeds:
+{seeds}
+
+components:
+  - identifier: SignatureGenerator
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: MfotlPolicyGenerator
+    commit: {generator}
+  - identifier: ReplayerConverter
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+"""
+
+DISORDER = {"seed": 271828, "displacement_bound": 50, "delay_distribution": "uniform",
+            "fraction_displaced": 1.0, "granularity": "event", "lag": 8, "claim_order": "independent"}
+
+
+def cmd_screen_config(args):
+    chosen = _candidates()[: args.take]
+    seeds = [int(r["seed"]) for r in chosen]
+    text = SCREEN_TEMPLATE.format(
+        take=args.take, cap=args.cap, size=SIZE, arity=ARITY, generator=GENERATOR_COMMIT,
+        disorder="\n".join(f"          {k}: {v}" for k, v in DISORDER.items()),
+        contract="\n".join(f"    {k}: {v}" for k, v in CONTRACT.items()),
+        settings=", ".join(map(str, seeds)),
+        seeds="\n".join(f"  '[{SIZE}, {ARITY}, {s}, 100]': [{TRACE_SEED}, {s}]" for s in seeds))
+    with open(SCREEN_YAML, "w") as f:
+        f.write(text)
+    print(f"{len(seeds)} candidates -> {SCREEN_YAML}")
+
+
+def _rows(results_dir, kind):
+    paths = glob.glob(os.path.join(results_dir, f"*_{kind}.csv"))
+    rows = []
+    for path in paths:
+        with open(path) as f:
+            rows += list(csv.DictReader(f))
+    return rows
+
+
+TOOLS = ["MonPoly", "TimelyMon common", "TimelyMon tp-interval", "OOOMon"]
+MONPOLY_IMAGE = "monpoly_bc752d37f1d4560b5667eddac9dd1670451b758e_offline_mf_image"
+OOOMON_IMAGE = "ooomon_6218df6528f36ba24416ec9bd7066512ad1b6d27_offline_mf_image"
+
+
+def _docker(image, args, work):
+    return subprocess.run(["docker", "run", "--rm", "-v", f"{work}:/work", "-w", "/work", image] + args,
+                          capture_output=True, text=True, timeout=600).stdout
+
+
+def verify_ooomon(results_dir, seed, experiments):
+    """OOOMon's verdicts against MonPoly's, both run directly on the lane
+    inputs the screen stored. The platform's OOOMon parser drops verdicts
+    above OOOMon's last output-complete claim, which for future operators is
+    below the trace's last time-point (windows reach past the end), so its
+    count is low; here every verdict within the trace is kept, and OOOMon's
+    value columns are put in MonPoly's order. Returns (agree, MonPoly count,
+    OOOMon count)."""
+    import itertools
+    import shutil
+    import tempfile
+    from collections import Counter
+    prov = os.path.join(results_dir, "provenance", f"{SIZE}_{ARITY}_{seed}_100")
+    data = os.path.join(experiments, "limits_screen", f"operators_{SIZE}", f"free_vars_{ARITY}", f"num_{seed}")
+    work = tempfile.mkdtemp(prefix=f"limits_verify_{seed}_")
+    try:
+        for src in (f"{prov}/MonPoly/trace.monpoly", f"{prov}/OOOMon/trace.csv", f"{prov}/OOOMon/policy.ooo-fragment",
+                    f"{data}/policy.policy", f"{data}/signature.sig"):
+            shutil.copy(src, work)
+        mp_out = _docker(MONPOLY_IMAGE, ["monpoly", "-sig", "signature.sig", "-formula", "policy.policy", "-log",
+                                         "trace.monpoly", "-nofilteremptytp", "-nofilterrel"], work)
+        oo_out = _docker(OOOMON_IMAGE, ["ooomon", "-formula", "policy.ooo-fragment", "-log", "trace.csv",
+                                        "-format", "timelymon", "-sig", "signature.sig"], work)
+        with open(os.path.join(work, "trace.csv")) as f:
+            last_tp = max(int(m) for m in re.findall(r"tp=(\d+)", f.read()))
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    mp, oo = Counter(), Counter()
+    for line in mp_out.splitlines():
+        m = re.match(r"^@\d+\s*\(time point (\d+)\):\s*(.*)$", line.strip())
+        if m:
+            if m[2].strip() == "true":
+                mp[(int(m[1]), ())] += 1
+            for t in re.findall(r"\(([^()]*)\)", m[2]):
+                if t.strip():
+                    mp[(int(m[1]), tuple(v.strip() for v in t.split(",")))] += 1
+    for line in oo_out.splitlines():
+        m = re.match(r"^@(\d+) \((.*)\)$", line.strip())
+        if m and int(m[1]) <= last_tp:
+            oo[(int(m[1]), tuple(v.strip() for v in m[2].split(",") if v.strip()))] += 1
+    arity = max((len(v) for _, v in list(mp) + list(oo)), default=0)
+    moved = [Counter({(tp, tuple(v[i] for i in order) if len(v) == arity else v): n for (tp, v), n in oo.items()})
+             for order in itertools.permutations(range(arity))]
+    return any(m == mp for m in moved), sum(mp.values()), sum(oo.values())
+
+
+def cmd_select(args):
+    """Per screened seed: PASS when all four tools finished within the cap,
+    agree on the verdicts, and there are at least --min-verdicts of them;
+    DISAGREE (to investigate, never to drop silently) otherwise. Where the
+    other three agree and the platform's OOOMon count differs, OOOMon is
+    checked directly (verify_ooomon) and the status says so."""
+    candidates = {int(r["seed"]): r for r in _candidates()}
+    finished, timed_out = {}, {}
+    for row in _rows(args.results_dir, "valid"):
+        finished.setdefault(int(row["Setting"].split("_")[2]), {})[row["Name"]] = row
+    for row in _rows(args.results_dir, "timeout"):
+        timed_out.setdefault(int(row["Setting"].split("_")[2]), set()).add(row["Name"])
+    screened = sorted(set(finished) | set(timed_out))
+    table, passed = [], []
+    for seed in screened:
+        done, late = finished.get(seed, {}), timed_out.get(seed, set())
+        counts = {t: int(done[t]["outputs"]) for t in TOOLS if t in done}
+        others = {counts[t] for t in TOOLS[:3] if t in counts}
+        status = None
+        if late or len(counts) < len(TOOLS):
+            status = "timeout " + ",".join(sorted(late)) if late else "failed " + ",".join(
+                t for t in TOOLS if t not in done)
+        elif len(others) > 1:
+            status = "DISAGREE"
+        elif counts["OOOMon"] != counts["MonPoly"]:
+            agree, mp_count, oo_count = verify_ooomon(args.results_dir, seed, args.experiments)
+            counts["OOOMon"] = oo_count
+            if not agree:
+                status = f"DISAGREE (OOOMon direct {oo_count} vs MonPoly {mp_count})"
+        if status is None:
+            if counts["MonPoly"] < args.min_verdicts:
+                status = "vacuous"
+            else:
+                status = "PASS" + (" (OOOMon direct)" if done["OOOMon"]["outputs"] != str(counts["OOOMon"]) else "")
+                passed.append(seed)
+        ooomon = done.get("OOOMon", {}).get("runtime")
+        table.append({"seed": seed, "status": status, "verdicts": "/".join(str(counts.get(t, "-")) for t in TOOLS),
+                      "ooomon_s": f"{float(ooomon):.1f}" if ooomon else "-",
+                      "operators": candidates[seed]["operators"], "formula": candidates[seed]["formula"]})
+    for row in table:
+        print(f"{row['seed']:4d} {row['status']:28s} {row['verdicts']:24s} OOOMon {row['ooomon_s']:>6s} s  "
+              f"ops {row['operators']:>2s}  {row['formula'][:90]}")
+    out = os.path.join(args.results_dir, "formula_screen.csv")
+    with open(out, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(table[0]))
+        w.writeheader()
+        w.writerows(table)
+    print(f"{len(passed)} PASS of {len(screened)} screened; first six in seed order: {passed[:6]} -> {out}")
+    return 0
+
+
+FINAL_YAML = os.path.join(HERE, "limits_online.yaml")
+DATA_SEEDS = [314159265, 271828182]
+
+FINAL_TEMPLATE = """\
+# Experiment A (limits): random formulas with bounded past and future
+# operators on medium-delayed data, online, four lanes on one disordered
+# stream. GENERATED by limits_formula_search.py final-config from the screen
+# {screen}: the first six formulas in seed order that all four tools monitor
+# within {cap} s with at least {min_verdicts} verdicts. Setting index =
+# policy seed * 10 + data seed number (1, 2).
+#   MonPoly                Disorderer (bridge) + dynamic Sorter, chain accounting
+#                          (exact positions: EmissionTiming.sorted_lane)
+#   TimelyMon common       Disorderer (csv) + dynamic PrefixRebuilder (watermarks)
+#   TimelyMon tp-interval  Disorderer (csv), identity: ELAPSED point claims
+#   OOOMon                 Disorderer (csv), identity: ELAPSED point claims
+# Medium disorder: uniform displacement up to 50 lines; the prefix watermark
+# trails the newest data by 4 time-points (median, p90 5), about half the
+# formulas' windows.
+
+experiment_name: limits_online
+runtime_setting: online
+
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  mode: accelerated
+  timestamp_units: seconds
+  maximum_latency: 60000
+  accumulative_time: 900
+
+monitors:
+  - identifier: MonPoly
+    name: MonPoly
+    commit: bc752d37f1d4560b5667eddac9dd1670451b758e
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        response_mode: current-timepoint
+        output_collection_mode: before-delimiter
+        response_accounting: chain
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params:
+{disorder}
+          format: bridge
+      - identifier: Sorter
+        stage: dynamic
+  - identifier: TimelyMon
+    name: TimelyMon common
+    branch: development
+    commit: 4a0ba6c981be147b85207bfede3399f36502d041
+    params:
+      worker: 1
+      output_mode: 1
+      OnlineExperimentContractTool:
+        format: csv
+        response_mode: event-count
+        output_collection_mode: before-delimiter
+        input_aggregation_number: 1
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: &disorder
+{disorder}
+      - identifier: PrefixRebuilder
+        stage: dynamic
+  - identifier: TimelyMon
+    name: TimelyMon tp-interval
+    branch: tp-interval-timestamp
+    commit: 4e51173a56bfe51a19a239936f65559d3cac6cf5
+    params:
+      worker: 1
+      output_mode: 1
+      OnlineExperimentContractTool:
+        format: csv
+        response_mode: event-count
+        output_collection_mode: before-delimiter
+        input_aggregation_number: 1
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+  - identifier: OOOMon
+    name: OOOMon
+    branch: main
+    commit: 6218df6528f36ba24416ec9bd7066512ad1b6d27
+    params:
+      OnlineExperimentContractTool:
+        format: csv
+        response_mode: event-count
+        output_collection_mode: before-delimiter
+        input_aggregation_number: 1
+    stream_pipeline:
+      - identifier: Disorderer
+        stage: static
+        params: *disorder
+
+data_setup:
+  type: SignatureContract
+  SignatureContract:
+    trace_length: 100
+    event_rate: 10
+    domain: 30
+
+policy_setup:
+  type: MfotlPolicyContract
+  MfotlPolicyContract:
+{contract}
+
+synthetic_config:
+  data_source: SignatureGenerator
+  policy_source: MfotlPolicyGenerator
+  experiment:
+    num_operators: [{size}]
+    num_fvs: [{arity}]
+    num_setting: [{settings}]
+    num_data_set_sizes: [100]
+
+experiment_type: Signature
+
+tools_to_build:
+  - MonPoly
+  - TimelyMon common
+  - TimelyMon tp-interval
+  - OOOMon
+
+oracle:
+  enabled: false
+
+seeds:
+{seeds}
+
+components:
+  - identifier: SignatureGenerator
+    commit: d8442ab1473ea8f0a9c49836d3bf56bfd0b60672
+  - identifier: MfotlPolicyGenerator
+    commit: {generator}
+  - identifier: OnlineExperimentDriver
+    commit: 006f01fe223cce9279022987fa26854c449d1e1f
+"""
+
+
+def cmd_final_config(args):
+    seeds = args.policy_seeds
+    settings = [(s, n, data_seed) for s in seeds for n, data_seed in enumerate(DATA_SEEDS, start=1)]
+    text = FINAL_TEMPLATE.format(
+        screen=os.path.basename(args.screen.rstrip("/")), cap=args.cap, min_verdicts=args.min_verdicts,
+        size=SIZE, arity=ARITY, generator=GENERATOR_COMMIT,
+        disorder="\n".join(f"          {k}: {v}" for k, v in DISORDER.items()),
+        contract="\n".join(f"    {k}: {v}" for k, v in CONTRACT.items()),
+        settings=", ".join(str(s * 10 + n) for s, n, _ in settings),
+        seeds="\n".join(f"  '[{SIZE}, {ARITY}, {s * 10 + n}, 100]': [{data_seed}, {s}]"
+                        for s, n, data_seed in settings))
+    with open(FINAL_YAML, "w") as f:
+        f.write(text)
+    print(f"{len(settings)} settings ({len(seeds)} formulas x {len(DATA_SEEDS)} data seeds) -> {FINAL_YAML}")
+    return 0
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser()
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("final-config")
+    p.add_argument("screen", help="results folder of the screen the seeds come from")
+    p.add_argument("policy_seeds", type=int, nargs="+")
+    p.add_argument("--cap", type=int, default=60)
+    p.add_argument("--min-verdicts", type=int, default=20)
+    p = sub.add_parser("syntax")
+    p.add_argument("--seeds", type=int, default=200)
+    p = sub.add_parser("screen-config")
+    p.add_argument("--take", type=int, default=30)
+    p.add_argument("--cap", type=int, default=60, help="per-run cap, seconds")
+    p = sub.add_parser("select")
+    p.add_argument("results_dir")
+    p.add_argument("--min-verdicts", type=int, default=20)
+    p.add_argument("--experiments", default="Infrastructure/experiments",
+                   help="folder holding the screen's generated inputs")
+    args = ap.parse_args(argv)
+    return {"syntax": cmd_syntax, "screen-config": cmd_screen_config, "select": cmd_select,
+            "final-config": cmd_final_config}[args.cmd](args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
