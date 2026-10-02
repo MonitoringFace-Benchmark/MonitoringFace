@@ -1,6 +1,7 @@
 from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 import ast
 import copy
+import os
 from typing import AnyStr, Tuple
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
@@ -13,7 +14,8 @@ from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrd
 from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, FOLDER_KEY, TRACE_KEY
-from Archive.Implementations.Monitors.OOOMon.OOOMon import parse_output_structure, parse_variable_order_ooomon
+from Archive.Implementations.Monitors.OOOMon.OOOMon import (
+    last_trace_time_point, parse_output_structure, parse_variable_order_ooomon)
 
 
 class OOOMonOracle(AbstractOracleTemplate):
@@ -62,6 +64,12 @@ class OOOMonOracle(AbstractOracleTemplate):
         variable_order = parse_variable_order_ooomon(logs)
         with open(f"{output_file_name}.vo", "w") as file:
             file.write(str(variable_order))
+        # the trace's last time-point, read now: the verdicts are parsed later,
+        # when the trace the oracle read may be gone
+        last = last_trace_time_point(
+            os.path.join(str(self.ooomon.params[FOLDER_KEY]), str(self.ooomon.params[TRACE_KEY])))
+        with open(f"{output_file_name}.end", "w") as file:
+            file.write("" if last is None else str(last))
         with open(output_file_name, "w") as file:
             file.write(std_out_str)
 
@@ -79,4 +87,9 @@ def get_oracle_verdicts(result_file) -> AbstractOutputStructure:
     with open(result_file, "r") as file:
         stdout_input = file.read()
 
-    return parse_output_structure(stdout_input, variable_order)
+    last = None
+    if os.path.exists(f"{result_file}.end"):
+        with open(f"{result_file}.end", "r") as file:
+            raw_end = file.read().strip()
+        last = int(raw_end) if raw_end else None
+    return parse_output_structure(stdout_input, variable_order, last)
