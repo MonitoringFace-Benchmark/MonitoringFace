@@ -52,7 +52,7 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon common
     branch: development
-    commit: f6e7e6d1255b86abb3c31e00d1a8398eb4f2a4e3
+    commit: 4a0ba6c981be147b85207bfede3399f36502d041
     params:
       worker: 1
       output_mode: 1
@@ -77,7 +77,7 @@ monitors:
   - identifier: TimelyMon
     name: TimelyMon tp-interval
     branch: tp-interval-timestamp
-    commit: 652c1351b712c43f2e64b8b1652938a266b3c1f8
+    commit: 4e51173a56bfe51a19a239936f65559d3cac6cf5
     params:
       worker: 1
       output_mode: 1
