@@ -46,8 +46,8 @@ monitors:
         params: *disorder
   - identifier: OOOMon
     name: OOOMon
-    branch: main
-    commit: 6218df6528f36ba24416ec9bd7066512ad1b6d27
+    branch: ooomon-late-guard
+    commit: a4bade90c133bd1e4d3dd1b3a9ce3470bd31629a
     stream_pipeline:
       - identifier: Disorderer
         stage: static
