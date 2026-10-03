@@ -1,4 +1,4 @@
-experiment_name: thesis_online_nokia_timelymon
+experiment_name: thesis_online_nokia_timelymon_baseline_b58bcf2a
 runtime_setting: online
 
 OnlineExperimentContractGeneral:
@@ -11,8 +11,8 @@ OnlineExperimentContractGeneral:
 monitors:
   - identifier: TimelyMon
     name: TimelyMon
-    branch: development
-    commit: 544a8553d82e86f4a2b9b8ffcc589549c3271876
+    branch: new_clean_up
+    commit: b58bcf2a358844aa0e7bdc024dc0fde938c1da51
     params:
       worker: 1
       output_mode: 1
