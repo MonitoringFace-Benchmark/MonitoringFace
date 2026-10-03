@@ -337,7 +337,10 @@ class YamlParser:
         fmt_raw = raw.pop("format", None)
         if fmt_raw is None:
             raise YamlParserException("Missing 'format' in OnlineExperimentContractTool configuration")
-        fmt = FormatType.CSV if str(fmt_raw).lower() == "csv" else FormatType.LOG
+        fmt_name = str(fmt_raw).lower()
+        if fmt_name not in ("csv", "log", "prefixed"):
+            raise YamlParserException(f"Unknown 'format' {fmt_raw!r} in OnlineExperimentContractTool (csv, log, prefixed)")
+        fmt = FormatType(fmt_name)
 
         resp_raw = raw.pop("response_mode", None)
         if resp_raw is None:
@@ -563,13 +566,18 @@ class YamlParser:
         mode = InputSpeed.ACCELERATED if str(mode_str).lower() == 'accelerated' else InputSpeed.REAL_TIME
 
         batch_delim = online_dict.get('batch_delimiter')
+        speed = online_dict.get('speed')
+        speed = float(speed) if speed is not None else None
+        if speed is not None and not speed > 0:
+            raise YamlParserException(f"OnlineExperimentContractGeneral 'speed' must be positive, got {speed}")
         return OnlineExperimentContractGeneral(
             data_source_type=dst_type,
             maximum_latency=max_lat,
             accumulated_latency=acc_lat,
             timestamp_units=ts_units,
             batch_delimiter=batch_delim,
-            mode=mode
+            mode=mode,
+            speed=speed
         )
 
 

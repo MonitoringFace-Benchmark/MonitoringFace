@@ -6,8 +6,7 @@ class OnlineExperimentContractGeneral:
     def __init__(
         self, data_source_type: DataSourceType, mode: InputSpeed, maximum_latency: Optional[int],
         accumulated_latency: Optional[int], timestamp_units: TimeUnits,
-        batch_delimiter: Optional[str]
-
+        batch_delimiter: Optional[str], speed: Optional[float] = None
     ):
         self.data_source_type = data_source_type
         self.timestamp_units = timestamp_units
@@ -18,6 +17,8 @@ class OnlineExperimentContractGeneral:
 
         self.maximum_latency = maximum_latency
         self.accumulated_latency = accumulated_latency
+        # real-time replay speed (driver --speed); None keeps the recorded pace
+        self.speed = speed
 
     def get_mode(self) -> List[str]:
         return ["--mode", self.mode.to_string()]
@@ -43,6 +44,11 @@ class OnlineExperimentContractGeneral:
             return []
         return ["--maximum-latency", str(self.maximum_latency)]
 
+    def get_speed(self) -> List[str]:
+        if self.speed is None:
+            return []
+        return ["--speed", repr(float(self.speed))]
+
     def get_settings(self) -> List[str]:
         settings = []
         settings += self.get_mode()
@@ -51,6 +57,7 @@ class OnlineExperimentContractGeneral:
         settings += self.get_batch_delimiter()
         settings += self.get_accumulated_latency()
         settings += self.get_maximum_latency()
+        settings += self.get_speed()
         return settings
 
 

@@ -99,12 +99,17 @@ class TimeUnits(Enum):
 class FormatType(Enum):
     CSV = "csv"
     LOG = "log"
+    # every line starts with `<due>\t`, its replay time in timestamp_units;
+    # the driver paces by the prefix and strips it (ClaimZipper writes these)
+    PREFIXED = "prefixed"
 
     def to_string(self):
         if self == FormatType.CSV:
             return "csv"
         elif self == FormatType.LOG:
             return "log"
+        elif self == FormatType.PREFIXED:
+            return "prefixed"
         else:
             raise ValueError(f"Unsupported FormatType value: {self}")
 
