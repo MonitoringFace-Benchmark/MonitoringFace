@@ -33,6 +33,15 @@ def run_stage(processor, lines: List[str]) -> Tuple[List[str], Dict]:
     return out, counters
 
 
+def resolve_stage_params(params: Dict, input_path: str) -> Dict:
+    """`{trace}` in a string param stands for the setting's trace path without
+    its extension, so files that belong to one trace (claim_gen's claims and
+    receipt-time sidecar, for ClaimZipper) resolve per setting."""
+    stem = os.path.splitext(input_path)[0]
+    return {key: value.replace("{trace}", stem) if isinstance(value, str) else value
+            for key, value in params.items()}
+
+
 def apply_stream_pipeline(
         spec: List[Dict], input_path: str, output_path: str,
         source_format: str, path_to_project: Optional[str] = None
@@ -47,7 +56,7 @@ def apply_stream_pipeline(
         params = entry.get("params") or {}
         processor = load_stream_processor(identifier)(identifier)
         try:
-            processor.setup(params)
+            processor.setup(resolve_stage_params(params, input_path))
             lines, counters = run_stage(processor, lines)
         except StreamProcessorException:
             raise

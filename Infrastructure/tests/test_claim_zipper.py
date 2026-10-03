@@ -1,7 +1,8 @@
 """Tests for the ClaimZipper stream processor: claim_gen's positional claims
 are zipped into the trace (a claim at position n goes after the first n trace
 lines), and with pacing every line carries its due time for the driver's
-`--format prefixed`.
+`--format prefixed`. Stage params name the claims through `{trace}`, which
+resolves to each setting's own trace.
 
 Plain asserts, no pytest dependency: run with
 
@@ -15,7 +16,8 @@ import tempfile
 from Archive.Implementations.Builders.ProcessorBuilder.StreamProcessors.ClaimZipper.ClaimZipper import ClaimZipper
 from Infrastructure.Builders.ProcessorBuilder.StreamProcessors.StreamProcessorTemplate import (
     StreamProcessorException)
-from Infrastructure.Builders.ProcessorBuilder.StreamProcessors.StreamRunner import run_stage
+from Infrastructure.Builders.ProcessorBuilder.StreamProcessors.StreamRunner import (
+    apply_stream_pipeline, resolve_stage_params, run_stage)
 
 TRACE = ["A, tp=1, ts=11, x=1", "A, tp=0, ts=10, x=2", "B, tp=2, ts=12, x=3"]
 RX = ["1000", "1200", "2500"]
@@ -87,6 +89,34 @@ def test_setup_requires_its_inputs():
             assert fragment in str(e), str(e)
         else:
             raise AssertionError(f"setup({params}) should fail")
+
+
+def test_trace_placeholder_resolves_to_the_setting_trace():
+    params = {"claims": "{trace}.a10.elapsed.claims", "rx": "{trace}.rx", "pacing": True}
+    assert resolve_stage_params(params, "/exp/data/Trace/rc_live.csv") == {
+        "claims": "/exp/data/Trace/rc_live.a10.elapsed.claims",
+        "rx": "/exp/data/Trace/rc_live.rx", "pacing": True}
+    assert params["claims"] == "{trace}.a10.elapsed.claims"
+
+
+def test_pipeline_zips_the_claims_that_belong_to_its_trace():
+    folder = tempfile.mkdtemp()
+    trace = os.path.join(folder, "t.csv")
+    with open(trace, "w") as f:
+        f.write("".join(line + "\n" for line in TRACE))
+    with open(os.path.join(folder, "t.rx"), "w") as f:
+        f.write("".join(r + "\n" for r in RX))
+    with open(os.path.join(folder, "t.a1.elapsed.claims"), "w") as f:
+        f.write(CLAIMS)
+    params = {"claims": "{trace}.a1.elapsed.claims", "rx": "{trace}.rx", "pacing": False}
+    output = os.path.join(folder, "scratch", "streamed_t.csv")
+    steps = apply_stream_pipeline([{"identifier": "ClaimZipper", "params": params}],
+                                  trace, output, "csv")
+    with open(output) as f:
+        assert f.read().splitlines() == [">WATERMARK 0<", TRACE[0], TRACE[1], ">ELAPSED 1 @ 11<",
+                                         ">ELAPSED 0 @ 10<", TRACE[2], ">ELAPSED 2 @ 12<"]
+    # provenance keeps the configured, setting-independent params
+    assert steps[0].params == params
 
 
 TESTS = [value for name, value in sorted(globals().items()) if name.startswith("test_")]
