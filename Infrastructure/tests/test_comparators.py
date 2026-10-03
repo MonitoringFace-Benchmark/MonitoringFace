@@ -385,10 +385,16 @@ def test_parser_normalises_empty_set_literal():
     level that partitions on nothing prints. Left as a dict it reaches
     setc_inter/setc_diff and raises there, so multi-variable comparison of
     real monitor output was impossible.
+
+    Elements parse as the unquoted strings Verdicts carry, not as Python
+    literals: every output parser yields strings, and pdt_value strips the
+    quotes around a string constant on both sides. A block holding the int 7
+    never contains the verdict "7", so an agreeing tool would be rejected.
     """
     assert isinstance(literal_set("{}"), set), "empty set literal must parse as a set"
     assert literal_set("{}") == set()
-    assert literal_set("{1, 2}") == {1, 2}
+    assert literal_set("{1, 2}") == {"1", "2"}, "elements must be the strings verdicts carry"
+    assert literal_set('{"a", "b"}') == {"a", "b"}, "quotes around string constants must be stripped"
     assert isinstance(resolve_set("Complement of {}").complement_set, set)
     print("ok test_parser_normalises_empty_set_literal")
 
