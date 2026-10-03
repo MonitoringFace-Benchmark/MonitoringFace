@@ -20,13 +20,20 @@ Mapping (rosetta: frontend/tests t1..t6 of formalized_streaming_monitor):
     (NOT phi) SINCE[I] psi -> (NEGSINCE phi' [I] psi')
     phi UNTIL[I] psi       -> (UNTIL phi' [I] psi'), NEGUNTIL analogous
 
+Syntax and precedence are TimelyMon's: NOT, EXISTS and the unary temporal
+operators take the next operand (parenthesize to widen them), AND binds
+tighter than OR, OR tighter than SINCE/UNTIL, and SINCE/UNTIL group to the
+right. EXISTS a, b. phi is EXISTS a. EXISTS b. phi. Anything outside the
+fragment (aggregations, comparisons other than =, IMPLIES, ...) is rejected,
+never skipped.
+
 Variables: free MFOTL variables sorted by natural name order become x0, x1,
 ... at the top level; each EXISTS binds index 0 and shifts the frame. The
 original names are lost in the fragment, so auto_convert records them, in
 column order, under params[OOO_FREE_VARIABLES] for the monitor adapter to
 restore on its verdicts (the oracle reports the MFOTL names).
-Intervals: [l,r] closed, [l,*) -> [l,*]; a finite half-open [l,r) becomes
-[l,r-1] (integer timestamps)."""
+Intervals: [l,r] closed, [l,*) -> [l,*]; open ends move inwards by one
+(integer timestamps): [l,r) -> [l,r-1], (l,r] -> [l+1,r]."""
 
 import re
 from typing import Any, Dict, List, Tuple
@@ -36,19 +43,32 @@ from Infrastructure.Builders.ProcessorBuilder.PolicyConverters.PolicyConverterTe
     PolicyConverterTemplate, PolicyTransformationException)
 from Infrastructure.constants import OOO_FREE_VARIABLES
 
-TOKEN_RE = re.compile(r'"[^"]*"|-?\d+\.\d+|-?\d+|[A-Za-z_][A-Za-z0-9_]*|[()\[\],.*=]')
+TOKEN_RE = re.compile(
+    r'"[^"]*"|\'[^\']*\'|-?\d+\.\d+|-?\d+|[A-Za-z_][A-Za-z0-9_]*|[()\[\],.*=]|\S')
+IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 TEMPORAL_UNARY = {"ONCE", "EVENTUALLY", "PREVIOUS", "NEXT"}
 TEMPORAL_BINARY = {"SINCE", "UNTIL"}
+COMPARISON_STARTS = {"<", ">", "!"}
 TRUE_LEFT = "(EQ 0 0)"
+
+
+def _token(raw: str) -> str:
+    if raw.startswith("'") and len(raw) > 1:
+        if '"' in raw:
+            raise PolicyTransformationException(
+                f"OOOFragmentConverter: string {raw} cannot be written in the fragment")
+        return f'"{raw[1:-1]}"'
+    return raw
 
 
 class _Tokens:
     def __init__(self, text: str):
-        self.tokens = TOKEN_RE.findall(text)
+        self.tokens = [_token(raw) for raw in TOKEN_RE.findall(text)]
         self.position = 0
 
-    def peek(self):
-        return self.tokens[self.position] if self.position < len(self.tokens) else None
+    def peek(self, offset: int = 0):
+        index = self.position + offset
+        return self.tokens[index] if index < len(self.tokens) else None
 
     def next(self):
         if self.position >= len(self.tokens):
@@ -78,26 +98,24 @@ def _parse_term(tk: _Tokens):
 
 
 def _parse_interval(tk: _Tokens) -> Tuple[int, Any]:
-    tk.expect("[")
-    low = int(tk.next())
+    opener = tk.next()
+    if opener not in ("[", "("):
+        raise PolicyTransformationException(
+            f"OOOFragmentConverter: expected an interval, got {opener!r}")
+    left = tk.next()
     tk.expect(",")
     right = tk.next()
-    if right == "*":
-        closer = tk.next()
-        if closer not in (")", "]"):
-            raise PolicyTransformationException(
-                f"OOOFragmentConverter: bad interval closer {closer!r}")
-        return low, None
-    high = int(right)
     closer = tk.next()
-    if closer == "]":
-        return low, high
-    if closer == ")":
-        if high - 1 < low:
-            raise PolicyTransformationException(
-                f"OOOFragmentConverter: empty interval [{low},{high})")
-        return low, high - 1
-    raise PolicyTransformationException(f"OOOFragmentConverter: bad interval closer {closer!r}")
+    if closer not in (")", "]"):
+        raise PolicyTransformationException(f"OOOFragmentConverter: bad interval closer {closer!r}")
+    low = int(left) + (1 if opener == "(" else 0)
+    if right == "*":
+        return low, None
+    high = int(right) - (1 if closer == ")" else 0)
+    if high < low:
+        raise PolicyTransformationException(
+            f"OOOFragmentConverter: empty interval {opener}{left},{right}{closer}")
+    return low, high
 
 
 def _parse_formula(tk: _Tokens):
@@ -107,27 +125,48 @@ def _parse_formula(tk: _Tokens):
     return node
 
 
+def _reject_outside_fragment(tk: _Tokens, subject: str):
+    if tk.peek() == "<" and tk.peek(1) == "-":
+        raise PolicyTransformationException(
+            f"OOOFragmentConverter: aggregation ({subject} <- ...) is outside the fragment")
+    if tk.peek() in COMPARISON_STARTS:
+        raise PolicyTransformationException(
+            f"OOOFragmentConverter: comparison {subject} {tk.peek()} ... is outside the fragment "
+            f"(only = is in it)")
+
+
 def _parse_operand(tk: _Tokens):
     token = tk.peek()
     if token == "(":
         return _parse_formula(tk)
     if token == "NOT":
         tk.next()
-        return ("not", _parse_formula(tk))
+        return ("not", _parse_operand(tk))
     if token == "EXISTS":
         tk.next()
-        var = tk.next()
+        variables = [tk.next()]
+        while tk.peek() == ",":
+            tk.next()
+            variables.append(tk.next())
+        for var in variables:
+            if IDENTIFIER_RE.fullmatch(var) is None:
+                raise PolicyTransformationException(f"OOOFragmentConverter: bad EXISTS variable {var!r}")
         tk.expect(".")
-        return ("exists", var, _parse_formula(tk))
+        node = _parse_operand(tk)
+        for var in reversed(variables):
+            node = ("exists", var, node)
+        return node
     if token in TEMPORAL_UNARY:
         tk.next()
         interval = _parse_interval(tk)
-        return (token.lower(), interval, _parse_formula(tk))
+        return (token.lower(), interval, _parse_operand(tk))
     if token is not None and _is_const(token):
         left = _parse_term(tk)
+        _reject_outside_fragment(tk, left[1])
         tk.expect("=")
         return ("eq", left, _parse_term(tk))
     name = tk.next()
+    _reject_outside_fragment(tk, name)
     if tk.peek() == "(":
         tk.next()
         args = []
@@ -144,23 +183,43 @@ def _parse_operand(tk: _Tokens):
         f"OOOFragmentConverter: cannot parse at {name!r} {tk.peek()!r}")
 
 
-def _parse_inner(tk: _Tokens):
+def _connective(tk: _Tokens):
+    token = tk.peek()
+    return None if token is None else token.upper()
+
+
+def _parse_conjunction(tk: _Tokens):
     left = _parse_operand(tk)
-    while True:
-        token = tk.peek()
-        if token is None or token == ")":
-            return left
-        op = tk.next().upper()
-        if op == "AND":
-            left = ("and", left, _parse_operand(tk))
-        elif op == "OR":
-            left = ("or", left, _parse_operand(tk))
-        elif op in TEMPORAL_BINARY:
-            interval = _parse_interval(tk)
-            left = (op.lower(), left, interval, _parse_operand(tk))
-        else:
-            raise PolicyTransformationException(
-                f"OOOFragmentConverter: unknown connective {op!r}")
+    while _connective(tk) == "AND":
+        tk.next()
+        left = ("and", left, _parse_operand(tk))
+    return left
+
+
+def _parse_disjunction(tk: _Tokens):
+    left = _parse_conjunction(tk)
+    while _connective(tk) == "OR":
+        tk.next()
+        left = ("or", left, _parse_conjunction(tk))
+    return left
+
+
+def _parse_since_until(tk: _Tokens):
+    left = _parse_disjunction(tk)
+    op = _connective(tk)
+    if op not in TEMPORAL_BINARY:
+        return left
+    tk.next()
+    interval = _parse_interval(tk)
+    return (op.lower(), left, interval, _parse_since_until(tk))
+
+
+def _parse_inner(tk: _Tokens):
+    node = _parse_since_until(tk)
+    token = tk.peek()
+    if token is not None and token != ")":
+        raise PolicyTransformationException(f"OOOFragmentConverter: unknown connective {token!r}")
+    return node
 
 
 def _collect_free(node, bound: frozenset, acc: List[str]):
@@ -320,7 +379,7 @@ class _Emitter:
 
 def _parse_policy(text: str):
     tokens = _Tokens(text.strip())
-    ast = _parse_formula(tokens)
+    ast = _parse_inner(tokens)
     if tokens.peek() is not None:
         raise PolicyTransformationException(
             f"OOOFragmentConverter: trailing tokens after policy: {tokens.peek()!r}")
