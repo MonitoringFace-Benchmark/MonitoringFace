@@ -15,7 +15,7 @@ Result CSV path
     Reads the per-step ``output_pairs`` column written by ``AnalysisOnline``
     / ``BenchmarkBuilder`` (format: ``[[processed_count, elapsed_ns], ...]``).
     Valid runs, accumulative-timeout runs, and maximum-timeout runs are all
-    merged onto one figure and colour-coded by status.  Accepts a single CSV,
+    drawn on one figure, in the style of the suite figures.  Accepts a single CSV,
     a folder that contains any of the three report files, or a DataFrame.
     x-axis: step index (0-based); real-time position is unavailable from the
     CSV alone.
@@ -26,9 +26,12 @@ Suite results folder
     / ``..._timeout_maximum_latency.csv`` and a ``provenance`` folder).  Runs
     of all experiments are pooled and grouped by the formula they ran, which
     is read from the provenance of their setting.  One figure is written per
-    formula with every tool that ran it.  A figure config (dict, JSON string,
-    or JSON/YAML file) sets title, axis labels, legend, log scale, and so on
-    per figure, keyed by formula name (``"default"`` applies to all figures).
+    formula with every tool that ran it: by default as small multiples, one
+    panel per run on shared axes with the other runs in grey behind it and the
+    run's outcome, p99 and total latency above it (``style: "overlay"`` draws
+    every run on one axes instead).  A figure config (dict, JSON string, or
+    JSON/YAML file) sets title, axis labels, log scale, style, and so on per
+    figure, keyed by formula name (``"default"`` applies to all figures).
 
 API
 ---
@@ -47,7 +50,7 @@ API
     summaries = plot_suite(
         "Infrastructure/results/<suite>_<timestamp>",
         figure_config={
-            "default":        {"y_log": True, "legend_loc": "upper left"},
+            "default":        {"y_unit": "us"},
             "formula_delete": {"title": "DELETE"},
             "formula_select": {"title": "SELECT", "out": "select.svg"},
         },
@@ -82,16 +85,16 @@ CLI
 
     python -m Infrastructure.Analysis.AutomatedAnalysis.OnlineLatencyPlotter \\
         --suite Infrastructure/results/<suite>_<timestamp> \\
-        [--out-dir plots] [--format svg] \\
-        [--figure-config '{"default": {"y_log": true}, "formula_delete": {"title": "DELETE"}}']
+        [--out-dir plots] [--format svg] [--style overlay] \\
+        [--figure-config '{"default": {"y_unit": "us"}, "formula_delete": {"title": "DELETE"}}']
         [--figure-config figures.yaml]
 
     --figure-config takes an inline JSON object or the path of a JSON/YAML file.
     Keys are formula names (as the provenance names the policy file, without
     extension), the setting block ("0", "1", ...), or "default". Values are
-    dicts of the options listed in FIGURE_DEFAULTS, e.g. title, xlabel,
-    ylabel, legend, legend_loc, y_log, y_unit, threshold_ms, window, colors,
-    out. Other command-line flags (--y-log, --y-unit, ...) fill "default".
+    dicts of the options listed in FIGURE_DEFAULTS, e.g. style, title, xlabel,
+    ylabel, y_log, y_unit, threshold_ms, window, colors, labels, out. Other
+    command-line flags (--style, --y-log, --y-unit, ...) fill "default".
 """
 from __future__ import annotations
 
@@ -186,44 +189,71 @@ _SUITE_SUFFIXES: List[Tuple[str, str]] = [
     ("_timeout_maximum_latency.csv",      _STATUS_MTO),
 ]
 
-# Default colour per tool; a figure config may override or extend it
+# Colour per tool: the categorical slots of the reference palette in their
+# fixed order, so a tool keeps its colour in every figure. Runs of other tools
+# take the spare slots in order of appearance. A figure config may override
+# or extend the mapping.
 _SERIES_COLORS: Dict[str, str] = {
-    "WhyMon":    "tab:blue",
-    "TimelyMon": "tab:orange",
-    "MonPoly":   "tab:green",
-    "VeriMon":   "tab:red",
-    "EnfGuard":  "tab:purple",
+    "TimelyMon": "#2a78d6",
+    "MonPoly":   "#eb6834",
+    "VeriMon":   "#1baf7a",
+    "WhyMon":    "#eda100",
+    "EnfGuard":  "#e87ba4",
 }
+_SPARE_COLORS: List[str] = ["#008300", "#4a3aa7", "#e34948"]
+# Panel order of the small multiples; other tools follow in input order
+_TOOL_ORDER: List[str] = list(_SERIES_COLORS)
+_INK, _INK2, _MUTED, _GRID, _CONTEXT = "#0b0b0b", "#52514e", "#8a8984", "#e6e5e0", "#d9d8d2"
+_SANS = ["Helvetica Neue", "Helvetica", "Arial", "Liberation Sans", "DejaVu Sans"]
 
 #: Every option a figure config may set, with its default. "default" in a
-#: config applies to all figures; a formula's entry overrides it.
+#: config applies to all figures; a formula's entry overrides it. A None marks
+#: an option whose default depends on the style (see _STYLE_DEFAULTS).
 FIGURE_DEFAULTS: Dict[str, object] = {
+    "style":           "small_multiples",  # one panel per run; "overlay": every run on one axes
     "title":           None,           # figure title; None for no title
-    "xlabel":          "Step index",
-    "ylabel":          None,           # None: "Per-step latency (<y_unit>)"
+    "xlabel":          None,
+    "ylabel":          None,           # None: "Step latency (<y_unit>)" / "Per-step latency (<y_unit>)"
     "y_unit":          "ms",           # one of Y_UNIT_FROM_NS
-    "y_log":           False,
-    "y_tick_format":   "auto",         # "auto": matplotlib's (10^k on a log axis); "plain": 0.1, 1, 10, ...
+    "y_log":           None,
+    "y_tick_format":   None,           # "auto": matplotlib's (10^k on a log axis); "plain": 0.1, 1, 10, ...
     "ylim":            None,           # [low, high]; None for auto
     "xlim":            None,           # [low, high]; None for [0, auto]
     "threshold_ms":    None,           # horizontal dashed line, in ms
     "drop_warmup":     0,              # steps dropped at the start of every run
     "max_points":      400_000,        # downsampling cap per run
     "window":          100,            # rolling-mean window in steps; 1 for raw
-    "linewidth":       1.5,
-    "alpha":           0.8,
+    "linewidth":       None,
+    "alpha":           None,
     "colors":          {},             # tool name -> matplotlib colour, on top of the defaults
-    "labels":          {},             # tool name -> legend label
-    "legend":          True,
-    "legend_loc":      "upper right",
-    "legend_fontsize": 16,
-    "fontsize":        20,             # axis label size
-    "title_fontsize":  20,
-    "tick_fontsize":   None,           # None keeps matplotlib's default
-    "figsize":         [12, 5],
+    "labels":          {},             # tool name -> panel title or legend label
+    "context":         True,           # small multiples: the other runs in grey behind each panel's
+    "panel_stats":     True,           # small multiples: outcome, p99 and total latency above each panel
+    "legend":          True,           # overlay only
+    "legend_loc":      "upper right",  # overlay only
+    "legend_fontsize": 16,             # overlay only
+    "fontsize":        None,           # axis label size
+    "title_fontsize":  None,
+    "tick_fontsize":   None,           # overlay: None keeps matplotlib's default
+    "figsize":         None,           # None: text width x 1.2 in per panel / [12, 5]
     "grid":            True,
-    "mark_timeouts":   True,           # "x" at the last step of a timed-out run
+    "mark_timeouts":   False,          # overlay: "x" at the last step of a timed-out run
     "out":             None,           # file name or path; None: <formula>.<format>
+}
+
+# Defaults of the options FIGURE_DEFAULTS leaves to the style. Small multiples
+# are sized for a printed page (5.4 in text width) at their print size.
+_STYLE_DEFAULTS: Dict[str, Dict[str, object]] = {
+    "small_multiples": {
+        "xlabel": "Time point (step)", "y_log": True, "y_tick_format": "plain",
+        "linewidth": 1.0, "alpha": 1.0, "fontsize": 8.5, "title_fontsize": 9,
+        "tick_fontsize": 8,
+    },
+    "overlay": {
+        "xlabel": "Step index", "y_log": False, "y_tick_format": "auto",
+        "linewidth": 1.5, "alpha": 0.8, "fontsize": 20, "title_fontsize": 20,
+        "figsize": [12, 5],
+    },
 }
 
 _TS_RE      = re.compile(r"ts\s*=\s*(\d+)")
@@ -654,7 +684,7 @@ def _save_fig(fig, out: Optional[Union[str, "os.PathLike[str]"]]):
     if parent:
         os.makedirs(parent, exist_ok=True)
     ext = os.path.splitext(out)[1].lstrip(".").lower()
-    fig.savefig(out, format=ext or "svg", dpi=150, bbox_inches="tight")
+    fig.savefig(out, format=ext or "svg", dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -772,20 +802,24 @@ def plot_latency_from_csv(
         out: Optional[Union[str, "os.PathLike[str]"]] = "latency_from_csv.png",
         *,
         y_unit: str = "ms",
-        y_log: bool = False,
+        y_log: Optional[bool] = None,
         threshold_ms: Optional[float] = None,
         drop_warmup: int = 0,
         max_points: int = 400_000,
         render: bool = True,
         title: Optional[str] = None,
+        style: Optional[str] = None,
 ) -> LatencyReplaySummary:
-    """Plot the per-step latency of every run in the CSV source on one figure."""
+    """Plot the per-step latency of every run in the CSV source on one figure.
+
+    ``y_log`` and ``style`` None take the style's defaults (FIGURE_DEFAULTS).
+    """
     all_series = parse_result_csv(source)
     if not all_series:
         raise ValueError("no parseable run series found in source")
     opts = _figure_options({}, overrides={
         "y_unit": y_unit, "y_log": y_log, "threshold_ms": threshold_ms,
-        "drop_warmup": drop_warmup, "max_points": max_points, "title": title,
+        "drop_warmup": drop_warmup, "max_points": max_points, "title": title, "style": style,
     })
     return _render_series(all_series, out if render else None, opts)
 
@@ -795,11 +829,19 @@ def _render_series(
     out: Optional[Union[str, "os.PathLike[str]"]],
     opts: Dict[str, object],
 ) -> LatencyReplaySummary:
-    """Draw the rolling-mean latency of every run over its step index.
+    """Draw the rolling-mean latency of every run over its step index, as
+    small multiples (one panel per run) or overlaid on one axes.
 
-    ``opts`` holds every key of :data:`FIGURE_DEFAULTS`.  With ``out`` None,
-    only the summary is computed.
+    ``opts`` holds every key of :data:`FIGURE_DEFAULTS`; its None entries take
+    the style's defaults.  With ``out`` None, only the summary is computed.
     """
+    style = str(opts["style"])
+    if style not in _STYLE_DEFAULTS:
+        raise ValueError(f"style must be one of {sorted(_STYLE_DEFAULTS)}, got {style!r}")
+    opts = dict(opts)
+    for key, value in _STYLE_DEFAULTS[style].items():
+        if opts.get(key) is None:
+            opts[key] = value
     y_unit = str(opts["y_unit"])
     if y_unit not in Y_UNIT_FROM_NS:
         raise ValueError(f"y_unit must be one of {sorted(Y_UNIT_FROM_NS)}")
@@ -821,68 +863,16 @@ def _render_series(
 
     out_path: Optional[str] = None
     if out is not None:
-        colors = dict(_SERIES_COLORS, **(opts["colors"] or {}))
-        labels = opts["labels"] or {}
-        window = max(1, int(opts["window"] or 1))
-        fig, ax = plt.subplots(figsize=tuple(opts["figsize"]))
-        seen: set = set()
-        for run in all_series:
-            lat = kept(run)
-            x = np.arange(lat.size, dtype=np.float64)
-            y = lat * yfac
-            mask = ~np.isnan(y)
-            x, y = x[mask], y[mask]
-            if y.size == 0:
-                continue
-            xs, ys = _downsample(x, y, int(opts["max_points"] or 0))
-            if window > 1:
-                ys = pd.Series(ys).rolling(window=window, center=True, min_periods=1).mean().to_numpy()
-            color = colors.get(run.name, "tab:gray")
-            label = labels.get(run.name, run.name) if run.name not in seen else None
-            seen.add(run.name)
-            ax.plot(xs, ys, linewidth=float(opts["linewidth"]), color=color, label=label,
-                    alpha=float(opts["alpha"]))
-            if opts["mark_timeouts"] and run.status in (_STATUS_ATO, _STATUS_MTO):
-                ax.plot(xs[-1], ys[-1], marker="x", markersize=10, markeredgewidth=2, color=color,
-                        linestyle="none", label="timeout" if "timeout" not in seen else None)
-                seen.add("timeout")
-
-        if opts["y_log"]:
-            ax.set_yscale("log")
-        if opts["y_tick_format"] == "plain":
-            from matplotlib.ticker import FuncFormatter, NullFormatter
-            ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
-            ax.yaxis.set_minor_formatter(NullFormatter())
-        elif opts["y_tick_format"] != "auto":
-            raise ValueError(f"y_tick_format must be 'auto' or 'plain', got {opts['y_tick_format']!r}")
-        if opts["threshold_ms"] is not None:
-            thr = float(opts["threshold_ms"])
-            ax.axhline(thr * 1e6 * yfac, color="black", ls="--", lw=1, label=f"threshold {thr:g} ms")
-        if opts["xlim"]:
-            ax.set_xlim(*opts["xlim"])
-        else:
-            ax.set_xlim(left=0)
-        if opts["ylim"]:
-            ax.set_ylim(*opts["ylim"])
-        fontsize = opts["fontsize"]
-        ax.set_xlabel(str(opts["xlabel"]), fontsize=fontsize)
-        ax.set_ylabel(opts["ylabel"] if opts["ylabel"] is not None else f"Per-step latency ({y_unit})",
-                      fontsize=fontsize)
-        if opts["title"]:
-            ax.set_title(str(opts["title"]), fontsize=opts["title_fontsize"])
-        if opts["tick_fontsize"]:
-            ax.tick_params(labelsize=opts["tick_fontsize"])
-        if opts["grid"]:
-            ax.grid(True, which="both", alpha=0.3)
-        handles, names = ax.get_legend_handles_labels()
-        if opts["legend"] and handles:
-            # tools first, then the timeout marker and the threshold line
-            order = sorted(range(len(names)), key=lambda i: names[i] == "timeout" or names[i].startswith("threshold"))
-            ax.legend([handles[i] for i in order], [names[i] for i in order],
-                      loc=str(opts["legend_loc"]), fontsize=opts["legend_fontsize"])
-        fig.tight_layout()
+        curves = _smoothed_curves(all_series, kept, yfac, opts)
+        colors = _run_colors([run.name for run, _, _ in curves], opts["colors"])
         out_path = os.fspath(out)
-        _save_fig(fig, out_path)
+        if style == "overlay" or not curves:
+            _save_fig(_draw_overlay(curves, colors, opts, y_unit, yfac), out_path)
+        else:
+            with plt.rc_context({"font.family": "sans-serif", "font.sans-serif": _SANS,
+                                 "font.size": float(opts["fontsize"])}):
+                fig = _draw_small_multiples(curves, colors, kept, opts, y_unit, yfac)
+                _save_fig(fig, out_path)
 
     return LatencyReplaySummary(
         out_path=out_path,
@@ -898,6 +888,168 @@ def _render_series(
     )
 
 
+def _smoothed_curves(all_series: List[RunSeries], kept, yfac: float,
+                     opts: Dict[str, object]) -> List[Tuple[RunSeries, np.ndarray, np.ndarray]]:
+    """Each run's (run, x, rolling-mean latency in the y unit), runs without data left out."""
+    window = max(1, int(opts["window"] or 1))
+    curves = []
+    for run in all_series:
+        lat = kept(run)
+        x = np.arange(lat.size, dtype=np.float64)
+        y = lat * yfac
+        mask = ~np.isnan(y)
+        x, y = x[mask], y[mask]
+        if y.size == 0:
+            continue
+        xs, ys = _downsample(x, y, int(opts["max_points"] or 0))
+        if window > 1:
+            ys = pd.Series(ys).rolling(window=window, center=True, min_periods=1).mean().to_numpy()
+        curves.append((run, xs, ys))
+    return curves
+
+
+def _run_colors(names: List[str], overrides) -> Dict[str, str]:
+    """The colour of every tool, the spare slots going to unlisted tools in order of appearance."""
+    colors = dict(_SERIES_COLORS, **(overrides or {}))
+    spare = iter(_SPARE_COLORS)
+    for name in names:
+        if name not in colors:
+            colors[name] = next(spare, _MUTED)
+    return colors
+
+
+def _format_y_axis(ax, opts: Dict[str, object]) -> None:
+    from matplotlib.ticker import FuncFormatter, NullFormatter
+    if opts["y_log"]:
+        ax.set_yscale("log")
+    if opts["y_tick_format"] == "plain":
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+        ax.yaxis.set_minor_formatter(NullFormatter())
+    elif opts["y_tick_format"] != "auto":
+        raise ValueError(f"y_tick_format must be 'auto' or 'plain', got {opts['y_tick_format']!r}")
+
+
+def _draw_overlay(curves, colors: Dict[str, str], opts: Dict[str, object], y_unit: str, yfac: float):
+    """Every run on one axes, with a legend."""
+    labels = opts["labels"] or {}
+    fig, ax = plt.subplots(figsize=tuple(opts["figsize"]))
+    seen: set = set()
+    for run, xs, ys in curves:
+        color = colors[run.name]
+        label = labels.get(run.name, run.name) if run.name not in seen else None
+        seen.add(run.name)
+        ax.plot(xs, ys, linewidth=float(opts["linewidth"]), color=color, label=label,
+                alpha=float(opts["alpha"]))
+        if opts["mark_timeouts"] and run.status in (_STATUS_ATO, _STATUS_MTO):
+            ax.plot(xs[-1], ys[-1], marker="x", markersize=10, markeredgewidth=2, color=color,
+                    linestyle="none", label="timeout" if "timeout" not in seen else None)
+            seen.add("timeout")
+
+    _format_y_axis(ax, opts)
+    if opts["threshold_ms"] is not None:
+        thr = float(opts["threshold_ms"])
+        ax.axhline(thr * 1e6 * yfac, color="black", ls="--", lw=1, label=f"threshold {thr:g} ms")
+    if opts["xlim"]:
+        ax.set_xlim(*opts["xlim"])
+    else:
+        ax.set_xlim(left=0)
+    if opts["ylim"]:
+        ax.set_ylim(*opts["ylim"])
+    fontsize = opts["fontsize"]
+    ax.set_xlabel(str(opts["xlabel"]), fontsize=fontsize)
+    ax.set_ylabel(opts["ylabel"] if opts["ylabel"] is not None else f"Per-step latency ({y_unit})",
+                  fontsize=fontsize)
+    if opts["title"]:
+        ax.set_title(str(opts["title"]), fontsize=opts["title_fontsize"])
+    if opts["tick_fontsize"]:
+        ax.tick_params(labelsize=opts["tick_fontsize"])
+    if opts["grid"]:
+        ax.grid(True, which="both", alpha=0.3)
+    handles, names = ax.get_legend_handles_labels()
+    if opts["legend"] and handles:
+        # tools first, then the timeout marker and the threshold line
+        order = sorted(range(len(names)), key=lambda i: names[i] == "timeout" or names[i].startswith("threshold"))
+        ax.legend([handles[i] for i in order], [names[i] for i in order],
+                  loc=str(opts["legend_loc"]), fontsize=opts["legend_fontsize"])
+    fig.tight_layout()
+    return fig
+
+
+def _panel_stats(run: RunSeries, lat_ns: np.ndarray, y_unit: str, yfac: float) -> str:
+    """Outcome, p99 and total latency of a run, for its panel title."""
+    lat = lat_ns[~np.isnan(lat_ns)]
+    if run.status == _STATUS_ATO:
+        outcome = f"stopped at step {run.steps:,}: latency budget"
+    elif run.status == _STATUS_MTO:
+        outcome = f"stopped at step {run.steps:,}: step-latency limit"
+    else:
+        outcome = "complete"
+    if not lat.size:
+        return outcome
+    p99 = float(np.percentile(lat, 99)) * yfac
+    p99_text = f"{p99:.0f}" if p99 >= 100 else f"{p99:.2g}"
+    return f"{outcome} · p99 {p99_text} {y_unit} · total {lat.sum() / 1e9:.0f} s"
+
+
+def _draw_small_multiples(curves, colors: Dict[str, str], kept, opts: Dict[str, object],
+                          y_unit: str, yfac: float):
+    """One panel per run on shared axes: the run in its colour, the other runs
+    in grey behind it, its name and outcome above it."""
+    from matplotlib.ticker import FuncFormatter, NullLocator
+    labels = opts["labels"] or {}
+    rank = {name: i for i, name in enumerate(_TOOL_ORDER)}
+    curves = sorted(curves, key=lambda c: rank.get(c[0].name, len(rank)))
+    names = [run.name for run, _, _ in curves]
+    repeated = {name for name in names if names.count(name) > 1}
+    n = len(curves)
+    figsize = opts["figsize"] or [5.4, 0.4 + 1.2 * n]
+    fig, axes = plt.subplots(n, 1, figsize=tuple(figsize), sharex=True, sharey=True, squeeze=False)
+    axes = axes[:, 0]
+    for ax, (run, xs, ys) in zip(axes, curves):
+        if opts["context"]:
+            for other, oxs, oys in curves:
+                if other is not run:
+                    ax.plot(oxs, oys, color=_CONTEXT, linewidth=0.8, zorder=1)
+        ax.plot(xs, ys, color=colors[run.name], linewidth=float(opts["linewidth"]),
+                alpha=float(opts["alpha"]), zorder=3)
+        name = labels.get(run.name, run.name)
+        if run.name in repeated:
+            name = f"{name} ({run.setting})"
+        ax.set_title(name, loc="left", fontsize=opts["title_fontsize"], color=_INK,
+                     fontweight="bold", pad=3)
+        if opts["panel_stats"]:
+            ax.set_title(_panel_stats(run, kept(run), y_unit, yfac), loc="right",
+                         fontsize=float(opts["tick_fontsize"]) - 0.5, color=_INK2, pad=3)
+        if opts["threshold_ms"] is not None:
+            ax.axhline(float(opts["threshold_ms"]) * 1e6 * yfac, color=_INK2, ls="--", lw=0.8,
+                       zorder=2)
+        for side in ("top", "right"):
+            ax.spines[side].set_visible(False)
+        for side in ("left", "bottom"):
+            ax.spines[side].set_color(_MUTED)
+            ax.spines[side].set_linewidth(0.6)
+        ax.tick_params(colors=_INK2, width=0.6, length=3, labelsize=opts["tick_fontsize"])
+        if opts["grid"]:
+            ax.grid(True, axis="y", which="major", color=_GRID, linewidth=0.6)
+        ax.set_axisbelow(True)
+        _format_y_axis(ax, opts)
+        if opts["y_log"]:
+            ax.yaxis.set_minor_locator(NullLocator())
+    axes[0].set_xlim(*(opts["xlim"] or (0, max(xs[-1] for _, xs, _ in curves) + 1)))
+    if opts["ylim"]:
+        axes[0].set_ylim(*opts["ylim"])
+    axes[-1].xaxis.set_major_formatter(
+        FuncFormatter(lambda v, _: f"{v / 1000:g}k" if abs(v) >= 1000 else f"{v:g}"))
+    axes[-1].set_xlabel(str(opts["xlabel"]), fontsize=opts["fontsize"], color=_INK2)
+    fig.supylabel(opts["ylabel"] if opts["ylabel"] is not None else f"Step latency ({y_unit})",
+                  fontsize=opts["fontsize"], color=_INK2)
+    if opts["title"]:
+        fig.suptitle(str(opts["title"]), x=0.01, ha="left", fontsize=opts["title_fontsize"],
+                     color=_INK)
+    fig.tight_layout(h_pad=0.8)
+    return fig
+
+
 # =========================================================================== #
 # Plot — suite results folder (one figure per formula)
 # =========================================================================== #
@@ -911,7 +1063,8 @@ def plot_suite(
     render: bool = True,
     **common,
 ) -> Dict[str, LatencyReplaySummary]:
-    """One latency figure per formula of a suite run, every tool on the same axes.
+    """One latency figure per formula of a suite run with every tool that ran it
+    (small multiples by default, see FIGURE_DEFAULTS["style"]).
 
     Parameters
     ----------
@@ -976,6 +1129,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--timestamp-units", choices=list(TS_UNIT_SECONDS),
                     default="milliseconds")
     ap.add_argument("--y-unit", choices=list(Y_UNIT_FROM_NS), default="ms")
+    ap.add_argument("--style", choices=list(_STYLE_DEFAULTS), default=None,
+                    help="(suite and CSV) small_multiples (the default) or overlay")
     ap.add_argument("--y-log", action="store_true")
     ap.add_argument("--threshold-ms", type=float, default=None)
     ap.add_argument("--drop-warmup", type=int, default=0)
@@ -997,7 +1152,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             summaries = plot_suite(
                 args.suite, args.out_dir, figure_config=args.figure_config, fmt=args.format,
                 y_unit=args.y_unit, y_log=args.y_log or None, threshold_ms=args.threshold_ms,
-                drop_warmup=args.drop_warmup, max_points=args.max_points,
+                drop_warmup=args.drop_warmup, max_points=args.max_points, style=args.style,
             )
             for formula, summary in summaries.items():
                 print(f"{formula:<24} steps {summary.steps:>8}  p50 {summary.p50_ms:9.3f} ms  "
@@ -1007,9 +1162,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.csv:
             out = args.out or "latency_from_csv.png"
             summary = plot_latency_from_csv(
-                args.csv, out=out, y_unit=args.y_unit, y_log=args.y_log,
+                args.csv, out=out, y_unit=args.y_unit, y_log=args.y_log or None,
                 threshold_ms=args.threshold_ms, drop_warmup=args.drop_warmup,
-                max_points=args.max_points,
+                max_points=args.max_points, style=args.style,
             )
         else:
             out = args.out or "latency_over_replay.png"
