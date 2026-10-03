@@ -35,8 +35,8 @@ monitors:
         stage: static
   - identifier: TimelyMon
     name: TimelyMon tp-interval
-    branch: tp-interval-timestamp
-    commit: 4e51173a56bfe51a19a239936f65559d3cac6cf5
+    branch: tpi-late-accounting
+    commit: f48d3cc4579c5016477004891c44e1e38e3d6e72
     params:
       worker: 1
       output_mode: 1
