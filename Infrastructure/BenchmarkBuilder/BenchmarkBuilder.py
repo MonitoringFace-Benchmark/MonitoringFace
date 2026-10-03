@@ -266,7 +266,7 @@ def run_tools_online(
 ):
     debug_path = coordinator.get_path(PATH_TO_DEBUG)
     try:
-        preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count, output, code = run_monitor_online(
+        preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count, output, code, guard = run_monitor_online(
             mon=tool, path_to_folder=path_to_folder, data_file=data_file, signature_file=signature_file,
             policy_file=policy_file, cli_args=cli_args, trace_source_format=data_type, policy_source_format=policy_type,
             path_manager=coordinator.get_path_manager(), online_experiment_contract=online_experiment_contract,
@@ -294,7 +294,7 @@ def run_tools_online(
                 json.dump({
                     "tool": tool.name, "setting": setting_id, "exit_code": code,
                     "acc_elapsed_s": total_elapsed_s, "total_count": total_count,
-                    "blocks": output,
+                    "guard": guard, "blocks": output,
                 }, frames_file)
 
         if code == 0:

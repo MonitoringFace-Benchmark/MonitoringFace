@@ -307,7 +307,7 @@ def run_monitor_online(
     if provenance is not None and pre is not None:
         provenance.record_invocation(tool_command)
     try:
-        output, total_elapsed_s, total_count, latency_err_msg, code = run_online_image(
+        output, total_elapsed_s, total_count, latency_err_msg, code, guard = run_online_image(
             image_name=target_name, tool_command=tool_command,
             online_experiment_contract=online_experiment_contract,
             tool_online_experiment_contract=tool_online_experiment_contract,
@@ -328,7 +328,7 @@ def run_monitor_online(
 
     # todo verify results with oracle (future work)
 
-    return preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count, output, code
+    return preprocessing_elapsed, build_comp_elapsed, total_elapsed_s, total_count, output, code, guard
 
 
 def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
