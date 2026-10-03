@@ -225,13 +225,24 @@ def _whole_lines(chunks):
         yield pending
 
 
+# a monitor's source-guard summary: TimelyMon "source guard: 0 regressing
+# watermark(s) ignored, 13 late fact(s) dropped, ...", OOOMon "source guard: 13
+# late fact(s) dropped"
+GUARD_LATE_RE = re.compile(r"(\d+) late fact\(s\) dropped")
+
+
 def parse_online_logs(chunks, batch_delimiter: str = "#"):
     """Parses the OnlineExperimentDriver's log stream. Protocol 2 adds
     [Driver Protocol], [Delivered], [Held], [Origins k], [Stage k Stats] and
     [Total Delivered]; logs from older drivers parse exactly as before. Each
     round also keeps the time-points its input carried (input_points), so
-    verdicts can later be placed in log time."""
+    verdicts can later be placed in log time. The tool's stderr arrives in
+    the same stream: its source-guard summary (facts dropped because they
+    reached an already completed time-point) becomes late_dropped, and its
+    `warning:` lines are counted, not taken as verdict output."""
     footer_acc_elapsed_s = None
+    late_dropped = None
+    tool_warnings = 0
     footer_wall_clock_s = None
     footer_total_count = None
     footer_total_delivered = None
@@ -251,6 +262,16 @@ def parse_online_logs(chunks, batch_delimiter: str = "#"):
         if text.startswith("[Error"):
             unexpected_error = text.strip()
             break
+
+        if text.startswith("source guard:"):
+            match = GUARD_LATE_RE.search(text)
+            if match:
+                late_dropped = (late_dropped or 0) + int(match.group(1))
+            continue
+
+        if text.startswith("warning:"):
+            tool_warnings += 1
+            continue
 
         if text == "\n":
             parsed_blocks.append(current_block)
@@ -342,6 +363,8 @@ def parse_online_logs(chunks, batch_delimiter: str = "#"):
         "stage_stats": stage_stats,
         "final_error": final_error,
         "unexpected_error": unexpected_error,
+        "late_dropped": late_dropped,
+        "tool_warnings": tool_warnings,
     }
 
 
@@ -422,6 +445,9 @@ def run_online_image(
             print(f"Delivered:   {parsed['total_delivered']} lines reached the tool")
         for stage, stats in sorted(parsed["stage_stats"].items()):
             print(f"Stage {stage} Stats: {stats}")
+        if parsed["late_dropped"] is not None:
+            print(f"Source guard: {parsed['late_dropped']} late fact(s) dropped")
+        guard = {"late_dropped": parsed["late_dropped"], "tool_warnings": parsed["tool_warnings"]}
 
         if stream_spec and (parsed["protocol"] is None or parsed["protocol"] < 2):
             raise ToolException(
@@ -432,19 +458,19 @@ def run_online_image(
         exit_code = result.get("StatusCode", 1) if isinstance(result, dict) else 1
         if unexpected_error:
             if exit_code == 200:
-                return parsed_blocks, footer_acc_elapsed_s, footer_total_count, final_error, exit_code
+                return parsed_blocks, footer_acc_elapsed_s, footer_total_count, final_error, exit_code, guard
             if exit_code == 250:
-                return parsed_blocks, footer_acc_elapsed_s, footer_total_count, final_error, exit_code
+                return parsed_blocks, footer_acc_elapsed_s, footer_total_count, final_error, exit_code, guard
             raise ToolException(f"Unexpected failure with exit code ({exit_code}) {unexpected_error}")
-        return parsed_blocks, footer_acc_elapsed_s, footer_total_count, final_error, exit_code
+        return parsed_blocks, footer_acc_elapsed_s, footer_total_count, final_error, exit_code, guard
     except docker.errors.ContainerError as e:
         stderr_text = e.stderr.decode("utf-8", errors="ignore") if isinstance(e.stderr, (bytes, bytearray)) else str(
             e.stderr)
-        return stderr_text, e.exit_status, [], None, None
+        return stderr_text, e.exit_status, [], None, None, None
     except docker.errors.APIError as e:
-        return f"Docker API error: {e}", 125, [], None, None
+        return f"Docker API error: {e}", 125, [], None, None, None
     except docker.errors.ImageNotFound:
-        return "Error: Image not found", 127, [], None, None
+        return "Error: Image not found", 127, [], None, None, None
     finally:
         if container is not None:
             try:
