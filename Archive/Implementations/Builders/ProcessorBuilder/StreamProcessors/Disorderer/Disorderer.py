@@ -10,6 +10,10 @@ DISTRIBUTIONS = ("uniform", "geometric", "heavytail")
 CLAIM_ORDERS = ("independent", "downward-closed")
 GRANULARITIES = ("event", "block")
 FORMATS = ("csv", "bridge")
+# what a delay counts: stream positions (lines), or log time (the events'
+# own timestamps, in the trace's time unit): a delayed event then arrives
+# after every event whose timestamp is at most its own plus the delay
+DELAY_UNITS = ("lines", "seconds")
 
 
 class Disorderer(StreamProcessorTemplate):
@@ -42,6 +46,9 @@ class Disorderer(StreamProcessorTemplate):
         self.format = params.get("format", "csv")
         if self.format not in FORMATS:
             raise StreamProcessorException(f"Disorderer 'format' must be one of {FORMATS}")
+        self.delay_unit = params.get("delay_unit", "lines")
+        if self.delay_unit not in DELAY_UNITS:
+            raise StreamProcessorException(f"Disorderer 'delay_unit' must be one of {DELAY_UNITS}")
         self.base_tp = int(params.get("base_tp", 0))
 
         self.events: List[tuple] = []
@@ -84,9 +91,13 @@ class Disorderer(StreamProcessorTemplate):
             return delay
         return min(bound, max(1, int(rng.paretovariate(1.5))))
 
+    def _origin(self, i: int, tp: int) -> int:
+        """Where an item stands before its delay: its position, or its timestamp."""
+        return i if self.delay_unit == "lines" else self.tp_ts[tp]
+
     def _permute(self, rng) -> List[tuple]:
         if self.granularity == "event":
-            keyed = [(i + self._delay(rng), i, entry) for i, entry in enumerate(self.events)]
+            keyed = [(self._origin(i, entry[1]) + self._delay(rng), i, entry) for i, entry in enumerate(self.events)]
             keyed.sort(key=lambda item: (item[0], item[1]))
             return [entry for _, _, entry in keyed]
         blocks: List[List[tuple]] = []
@@ -95,7 +106,7 @@ class Disorderer(StreamProcessorTemplate):
                 blocks[-1].append(entry)
             else:
                 blocks.append([entry])
-        keyed = [(i + self._delay(rng), i, block) for i, block in enumerate(blocks)]
+        keyed = [(self._origin(i, block[0][1]) + self._delay(rng), i, block) for i, block in enumerate(blocks)]
         keyed.sort(key=lambda item: (item[0], item[1]))
         return [entry for _, _, block in keyed for entry in block]
 
@@ -144,6 +155,7 @@ class Disorderer(StreamProcessorTemplate):
         peak_open = 0
         max_displacement = 0
         displacement_sum = 0
+        out_of_order, highest_tp = 0, None    # events after an event of a later time-point
         for position in range(n + 1):
             if position > 0:
                 original_index, tp, line = permuted[position - 1]
@@ -152,6 +164,8 @@ class Disorderer(StreamProcessorTemplate):
                         f"Disorderer invariant violated: event of tp {tp} after its claim")
                 out.append(csv_to_bridge(line) if self.format == "bridge" else line)
                 origins.append(original_index)
+                out_of_order += highest_tp is not None and tp < highest_tp
+                highest_tp = tp if highest_tp is None else max(highest_tp, tp)
                 open_tps.add(tp)
                 displacement = abs((position - 1) - (original_index - 1))
                 max_displacement = max(max_displacement, displacement)
@@ -174,6 +188,8 @@ class Disorderer(StreamProcessorTemplate):
             "lag": self.lag,
             "claim_order": self.claim_order,
             "format": self.format,
+            "delay_unit": self.delay_unit,
+            "out_of_order_events": out_of_order,
         }
         self.events = []
         self.tp_ts = {}
