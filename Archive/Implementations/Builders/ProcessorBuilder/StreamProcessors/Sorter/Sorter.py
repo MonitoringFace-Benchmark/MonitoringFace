@@ -15,9 +15,12 @@ class Sorter(StreamProcessorTemplate):
 
     Canonical csv events are released as-is, one line per event. Bridge
     events (`@tp @ts atom(args)`) are released as one MonPoly-readable block
-    per time-point, `@ts atom1 atom2 ...`, the @tp annotation consumed; an
-    empty claimed time-point becomes a bare `@ts` block carrying the last
-    released timestamp, keeping MonPoly's positional tp indexing aligned."""
+    per time-point, `@ts atom1 atom2 ...;`, the @tp annotation consumed; an
+    empty claimed time-point becomes a bare `@ts;` block carrying the last
+    released timestamp, keeping MonPoly's positional tp indexing aligned.
+    The `;` ends the time-point: without it MonPoly reads a block as open
+    until the next block's `@` arrives, and processes each time-point one
+    block late."""
 
     buffering = True
     deterministic = True
@@ -99,7 +102,7 @@ class Sorter(StreamProcessorTemplate):
         origins: List[int] = []
         events = 0
         if self.stream_format == "bridge" and self.pending_empty:
-            lines.extend(f"@{ts}" for ts in self.pending_empty)
+            lines.extend(f"@{ts};" for ts in self.pending_empty)
             self.pending_empty = []
         for tp in tps:
             entries = self.buffer.pop(tp, [])
@@ -109,10 +112,10 @@ class Sorter(StreamProcessorTemplate):
                 ts = self.tp_ts.pop(tp, self.last_released_ts)
                 self.last_released_ts = ts
                 if entries:
-                    lines.append(f"@{ts} " + " ".join(atom for _, atom in entries))
+                    lines.append(f"@{ts} " + " ".join(atom for _, atom in entries) + ";")
                     self.dropped += len(entries) - 1
                 else:
-                    lines.append(f"@{ts}")
+                    lines.append(f"@{ts};")
             elif self.stream_format is None and not entries:
                 # claimed empty tp before the first event: the format is not
                 # known yet, so a bridge placeholder may still be owed
