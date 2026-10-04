@@ -1,3 +1,4 @@
+from dataclasses import replace
 from typing import Dict, AnyStr, Any, Tuple, List, Optional
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
@@ -8,13 +9,41 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
 from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable, OnlineRunnable
+from Archive.Implementations.Monitors.BoundedFuture import bound_policy_to_trace
 from Archive.Implementations.Monitors.SharedFunctions import parse_variable_order_monpoly, parse_monpoly_output
+from Infrastructure.Provenance.Provenance import PreprocessingResult
 from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
 
 
 class VeriMon(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
+
+    def preprocessing(
+            self, path_to_folder: str, trace_source_format: InputOutputTraceFormats,
+            policy_source_format: InputOutputPolicyFormats, data_file: str, signature_file: str, policy_file: str,
+            path_manager: PathManager, verbose=False
+    ) -> PreprocessingResult:
+        """Bounds the policy's unbounded future operators by the trace's
+        timestamp span (see BoundedFuture), which VeriMon would otherwise reject.
+        `bound_unbounded_future: false` in the params turns this off."""
+        result = super().preprocessing(
+            path_to_folder, trace_source_format, policy_source_format, data_file, signature_file, policy_file,
+            path_manager, verbose
+        )
+        if not self.params.get("bound_unbounded_future", True):
+            return result
+        step = bound_policy_to_trace(self.params, path_to_folder)
+        if step is None:
+            return result
+        if verbose:
+            print(f"Unbounded future operators bounded by the trace's timestamp span {step.params['horizon']}")
+        records = [
+            replace(record, steps=record.steps + [step], as_seen_by_tool=self.params[POLICY_KEY])
+            if record.kind == "policy" else record
+            for record in result.records
+        ]
+        return replace(result, records=records)
 
     def preprocessing_data(
             self, path_to_folder: AnyStr, data_file: AnyStr,
