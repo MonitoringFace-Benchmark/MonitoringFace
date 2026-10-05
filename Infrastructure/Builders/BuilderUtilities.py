@@ -1,4 +1,6 @@
 import codecs
+import hashlib
+import os
 import time
 import re
 from dataclasses import dataclass
@@ -37,13 +39,48 @@ class ImageBuildException(Exception):
     pass
 
 
+BUILD_CONTEXT_LABEL = "monitoringface.build-context"
+
+
+def build_context_digest(build_dir) -> str:
+    """sha256 over every file of a Docker build context: its relative path,
+    executable bit and content. Any edit to the Dockerfile or to a script it
+    copies changes it. Finder's .DS_Store is skipped: no Dockerfile copies it,
+    and macOS writes one whenever the folder is opened."""
+    digest = hashlib.sha256()
+    for root, dirs, files in os.walk(build_dir):
+        dirs.sort()
+        for name in sorted(files):
+            if name == ".DS_Store":
+                continue
+            path = os.path.join(root, name)
+            executable = os.stat(path).st_mode & 0o111 != 0
+            digest.update(f"{os.path.relpath(path, build_dir)}\0{executable}\0{os.path.getsize(path)}\0".encode())
+            with open(path, "rb") as f:
+                for chunk in iter(lambda: f.read(1 << 20), b""):
+                    digest.update(chunk)
+    return digest.hexdigest()
+
+
+def image_is_current(image_name, build_dir) -> bool:
+    """Whether image_name was built from build_dir as it is now. image_building
+    stamps every image with the digest of its build context; an image without
+    the stamp predates it and cannot be shown current."""
+    try:
+        labels = docker.from_env().images.get(image_name).labels or {}
+    except APIError:
+        return False
+    return labels.get(BUILD_CONTEXT_LABEL) == build_context_digest(build_dir)
+
+
 def image_building(image_name, build_dir, args=None):
     client = docker.from_env()
     try:
         print(f"\nBuilding image '{image_name}' from {build_dir} ...")
         build_output = client.api.build(
             path=build_dir, tag=image_name, decode=True,
-            buildargs=args, nocache=True, rm=True, forcerm=True
+            buildargs=args, nocache=True, rm=True, forcerm=True,
+            labels={BUILD_CONTEXT_LABEL: build_context_digest(build_dir)}
         )
 
         error_in_build = False

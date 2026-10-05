@@ -8,7 +8,8 @@ from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import Properti
 from Infrastructure.DataTypes.Types.custome_type import Processor, processor_to_identifier
 from Infrastructure.Builders.ProcessorBuilder.AbstractImageManager import AbstractImageManager
 from Infrastructure.Builders.ProcessorBuilder.ComponentPins import get_pin, docker_ref
-from Infrastructure.Builders.BuilderUtilities import image_exists, image_building, run_offline_image, to_prop_file, ImageBuildException
+from Infrastructure.Builders.BuilderUtilities import image_exists, image_building, image_is_current, run_offline_image, \
+    to_prop_file, ImageBuildException
 from Infrastructure.Monitors.MonitorExceptions import BuildException
 from Infrastructure.constants import IMAGE_POSTFIX, VERSION_KEY, META_FILE_VALUE, PROP_FILES_VALUE, BRANCH_KEY, \
     DOCKERFILE_VALUE, BUILD_ARG_GIT_BRANCH, BUILD_ARG_GIT_COMMIT
@@ -98,6 +99,10 @@ class ImageManager(AbstractImageManager):
 
         meta = self.path_to_build + META_FILE_VALUE
         if effective_location != Location.Local or not os.path.exists(meta) or not image_exists(self.image_name):
+            self._stamp_and_build(version)
+            return
+        if not image_is_current(self.image_name, self._build_archive):
+            print(f"    Build files changed for {self.identifier} - {self.name} since its image was built, rebuilding...")
             self._stamp_and_build(version)
             return
         current = PropertiesHandler.from_file(meta).get_attr(VERSION_KEY)

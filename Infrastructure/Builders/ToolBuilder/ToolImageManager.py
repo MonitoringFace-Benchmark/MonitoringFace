@@ -5,7 +5,8 @@ from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import Location
-from Infrastructure.Builders.BuilderUtilities import image_building, run_container, ContainerRun, to_prop_file, image_exists, ImageBuildException
+from Infrastructure.Builders.BuilderUtilities import image_building, run_container, ContainerRun, to_prop_file, image_exists, \
+    image_is_current, ImageBuildException
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
@@ -123,6 +124,12 @@ class IndirectToolImageManager(AbstractToolImageManager):
             else:
                 print(f"Dockerfile exists but image missing for {self.original_name} - {self.branch}, building...")
             self._build_image()
+        elif not image_is_current(self.image_name, self._build_dir()):
+            print(f"Build files changed for {self.original_name} since its image was built, rebuilding...")
+            if self._build_image() is False:
+                # the old image keeps its tag: running it would be running the
+                # very build files this rebuild was meant to replace
+                raise ImageBuildException(f"Rebuild failed for {self.original_name} ({self.image_name})")
         else:
             current_version = PropertiesHandler.from_file(f"{self.path}{META_FILE_VALUE}").get_attr(VERSION_KEY)
             if commit:
@@ -153,7 +160,10 @@ class IndirectToolImageManager(AbstractToolImageManager):
             fl = PropertiesHandler.from_file(self.linked_named_archive + PROP_FILES_VALUE)
             version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
             to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
-        return image_building(self.image_name, f"{self.linked_named_archive}/{self.runtime_setting.to_string()}", self.args)
+        return image_building(self.image_name, self._build_dir(), self.args)
+
+    def _build_dir(self):
+        return f"{self.linked_named_archive}/{self.runtime_setting.to_string()}"
 
     def run_offline_streams(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None) -> ContainerRun:
         inner_contract_ = dict()
@@ -201,6 +211,12 @@ class DirectToolImageManager(AbstractToolImageManager):
             else:
                 print(f"Dockerfile exists but image missing for {self.name} - {self.branch}, building...")
             self._build_image()
+        elif not image_is_current(self.image_name, self._build_dir()):
+            print(f"Build files changed for {self.name} since its image was built, rebuilding...")
+            if self._build_image() is False:
+                # the old image keeps its tag: running it would be running the
+                # very build files this rebuild was meant to replace
+                raise ImageBuildException(f"Rebuild failed for {self.name} ({self.image_name})")
         else:
             current_version = PropertiesHandler.from_file(f"{self.path}{META_FILE_VALUE}").get_attr(VERSION_KEY)
             if commit:
@@ -231,7 +247,10 @@ class DirectToolImageManager(AbstractToolImageManager):
             fl = PropertiesHandler.from_file(self.named_archive + PROP_FILES_VALUE)
             version = init_repo_fetcher(fl, self.path_to_infra).get_hash(self.branch)
             to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
-        return image_building(self.image_name, f"{self.named_archive}/{self.runtime_setting.to_string()}", self.args)
+        return image_building(self.image_name, self._build_dir(), self.args)
+
+    def _build_dir(self):
+        return f"{self.named_archive}/{self.runtime_setting.to_string()}"
 
     def run_offline_streams(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None) -> ContainerRun:
         inner_contract_ = dict()
