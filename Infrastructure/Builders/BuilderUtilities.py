@@ -1,6 +1,7 @@
 import codecs
 import time
 import re
+from dataclasses import dataclass
 from typing import Dict, AnyStr, Any, List, Optional
 
 import docker
@@ -70,8 +71,43 @@ def image_building(image_name, build_dir, args=None):
         return False
 
 
-def run_offline_image(image_name, generic_contract: Dict[AnyStr, Any], verbose=False, time_on=None, time_out=None,
-                      is_tool_image=False):
+@dataclass(frozen=True)
+class ContainerRun:
+    """A finished container. A verdict parser reads `stdout`: stderr carries the
+    tool's own warnings and the platform's measurement diagnostics
+    (measured_command), none of which are verdicts. `output` is both streams,
+    for error messages and for callers that search the text: stdout, then
+    stderr. docker-py hands the streams over merged or one at a time, never
+    tagged, so keeping their interleaving would cost a third read of the logs
+    inside the timed run; a failure's message is usually the last thing the
+    tool wrote, and it stays last."""
+    code: int
+    stdout: str = ""
+    stderr: str = ""
+
+    @property
+    def output(self) -> str:
+        if self.stdout and self.stderr and not self.stdout.endswith("\n"):
+            return self.stdout + "\n" + self.stderr
+        return self.stdout + self.stderr
+
+
+def _remove_container(container, kill=False):
+    if container is None:
+        return
+    if kill:
+        try:
+            container.kill()
+        except docker.errors.APIError:
+            pass  # Container may have already exited
+    try:
+        container.remove(force=True)
+    except docker.errors.APIError:
+        pass  # Container may have already been removed
+
+
+def run_container(image_name, generic_contract: Dict[AnyStr, Any], verbose=False, time_on=None, time_out=None,
+                  is_tool_image=False) -> ContainerRun:
     client = docker.from_env()
 
     command = generic_contract.get(COMMAND_KEY)
@@ -84,84 +120,54 @@ def run_offline_image(image_name, generic_contract: Dict[AnyStr, Any], verbose=F
 
     container = None
     try:
-        if time_out is None:
-            start_time = time.time()
-            result = client.containers.run(
-                image=image_name, command=command,
-                volumes=volumes, working_dir=workdir,
-                remove=True, stdout=True, stderr=True,
-                entrypoint=entrypoint
-            )
+        # always detached: a blocking containers.run returns the streams merged
+        # on success, and the container must outlive the run for its two
+        # streams to be read apart
+        container = client.containers.run(
+            image=image_name, command=command,
+            volumes=volumes, working_dir=workdir,
+            entrypoint=entrypoint,
+            detach=True, remove=False,
+            stdout=True, stderr=True,
+        )
 
-            if time_on is not None and (time.time() - start_time < time_on):
-                raise TimedOut()
-
-            stdout = result.decode("utf-8") if isinstance(result, bytes) else str(result)
-            return_code = 0
-        else:
-            container = client.containers.run(
-                image=image_name, command=command,
-                volumes=volumes, working_dir=workdir,
-                entrypoint=entrypoint,
-                detach=True, remove=False,
-                stdout=True, stderr=True,
-            )
-
-            start_time = time.time()
+        start_time = time.time()
+        if time_out is not None:
             while container.status != "exited":
                 container.reload()
                 if time.time() - start_time > time_out:
-                    try:
-                        container.kill()
-                    except docker.errors.APIError:
-                        pass  # Container may have already exited
-                    try:
-                        container.remove(force=True)
-                    except docker.errors.APIError:
-                        pass  # Container may have already been removed
+                    _remove_container(container, kill=True)
                     raise TimedOut()
                 time.sleep(0.1)
+        result = container.wait()
 
-            if time_on is not None and (time.time() - start_time < time_on):
-                try:
-                    container.remove(force=True)
-                except docker.errors.APIError:
-                    pass
-                raise TimedOut()
+        if time_on is not None and (time.time() - start_time < time_on):
+            _remove_container(container)
+            raise TimedOut()
 
-            result = container.wait()
-            logs = container.logs(stdout=True, stderr=True).decode("utf-8", errors="ignore")
-            exit_code = result.get("StatusCode", 1)
-            try:
-                container.remove(force=True)
-            except docker.errors.APIError:
-                pass
-            return logs, exit_code
-    except docker.errors.ContainerError as e:
-        if container:
-            try:
-                container.remove(force=True)
-            except docker.errors.APIError:
-                pass
-        stdout = e.stderr.decode("utf-8") if isinstance(e.stderr, bytes) else str(e.stderr)
-        return_code = e.exit_status
+        def logs(stdout, stderr):
+            return container.logs(stdout=stdout, stderr=stderr).decode("utf-8", errors="ignore")
+
+        run = ContainerRun(code=result.get("StatusCode", 1), stdout=logs(True, False), stderr=logs(False, True))
+        _remove_container(container)
+        return run
     except docker.errors.APIError as e:
-        if container:
-            try:
-                container.remove(force=True)
-            except docker.errors.APIError:
-                pass
-        stdout = f"Docker API error: {e}"
-        return_code = 125
+        _remove_container(container)
+        return ContainerRun(code=125, stderr=f"Docker API error: {e}")
     except docker.errors.ImageNotFound:
-        if container:
-            try:
-                container.remove(force=True)
-            except docker.errors.APIError:
-                pass
-        stdout = "Error: Image not found"
-        return_code = 127
-    return stdout, return_code
+        _remove_container(container)
+        return ContainerRun(code=127, stderr="Error: Image not found")
+
+
+def run_offline_image(image_name, generic_contract: Dict[AnyStr, Any], verbose=False, time_on=None, time_out=None,
+                      is_tool_image=False):
+    """(output, code), both streams together. Which stream carries what is each
+    tool's own choice (MonPoly prints its -check variable order on stderr,
+    TimelyMon on stdout), so a caller that has not settled that for its tool
+    reads both; run_container keeps them apart."""
+    run = run_container(image_name, generic_contract, verbose=verbose, time_on=time_on, time_out=time_out,
+                        is_tool_image=is_tool_image)
+    return run.output, run.code
 
 
 def _empty_block():

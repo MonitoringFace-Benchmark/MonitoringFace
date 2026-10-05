@@ -332,7 +332,7 @@ def test_timeout_still_verifies(tmp):
     from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats as PF
 
     class TimingOutImage:
-        def run_offline(self, **kwargs):
+        def run_offline_streams(self, **kwargs):
             raise TimedOut("simulated container timeout")
 
     class TimingOutMonitor(IdentityMonitor):

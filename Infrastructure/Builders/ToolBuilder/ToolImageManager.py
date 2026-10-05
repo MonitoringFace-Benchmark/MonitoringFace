@@ -5,7 +5,7 @@ from Infrastructure.Frontend.CLI.cli_args import CLIArgs
 from Infrastructure.DataLoader import init_repo_fetcher
 from Infrastructure.DataLoader.Downloader import MonitoringFaceDownloader
 from Infrastructure.DataLoader.Resolver import Location
-from Infrastructure.Builders.BuilderUtilities import image_building, run_offline_image, to_prop_file, image_exists, ImageBuildException
+from Infrastructure.Builders.BuilderUtilities import image_building, run_container, ContainerRun, to_prop_file, image_exists, ImageBuildException
 from Infrastructure.DataTypes.FileRepresenters.PropertiesHandler import PropertiesHandler
 from Infrastructure.DataTypes.Types.custome_type import BranchOrRelease, OnlineOffline
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
@@ -140,7 +140,7 @@ class IndirectToolImageManager(AbstractToolImageManager):
             to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, f"{self.linked_named_archive}/{self.runtime_setting.to_string()}", self.args)
 
-    def run_offline(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None):
+    def run_offline_streams(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None) -> ContainerRun:
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
 
@@ -151,7 +151,7 @@ class IndirectToolImageManager(AbstractToolImageManager):
         else:
             inner_contract_[COMMAND_KEY] = [inner_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_offline_image(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+        return run_container(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
 
 
 class DirectToolImageManager(AbstractToolImageManager):
@@ -214,7 +214,7 @@ class DirectToolImageManager(AbstractToolImageManager):
             to_prop_file(self.path, META_FILE_VALUE, {VERSION_KEY: version})
         return image_building(self.image_name, f"{self.named_archive}/{self.runtime_setting.to_string()}", self.args)
 
-    def run_offline(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None):
+    def run_offline_streams(self, path_to_data, parameters, time_on=None, time_out=None, measure=True, name=None) -> ContainerRun:
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
         inner_name = name if name is not None else self.name.lower()
@@ -224,4 +224,4 @@ class DirectToolImageManager(AbstractToolImageManager):
         else:
             inner_contract_[COMMAND_KEY] = [inner_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_offline_image(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+        return run_container(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)

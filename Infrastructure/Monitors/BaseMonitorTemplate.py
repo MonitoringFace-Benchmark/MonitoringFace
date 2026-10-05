@@ -9,7 +9,7 @@ from Infrastructure.AutoConversion.AutoPolicyConverter import AutoPolicyConverte
 from Infrastructure.AutoConversion.AutoTraceConverter import AutoTraceConverter
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.PolicyAlternatives import PolicyAlternatives
-from Infrastructure.Builders.BuilderUtilities import run_online_image
+from Infrastructure.Builders.BuilderUtilities import run_online_image, ContainerRun
 from Infrastructure.Builders.OnlineExperiementPipeline import build_pipeline
 from Infrastructure.Builders.ToolBuilder.ToolImageManager import AbstractToolImageManager
 from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
@@ -51,6 +51,13 @@ class OfflineRunnable(ABC):
 
     def offline_compile(self):
         pass
+
+    def offline_output(self, run: ContainerRun) -> str:
+        """The text post_processing_offline parses: the tool's stdout. stderr
+        holds the tool's own warnings and the platform's measurement
+        diagnostics, none of which are verdicts. A tool that reports a failed
+        run only on stderr, while exiting 0, overrides this to read both."""
+        return run.stdout
 
     @abstractmethod
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
@@ -371,7 +378,7 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
     measure = False if mon.params.get(NOMEASURE) else True
     start = time.perf_counter()
     try:
-        out, code = mon.image.run_offline(parameters=cmd, path_to_data=path_to_folder, time_out=timeout_value, name=name, measure=measure)
+        run = mon.image.run_offline_streams(parameters=cmd, path_to_data=path_to_folder, time_out=timeout_value, name=name, measure=measure)
         end = time.perf_counter()
     finally:
         # a timeout raises from INSIDE run_offline (BuilderUtilities), so the
@@ -381,11 +388,11 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
             provenance.verify_after_run(pre.records)
     run_offline_elapsed = end - start
 
-    if code != 0:
-        raise TimedOut(f"Timed out: {mon.name}") if code == 124 else ToolException(out)
+    if run.code != 0:
+        raise TimedOut(f"Timed out: {mon.name}") if run.code == 124 else ToolException(run.output)
 
     start = time.perf_counter()
-    res = mon.post_processing_offline(out)
+    res = mon.post_processing_offline(mon.offline_output(run))
     end = time.perf_counter()
     postprocessing_elapsed = end - start
 

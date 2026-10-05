@@ -115,6 +115,10 @@ class TeSSLa(BaseMonitorTemplate, OfflineRunnable):
         cmd = ["interpreter"] + flags + [policy, trace]
         return cmd, "tessla"
 
+    def offline_output(self, run) -> str:
+        # both streams: see post_processing_offline
+        return run.output
+
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         # The interpreter exits 0 on runtime-phase errors (including trace
         # format violations); only stderr betrays them.

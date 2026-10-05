@@ -1,9 +1,10 @@
 from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 from abc import ABC, abstractmethod
-from typing import AnyStr, Tuple, Optional, List
+from typing import AnyStr, Optional, List
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.Builders.BuilderUtilities import ContainerRun
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 
@@ -24,7 +25,9 @@ class AbstractOracleTemplate(ABC):
         pass
 
     @abstractmethod
-    def compute_result(self, time_on: int = None, time_out: int = None) -> Tuple[AnyStr, int]:
+    def compute_result(self, time_on: int = None, time_out: int = None) -> ContainerRun:
+        """The oracle tool's run. post_process_data receives its stdout, the
+        verdicts; a failed run's error message shows both streams."""
         pass
 
     @abstractmethod

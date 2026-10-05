@@ -263,20 +263,20 @@ def synthetic_trace_creation(
         )
         if guard_type is not None and guard_type == TimeGuardingTool.Oracle:
             try:
-                out, code = oracle.compute_result(time_on, time_out)
-                if code != 0:
-                    if code == 124:
+                run = oracle.compute_result(time_on, time_out)
+                if run.code != 0:
+                    if run.code == 124:
                         raise TimedOut()
                     else:
-                        raise RunOracleException(out)
+                        raise RunOracleException(run.output)
             except TimedOut:
                 return True, data_file, result_file
         else:
-            out, code = oracle.compute_result()
-            if code != 0:
-                raise RunOracleException(out)
+            run = oracle.compute_result()
+            if run.code != 0:
+                raise RunOracleException(run.output)
         result_file = f"{num_path}/result/result_{num_len}.res"
-        oracle.post_process_data(out, result_file)
+        oracle.post_process_data(run.stdout, result_file)
         sfh.remove_folder()
 
     if guard_type is not None and guard_type == TimeGuardingTool.Monitor and guard is not None:
