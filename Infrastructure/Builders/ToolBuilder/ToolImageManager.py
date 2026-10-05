@@ -35,7 +35,8 @@ def measured_command(tool_cmd: str) -> list:
             # the probe abort the run it exists to protect. touch is external,
             # so a failure is just a non-zero status. The loop can never fail
             # the command: if all attempts fail the tool still runs, and the
-            # retries are reported on stderr for the results to record.
+            # retries are reported on stderr, which no verdict parser reads;
+            # report_wrapper_diagnostics prints them to the run log.
             "for i in 1 2 3 4 5; do mkdir -p /data/scratch 2>/dev/null; m=$?; "
             "touch /data/scratch/.mfprobe 2>/dev/null && break; "
             "echo \"#mfprobe retry $i mkdir_rc=$m id=[$(id -u):$(id -g)] "
@@ -46,11 +47,25 @@ def measured_command(tool_cmd: str) -> list:
             # probe protects, but AFTER the tool ran; a single silent cp lost
             # the wall/mem/cpu stats of a few percent of perfectly good runs.
             # Same retry discipline as the probe, same never-fail-the-run rule.
+            # `#mfstatscopy`, not `#mfstats`: LiveRunner already prints
+            # `#mfstats <json>` for a stream processor's statistics.
             "for i in 1 2 3 4 5; do "
             "cp /tmp/stats.txt /data/scratch/stats.txt 2>/dev/null && break; "
-            "echo \"#mfstats retry $i cp_failed dir=[$(ls -ld /data/scratch 2>&1)]\" >&2; "
+            "echo \"#mfstatscopy retry $i cp_failed dir=[$(ls -ld /data/scratch 2>&1)]\" >&2; "
             "sleep 0.2; done; "
             "exit $e"]
+
+
+WRAPPER_MARKERS = ("#mfprobe ", "#mfstatscopy ")
+
+
+def report_wrapper_diagnostics(stderr: str):
+    """Print measured_command's retry lines to the run log. They are on the
+    container's stderr, which no verdict parser reads, so this is where a retry
+    stays visible."""
+    for line in stderr.splitlines():
+        if line.startswith(WRAPPER_MARKERS):
+            print(f"    {line}")
 
 
 def to_file(path, name, content):
@@ -145,13 +160,17 @@ class IndirectToolImageManager(AbstractToolImageManager):
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
 
         inner_name = name if name is not None else self.binary_name
-        if measure and self.cli_args.measure:
+        measured = measure and self.cli_args.measure
+        if measured:
             tool_cmd = " ".join([inner_name] + parameters)
             inner_contract_[COMMAND_KEY] = measured_command(tool_cmd)
         else:
             inner_contract_[COMMAND_KEY] = [inner_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_container(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+        run = run_container(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+        if measured:
+            report_wrapper_diagnostics(run.stderr)
+        return run
 
 
 class DirectToolImageManager(AbstractToolImageManager):
@@ -218,10 +237,14 @@ class DirectToolImageManager(AbstractToolImageManager):
         inner_contract_ = dict()
         inner_contract_[VOLUMES_KEY] = {path_to_data: {'bind': '/data', 'mode': 'rw'}}
         inner_name = name if name is not None else self.name.lower()
-        if measure and self.cli_args.measure:
+        measured = measure and self.cli_args.measure
+        if measured:
             tool_cmd = " ".join([inner_name] + parameters)
             inner_contract_[COMMAND_KEY] = measured_command(tool_cmd)
         else:
             inner_contract_[COMMAND_KEY] = [inner_name] + parameters
         inner_contract_[WORKDIR_KEY] = "/data"
-        return run_container(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+        run = run_container(self.image_name, inner_contract_, verbose=self.cli_args.verbose, time_on=time_on, time_out=time_out, is_tool_image=True)
+        if measured:
+            report_wrapper_diagnostics(run.stderr)
+        return run
