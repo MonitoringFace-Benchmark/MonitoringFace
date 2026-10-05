@@ -7,6 +7,7 @@ from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTra
 from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Types.custome_type import OnlineOffline
+from Infrastructure.Monitors.MonitorExceptions import TimedOut, ToolException
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 
 
@@ -64,3 +65,20 @@ class Coordinator(ABC):
     def get_online_settings(self) -> OnlineExperimentContractGeneral:
         return self.online_settings
 
+
+def run_guard_monitor(guard, path_to_folder, time_on=None, time_out=None):
+    """Run a generation guard's monitor on the inputs its preprocessing prepared.
+    path_to_folder is the folder that preprocessing was given: the monitor's
+    paths are relative to it, and it is mounted as /data. A run outside
+    [time_on, time_out] raises TimedOut from inside run_offline, as does exit
+    code 124; any other failure raises ToolException."""
+    cmd, name = guard.construct_offline_command()
+    out, code = guard.image.run_offline(
+        parameters=cmd, path_to_data=path_to_folder, time_on=time_on, time_out=time_out, name=name
+    )
+    if code == 124:
+        raise TimedOut(f"Guard monitor {guard.name} timed out")
+    if code == 137:
+        raise ToolException("OOM Killer activated")
+    if code != 0:
+        raise ToolException(f"Guard monitor {guard.name} failed (exit_code={code}): {out}")
