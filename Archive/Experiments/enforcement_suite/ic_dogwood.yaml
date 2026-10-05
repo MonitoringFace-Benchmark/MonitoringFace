@@ -1,0 +1,40 @@
+experiment_name: enfsuite_ic_dogwood
+runtime_setting: online
+
+repeats: 3
+
+# Each time-point is sent as soon as the previous one is answered; the
+# budget is the benchmark's timeout per run
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  mode: accelerated
+  accumulative_time: 600
+
+# the benchmark's log is committed under eval/enforcement/benchmarks/large/,
+# which is not on EnfFlash's main yet: pin the commit that adds it
+components:
+  - identifier: EnfSuite_IC_Dogwood
+    branch: main
+
+monitors:
+  - identifier: Dogwood
+    name: Dogwood
+    branch: main
+    commit: d7096259aa256e5bf75cc59fc2d3d77b14d7bb2b
+    params:
+      OnlineExperimentContractTool:
+        format: log
+        # A marker precedes every time-point and the tool echoes it once it
+        # has read it, i.e. once the previous time-point is processed: each
+        # step lasts from its echo to the next one
+        response_mode: process-step
+        output_collection_mode: after-delimiter
+        latency_marker: '> LATENCY "at time point" <'
+        warm_up_input: '> LATENCY "at time point" <'
+
+tools_to_build:
+  - Dogwood
+
+data_setup:
+  type: CaseStudy
+  name: EnfSuite_IC_Dogwood

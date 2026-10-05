@@ -9,6 +9,7 @@ class InputOutputPolicyFormats(Enum):
     QTL = "qtl"
     SRV_POLICY = "srv-policy"
     OOO_FRAGMENT = "ooo-fragment"
+    DOGWOOD = "dogwood"
 
 
 def str_to_policy_inout_format(format_str: str) -> InputOutputPolicyFormats:
@@ -27,6 +28,8 @@ def str_to_policy_inout_format(format_str: str) -> InputOutputPolicyFormats:
         return InputOutputPolicyFormats.SRV_POLICY
     elif format_str == "ooo-fragment":
         return InputOutputPolicyFormats.OOO_FRAGMENT
+    elif format_str == "dogwood":
+        return InputOutputPolicyFormats.DOGWOOD
     else:
         raise ValueError(f"Unknown input/output policy format: {format_str}")
 
@@ -46,5 +49,7 @@ def policy_inout_format_to_str(formats: InputOutputPolicyFormats) -> str:
         return "srv-policy"
     elif formats == InputOutputPolicyFormats.OOO_FRAGMENT:
         return "ooo-fragment"
+    elif formats == InputOutputPolicyFormats.DOGWOOD:
+        return "dogwood"
     else:
         raise ValueError(f"Unknown input/output policy format enum: {formats}")

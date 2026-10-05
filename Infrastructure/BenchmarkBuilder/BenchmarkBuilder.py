@@ -1,7 +1,7 @@
 import json
 import os.path
 from enum import Enum
-from typing import AnyStr, List, Optional
+from typing import AnyStr, Dict, List, Optional
 
 from Infrastructure.Analysis.Aggregators.AbstractAggregator import dispatch_aggregator, AbstractAggregator
 from Infrastructure.Analysis.Aggregators.ResultAggregatorOffline import ResultAggregatorOffline
@@ -164,6 +164,7 @@ class BenchmarkBuilder:
             # repeats share one provenance entry per tool; the repeat index is
             # dropped from the key and capture verifies repeats hash-identically
             setting_key = f"{identifier}" if data_set_size is None else f"{identifier}_{data_set_size}"
+            policy_companions = self.coordinator.policy_companions(identifier)
 
             for i in range(0, self.repeat_runs):
                 tmp_setting_id = f"{identifier}_{i}" if data_set_size is None else f"{identifier}_{data_set_size}_{i}"
@@ -202,7 +203,7 @@ class BenchmarkBuilder:
                                 signature_file=signature, policy_file=tool_policy_file, sfh=sfh, cli_args=self.cli_args,
                                 coordinator=self.coordinator, policy_type=tool_policy_type, data_type=data_type,
                                 online_experiment_contract=self.coordinator.get_online_settings(),
-                                provenance=provenance,
+                                provenance=provenance, policy_companions=policy_companions,
                                 frames_dir=(os.path.join(self.result_folder, "frames")
                                             if self.result_folder else None)
                             )
@@ -212,7 +213,7 @@ class BenchmarkBuilder:
                                 result_file=result, setting_id=tmp_setting_id, data_file=data_file, signature_file=signature,
                                 policy_file=tool_policy_file, sfh=sfh, cli_args=self.cli_args,
                                 coordinator=self.coordinator, policy_type=tool_policy_type, data_type=data_type,
-                                provenance=provenance
+                                provenance=provenance, policy_companions=policy_companions
                             )
                     else:
                         raise NotImplemented(f"Not implemented for object {tool}")
@@ -262,7 +263,8 @@ def run_tools_online(
         data_file: str, data_type: InputOutputTraceFormats, policy_file: str, policy_type: InputOutputPolicyFormats,
         signature_file: str, _result_file: str, cli_args: CLIArgs, coordinator: Coordinator,
         online_experiment_contract: OnlineExperimentContractGeneral, sfh=None,
-        provenance: Optional[ProvenanceSession] = None, frames_dir: Optional[str] = None
+        provenance: Optional[ProvenanceSession] = None, frames_dir: Optional[str] = None,
+        policy_companions: Optional[Dict[str, str]] = None
 ):
     debug_path = coordinator.get_path(PATH_TO_DEBUG)
     try:
@@ -271,7 +273,7 @@ def run_tools_online(
             policy_file=policy_file, cli_args=cli_args, trace_source_format=data_type, policy_source_format=policy_type,
             path_manager=coordinator.get_path_manager(), online_experiment_contract=online_experiment_contract,
             script_name=(coordinator.script_name if hasattr(coordinator, "script_name") and coordinator.script_name is not None else None),
-            provenance=provenance
+            provenance=provenance, policy_companions=policy_companions
         )
 
         processed_elapsed_pairs = []
@@ -336,7 +338,7 @@ def run_tools_offline(
         result_aggregator: ResultAggregatorOffline, tool, setting_id: str, path_to_folder: str,
         data_file: str, data_type: InputOutputTraceFormats, policy_file: str, policy_type: InputOutputPolicyFormats,
         signature_file: str, result_file: str, cli_args: CLIArgs, coordinator: Coordinator, sfh=None,
-        provenance: Optional[ProvenanceSession] = None
+        provenance: Optional[ProvenanceSession] = None, policy_companions: Optional[Dict[str, str]] = None
 ) -> RunToolResult:
     debug_path = coordinator.get_path(PATH_TO_DEBUG)
     timeout_value = coordinator.time_out()
@@ -347,7 +349,7 @@ def run_tools_offline(
             policy_file=policy_file, cli_args=cli_args, trace_source_format=data_type, policy_source_format=policy_type,
             result_file=result_file, timeout_value=timeout_value,
             oracle=coordinator.get_oracle(), path_manager=coordinator.get_path_manager(),
-            provenance=provenance
+            provenance=provenance, policy_companions=policy_companions
         )
 
         if cli_args.debug and sfh is not None:

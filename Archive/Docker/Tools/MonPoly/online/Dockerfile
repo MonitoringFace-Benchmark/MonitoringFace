@@ -27,7 +27,7 @@ RUN opam init --disable-sandboxing -y && \
     eval $(opam env) && \
     opam update -y && \
     opam install -y dune && \
-    opam install -y . --deps-only
+    opam install -y . --deps-only --ignore-constraints-on=libmonpoly
 
 # Build once, from a verified dune workspace root
 RUN eval $(opam env) && \

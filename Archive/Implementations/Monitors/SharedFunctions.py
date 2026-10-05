@@ -33,3 +33,10 @@ def parse_monpoly_output(verdicts, stdout_input):
             else:
                 raise ValueError(f"Could not parse line: {line}")
     return verdicts
+
+
+def uses_latency_marker(params) -> bool:
+    """Whether the experiment sends a latency marker before each input step:
+    the tool's echo of it then delimits the steps (see OnlineExperimentContractTool)."""
+    contract = params.get("OnlineExperimentContractTool")
+    return bool(getattr(contract, "latency_marker", None))
