@@ -1,10 +1,11 @@
 from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 import re
 from pathlib import Path
-from typing import AnyStr, Optional, Tuple
+from typing import AnyStr, Optional
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.Builders.BuilderUtilities import ContainerRun
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Compare.Comparing import comparing
@@ -21,8 +22,8 @@ class DataGolfOracle(AbstractOracleTemplate):
     ):
         pass
 
-    def compute_result(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
-        return "", 0
+    def compute_result(self, time_on=None, time_out=None) -> ContainerRun:
+        return ContainerRun(code=0)
 
     def post_process_data(self, std_out_str, output_file_name):
         pass

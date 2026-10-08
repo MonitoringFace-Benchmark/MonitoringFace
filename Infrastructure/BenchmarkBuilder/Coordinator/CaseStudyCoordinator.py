@@ -154,10 +154,10 @@ class CaseStudyCoordinator(Coordinator):
                     oracle_policy, oracle_policy_type = select_policy(
                         self.oracle.supported_policy_formats(), self.path_manager, policy_file, policy_type)
                     self.oracle.pre_process_data(named_path_to_data, data_type, oracle_policy_type, data_file, sig, oracle_policy, self.path_manager)
-                    out, code = self.oracle.compute_result(time_on=None, time_out=run_time_out)
-                    if code != 0:
-                        raise RunOracleException(out)
-                    self.oracle.post_process_data(out, f"{result_folder}/result_{i}.res")
+                    run = self.oracle.compute_result(time_on=None, time_out=run_time_out)
+                    if run.code != 0:
+                        raise RunOracleException(run.output)
+                    self.oracle.post_process_data(run.stdout, f"{result_folder}/result_{i}.res")
                     self.results[i] = f"{result_folder}/result_{i}.res"
                 except TimedOut:
                     raise TimedOut(f"Oracle {self.oracle} timed out ({run_time_out} seconds)")

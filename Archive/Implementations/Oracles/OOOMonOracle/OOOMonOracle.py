@@ -2,10 +2,11 @@ from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comp
 import ast
 import copy
 import os
-from typing import AnyStr, Tuple
+from typing import AnyStr
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.Builders.BuilderUtilities import ContainerRun
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Compare.Comparing import comparing
@@ -48,12 +49,12 @@ class OOOMonOracle(AbstractOracleTemplate):
             path_manager
         )
 
-    def compute_result(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
+    def compute_result(self, time_on=None, time_out=None) -> ContainerRun:
         cmd = ["-formula", str(self.ooomon.params[POLICY_KEY]),
                "-log", str(self.ooomon.params[TRACE_KEY]),
                "-format", "timelymon",
                "-sig", str(self.ooomon.params[SIGNATURE_KEY])]
-        return self.ooomon.image.run_offline(self.ooomon.params[FOLDER_KEY], cmd, time_on, time_out)
+        return self.ooomon.image.run_offline_streams(self.ooomon.params[FOLDER_KEY], cmd, time_on, time_out)
 
     def post_process_data(self, std_out_str, output_file_name):
         cmd = ["-formula", str(self.ooomon.params[POLICY_KEY]), "-columns"]

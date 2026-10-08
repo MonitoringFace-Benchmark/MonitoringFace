@@ -8,7 +8,7 @@ from typing import Optional, Dict, List
 import docker
 from docker.errors import APIError
 
-from Infrastructure.Builders.BuilderUtilities import image_building, ImageBuildException, image_exists
+from Infrastructure.Builders.BuilderUtilities import image_building, ImageBuildException, image_exists, image_is_current
 from Infrastructure.Builders.ProcessorBuilder.ComponentPins import get_pin, docker_ref
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.constants import Policy_File, Signature_File, ADDITIONAL_FOLDER, BUILD_ARG_GIT_BRANCH, \
@@ -126,7 +126,7 @@ def move_additional_data(temporary_build_folder: str, path_to_folder: str, folde
 
 
 def build_image_wrapper(dockerfile_path: str, image_name: str, args: Optional[Dict[str, str]] = None, verbose: bool = False) -> bool:
-    if not image_exists(image_name):
+    if not image_exists(image_name) or not image_is_current(image_name, dockerfile_path):
         if not image_building(image_name, dockerfile_path, args):
             raise ImageBuildException(f"Failed to build image: {image_name}")
     else:

@@ -1,10 +1,11 @@
 from Infrastructure.DataTypes.Verification.OutputStructures.Strength import Comparison
 import ast
 import copy
-from typing import AnyStr, Tuple
+from typing import AnyStr
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
+from Infrastructure.Builders.BuilderUtilities import ContainerRun
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Compare.Comparing import comparing
@@ -37,14 +38,14 @@ class VeriMonOracle(AbstractOracleTemplate):
             path_manager
         )
 
-    def compute_result(self, time_on=None, time_out=None) -> Tuple[AnyStr, int]:
+    def compute_result(self, time_on=None, time_out=None) -> ContainerRun:
         cmd = [
             "-sig", str(self.verimon.params[SIGNATURE_KEY]),
             "-formula", str(self.verimon.params[POLICY_KEY]),
             "-log", str(self.verimon.params[TRACE_KEY]),
             "-verified"
         ]
-        return self.verimon.image.run_offline(self.verimon.params[FOLDER_KEY], cmd, time_on, time_out)
+        return self.verimon.image.run_offline_streams(self.verimon.params[FOLDER_KEY], cmd, time_on, time_out)
 
     def post_process_data(self, std_out_str, output_file_name):
         cmd = ["-sig", str(self.verimon.params[SIGNATURE_KEY]), "-formula", str(self.verimon.params[POLICY_KEY]), "-check"]
