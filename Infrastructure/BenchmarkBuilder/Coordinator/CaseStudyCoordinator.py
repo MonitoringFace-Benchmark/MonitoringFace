@@ -19,7 +19,7 @@ from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import TRACE_KEY, POLICY_KEY, PATH_KEY, BENCHMARK_BUILDING_OFFSET, \
     SIGNATURE_KEY, FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, FINGERPRINT_COMPONENTS, PATH_TO_NAMED_DATA, \
     PATH_TO_NAMED_EXPERIMENT, \
-    PATH_TO_INSTRUCTIONS
+    PATH_TO_INSTRUCTIONS, POLICY_COMPANION_KEYS
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, TimeGuardingTool
 
 
@@ -188,6 +188,10 @@ class CaseStudyCoordinator(Coordinator):
             result = self.results.get(i, None)
             res.append(((i, None), path_to_data, data_file, data_type, policy_file, policy_type, sig, result))
         return res
+
+    def policy_companions(self, identifier: int) -> Dict[str, str]:
+        setting = self.instructions[identifier]
+        return {key: setting[key] for key in POLICY_COMPANION_KEYS if setting.get(key)}
 
     def short_cutting(self):
         pass

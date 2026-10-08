@@ -12,7 +12,7 @@ from Infrastructure.Builders.BuilderUtilities import image_building, ImageBuildE
 from Infrastructure.Builders.ProcessorBuilder.ComponentPins import get_pin, docker_ref
 from Infrastructure.Builders.ToolBuilder.AbstractToolImageManager import AbstractToolImageManager
 from Infrastructure.constants import Policy_File, Signature_File, ADDITIONAL_FOLDER, BUILD_ARG_GIT_BRANCH, \
-    BUILD_ARG_GIT_COMMIT
+    BUILD_ARG_GIT_COMMIT, POLICY_REQUIREMENTS_KEY
 
 DRIVER_COMPONENT_NAME = "OnlineExperimentDriver"
 
@@ -58,7 +58,7 @@ def build_pipeline(
         path_to_build, path_to_archive, data_source: str, path_to_folder: str,
         policy_file: str, signature_file: Optional[str], target_image_name: str,
         compilation_details: Optional[Dict[str, str]] = None, verbose: bool = False,
-        stream_spec: Optional[List[Dict]] = None
+        stream_spec: Optional[List[Dict]] = None, policy_companions: Optional[Dict[str, str]] = None
 ):
     path = f"{path_to_build}/OnlineExperimentDriver"
     if os.path.exists(path):
@@ -71,14 +71,17 @@ def build_pipeline(
         temporary_build_folder=path, tool_image_manager=tool_image_manager,
         driver_docker=driver_docker, driver_tool_name=driver_tool_name, path_to_folder=path_to_folder,
         data_source=data_source, policy_file=policy_file, signature_file=signature_file,
-        compilation_details=compilation_details, verbose=verbose, driver_args=driver_args
+        compilation_details=compilation_details, verbose=verbose, driver_args=driver_args,
+        policy_companions=policy_companions
     )
 
     bake_stream_processors(path, os.path.dirname(path_to_archive.rstrip("/")), stream_spec)
 
     # build the final image with the copied dockerfile and the copied data
     shutil.copy(f"{path_to_archive}/Docker/Utilities/OnlineExperimentTemplate/Dockerfile", path)
-    image_building(image_name=target_image_name, build_dir=path)
+    requirements = (policy_companions or {}).get(POLICY_REQUIREMENTS_KEY)
+    image_building(image_name=target_image_name, build_dir=path,
+                   args={"POLICY_REQUIREMENTS": os.path.basename(requirements)} if requirements else None)
 
 
 def build_stage(
@@ -86,7 +89,7 @@ def build_stage(
         driver_docker: str, driver_tool_name: str, path_to_folder: str,
         data_source: str, policy_file: str, signature_file: Optional[str],
         compilation_details: Optional[Dict[str, str]] = None, verbose: bool = False,
-        driver_args: Optional[Dict[str, str]] = None
+        driver_args: Optional[Dict[str, str]] = None, policy_companions: Optional[Dict[str, str]] = None
 ):
     if compilation_details is None:
         extract_binary(tool_image_manager.get_image_name(), temporary_build_folder, "tool", verbose=verbose)
@@ -104,6 +107,8 @@ def build_stage(
     # pass the file or data script to the build folder
     move_data_source(temporary_build_folder, path_to_folder, data_source)
     file_dict = {Policy_File(): policy_file, Signature_File(): signature_file}
+    # the files that come with the policy, under their own names
+    file_dict.update({os.path.basename(f): f for f in (policy_companions or {}).values()})
     move_additional_data(temporary_build_folder, path_to_folder, ADDITIONAL_FOLDER, file_dict)
 
 

@@ -47,6 +47,11 @@ class Coordinator(ABC):
     def iterate_settings(self) -> List[Tuple[int, str, str, InputOutputTraceFormats, str, InputOutputPolicyFormats, Optional[str], Optional[str]]]:
         pass
 
+    def policy_companions(self, identifier: int) -> Dict[str, str]:
+        """The files that come with the policy of setting `identifier`, by kind
+        (POLICY_COMPANION_KEYS), relative to the setting folder."""
+        return {}
+
     def add_path(self, path_id: str, path: str):
         self.path_manager.add_path(path_id, path)
 

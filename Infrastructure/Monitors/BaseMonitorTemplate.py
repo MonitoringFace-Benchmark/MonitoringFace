@@ -28,7 +28,8 @@ from Infrastructure.constants import SIGNATURE_KEY, FOLDER_KEY, TRACE_KEY, POLIC
     PATH_TO_TRACE_INPUT, PATH_TO_TRACE_OUTPUT, PATH_TO_INTERMEDIATE_WORKSPACE, IMAGE_POSTFIX, Policy_File, \
     Signature_File, NOMEASURE, POLICY_CONSTANTS_APPLIED, POLICY_CONSTANTS_COUNT, POLICY_CONSTANTS_FILE, OOO_FREE_VARIABLES, \
     STRATIFIED, STRATIFIED_MAP, TRACE_TARGET_FORMAT, MODE_KEY, OOO_MODES, PATH_TO_PROJECT, \
-    STREAM_PIPELINE_KEY, STREAM_STAGE_STATIC, STREAM_STAGE_DYNAMIC
+    STREAM_PIPELINE_KEY, STREAM_STAGE_STATIC, STREAM_STAGE_DYNAMIC, POLICY_COMPANIONS_KEY, POLICY_REQUIREMENTS_KEY, \
+    ADDITIONAL_FOLDER
 from Infrastructure.printing import print_headline, print_footline
 
 
@@ -224,6 +225,12 @@ class BaseMonitorTemplate(AutoConvertable):
                 kind="signature", source_file=signature_file, source_format="sig",
                 steps=[], as_seen_by_tool=signature_file
             ))
+        # so are the files that come with the policy
+        for kind, companion in sorted(self.params.get(POLICY_COMPANIONS_KEY, {}).items()):
+            records.append(ConversionRecord(
+                kind=f"policy-{kind}", source_file=companion, source_format=kind,
+                steps=[], as_seen_by_tool=companion
+            ))
         end = time.perf_counter()
         return PreprocessingResult(elapsed_s=end - start, records=records)
 
@@ -248,9 +255,10 @@ def run_monitor_online(
         path_manager: PathManager, trace_source_format: InputOutputTraceFormats,
         policy_source_format: InputOutputPolicyFormats, cli_args: CLIArgs,
         online_experiment_contract: OnlineExperimentContractGeneral, script_name: Optional[str] = None,
-        provenance: Optional[ProvenanceSession] = None
+        provenance: Optional[ProvenanceSession] = None, policy_companions: Optional[Dict[str, str]] = None
 ):
     print_headline(f"Run (Online) {mon.name}")
+    mon.params[POLICY_COMPANIONS_KEY] = dict(policy_companions or {})
 
     pre = None
     if script_name is not None:
@@ -300,7 +308,7 @@ def run_monitor_online(
         path_to_archive=path_manager.get_path(PATH_TO_ARCHIVE), path_to_folder=path_to_folder,
         data_source=data_source, policy_file=policy_file, signature_file=signature_file,
         target_image_name=target_name, compilation_details=additional_compilation_data,
-        stream_spec=dynamic_stream_spec
+        stream_spec=dynamic_stream_spec, policy_companions=mon.params[POLICY_COMPANIONS_KEY]
     )
     end_build_comp = time.perf_counter()
     build_comp_elapsed = end_build_comp - start_build_comp
@@ -341,8 +349,15 @@ def run_monitor_online(
 def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeout_value, path_to_folder: AnyStr, data_file: AnyStr, signature_file: AnyStr, policy_file: AnyStr,
                         path_manager: PathManager, trace_source_format: InputOutputTraceFormats, policy_source_format: InputOutputPolicyFormats,
                         result_file, cli_args: CLIArgs, oracle: Optional[AbstractOracleTemplate] = None,
-                        provenance: Optional[ProvenanceSession] = None) -> Tuple[float, float, float, float, Optional[int], Optional[int], Optional[str], Optional[int]]:
+                        provenance: Optional[ProvenanceSession] = None, policy_companions: Optional[Dict[str, str]] = None
+                        ) -> Tuple[float, float, float, float, Optional[int], Optional[int], Optional[str], Optional[int]]:
     print_headline(f"Run (Offline) {mon.name}")
+    mon.params[POLICY_COMPANIONS_KEY] = dict(policy_companions or {})
+    if POLICY_REQUIREMENTS_KEY in mon.params[POLICY_COMPANIONS_KEY]:
+        # offline runs use the tool's own image as is
+        print(f"    WARNING: {mon.name}: the policy's requirements "
+              f"({mon.params[POLICY_COMPANIONS_KEY][POLICY_REQUIREMENTS_KEY]}) are installed in "
+              f"online runs only; offline, the tool's image must provide them")
 
     for entry in (mon.params.get(STREAM_PIPELINE_KEY) or []):
         if entry.get("stage", STREAM_STAGE_STATIC) == STREAM_STAGE_DYNAMIC:
@@ -434,6 +449,16 @@ def run_monitor_offline(mon: Union[OfflineRunnable, BaseMonitorTemplate], timeou
     print_footline()
     return (preprocessing_elapsed, compile_elapsed, run_offline_elapsed, postprocessing_elapsed,
             outputs, distinct_outputs, verification_strength, values_checked, dropped_outputs)
+
+
+def policy_companion(params: Dict[AnyStr, Any], kind: str, online: bool) -> Optional[str]:
+    """Path of the policy's `kind` companion (POLICY_COMPANION_KEYS) as the tool
+    sees it, None if the policy has none: online runs carry it next to the policy
+    in additional/, offline runs see the setting folder."""
+    companion = params.get(POLICY_COMPANIONS_KEY, {}).get(kind)
+    if companion is None:
+        return None
+    return f"{ADDITIONAL_FOLDER}/{os.path.basename(companion)}" if online else companion
 
 
 def find_trace_path(mon: BaseMonitorTemplate, path_manager: PathManager, trace_source_format: InputOutputTraceFormats) -> Tuple[Optional[InputOutputTraceFormats], Optional[int]]:

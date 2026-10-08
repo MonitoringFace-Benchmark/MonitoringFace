@@ -1,0 +1,41 @@
+experiment_name: enfsuite_nokia_enfpoly
+runtime_setting: online
+
+repeats: 3
+
+# Each time-point is sent as soon as the previous one is answered; the
+# budget is the benchmark's timeout per run
+OnlineExperimentContractGeneral:
+  data_source_type: file
+  mode: accelerated
+  accumulative_time: 120
+
+# the benchmark's log is committed under eval/enforcement/benchmarks/large/,
+# which is not on EnfFlash's main yet: pin the commit that adds it
+components:
+  - identifier: EnfSuite_Nokia_Enfpoly
+    branch: main
+
+monitors:
+  - identifier: Enfpoly
+    name: Enfpoly
+    branch: enfpoly
+    commit: 46d5ba2bf767a77b5442e737d440936aba835484
+    params:
+      ignore_parse_errors: true
+      OnlineExperimentContractTool:
+        format: log
+        # A marker precedes every time-point and the tool echoes it once it
+        # has read it, i.e. once the previous time-point is processed: each
+        # step lasts from its echo to the next one
+        response_mode: process-step
+        output_collection_mode: after-delimiter
+        latency_marker: '> LATENCY "at time point" <'
+        warm_up_input: '> LATENCY "at time point" <'
+
+tools_to_build:
+  - Enfpoly
+
+data_setup:
+  type: CaseStudy
+  name: EnfSuite_Nokia_Enfpoly

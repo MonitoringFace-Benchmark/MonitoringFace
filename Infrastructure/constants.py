@@ -43,6 +43,13 @@ SIGNATURE_KEY = "signature"
 SIGNATURE_FILE_KEY = "signature"
 FOLDER_KEY = "folder"
 POLICY_KEY = "policy"
+# files that belong to a policy besides its formula: the definitions of the
+# functions it calls, and the Python packages those import (pip requirements);
+# optional columns of a case study's instructions.txt, paths relative to data/
+POLICY_FUNCTIONS_KEY = "functions"
+POLICY_REQUIREMENTS_KEY = "requirements"
+POLICY_COMPANION_KEYS = (POLICY_FUNCTIONS_KEY, POLICY_REQUIREMENTS_KEY)
+POLICY_COMPANIONS_KEY = "policy_companions"
 TRACE_KEY = "trace"
 
 VALUE_KEY = "value"

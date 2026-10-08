@@ -7,11 +7,12 @@ from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import DefaultVariableOrder
 from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucutre import AbstractOutputStructure
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.PropositionList import PropositionList
-from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable
-from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY
+from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable, OnlineRunnable, \
+    policy_companion
+from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY, POLICY_FUNCTIONS_KEY
 
 
-class EnfGuard(BaseMonitorTemplate, OfflineRunnable):
+class EnfGuard(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
     def __init__(self, image: AbstractToolImageManager, name, params: Dict[AnyStr, Any]):
         super().__init__(image, name, params)
 
@@ -36,12 +37,32 @@ class EnfGuard(BaseMonitorTemplate, OfflineRunnable):
 
         if self.params.get("monitoring", False):
             cmd += ["-monitoring"]
-        if "func" in self.params:
-            cmd += ["-func", str(self.params["func"])]
+        functions = policy_companion(self.params, POLICY_FUNCTIONS_KEY, online=False) or self.params.get("func")
+        if functions:
+            cmd += ["-func", str(functions)]
         return cmd, None
 
     def post_processing_offline(self, stdout_input: AnyStr) -> AbstractOutputStructure:
         return PropositionList(DefaultVariableOrder())
+
+    def construct_online_command(self) -> Tuple[List[str], Optional[str]]:
+        cmd = [
+            "-sig", "additional/signature.sig",
+            "-formula", "additional/policy.policy"
+        ]
+        if self.params.get("monitoring", False):
+            cmd += ["-monitoring"]
+        functions = policy_companion(self.params, POLICY_FUNCTIONS_KEY, online=True)
+        if functions:
+            cmd += ["-func", functions]
+        return cmd, None
+
+    @staticmethod
+    def latency_marker() -> Optional[str]:
+        pass
+
+    def post_processing_online(self, stdout_input: AnyStr) -> AbstractOutputStructure:
+        pass
 
     @staticmethod
     def supported_policy_formats() -> List[InputOutputPolicyFormats]:

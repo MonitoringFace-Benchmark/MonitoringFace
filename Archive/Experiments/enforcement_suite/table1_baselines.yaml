@@ -1,0 +1,56 @@
+# EnfFlash evaluation, Table 1 (tab:micro): the baselines Enfpoly, EnfGuard,
+# Dogwood and MonPoly on the EnfGuard benchmark suite, at the tool versions,
+# timeouts and repetitions of the paper. Per-time-point latencies are the
+# rounds' `[Elapsed]` (output_pairs); the last round also contains the tool's
+# exit, as no echo follows the last time-point. The setting index is the
+# formula's line in the case study's instructions.txt (alphabetical order).
+
+experiments:
+  - path: enforcement_suite/gdpr_enfpoly.yaml
+    enabled: true
+    description: "gdpr, Enfpoly (timeout 60 s)"
+  - path: enforcement_suite/gdpr_enfguard.yaml
+    enabled: true
+    description: "gdpr, EnfGuard (timeout 60 s)"
+  - path: enforcement_suite/gdpr_dogwood.yaml
+    enabled: true
+    description: "gdpr, Dogwood (timeout 60 s)"
+  - path: enforcement_suite/gdpr_monpoly.yaml
+    enabled: true
+    description: "gdpr, MonPoly (timeout 60 s)"
+  - path: enforcement_suite/fun_enfguard.yaml
+    enabled: true
+    description: "fun, EnfGuard (timeout 60 s)"
+  - path: enforcement_suite/cluster_enfguard.yaml
+    enabled: true
+    description: "cluster, EnfGuard (timeout 60 s)"
+  - path: enforcement_suite/agg_enfguard.yaml
+    enabled: true
+    description: "agg, EnfGuard (timeout 120 s)"
+  - path: enforcement_suite/agg_dogwood.yaml
+    enabled: true
+    description: "agg, Dogwood (timeout 120 s)"
+  - path: enforcement_suite/agg_monpoly.yaml
+    enabled: true
+    description: "agg, MonPoly (timeout 120 s)"
+  - path: enforcement_suite/nokia_enfpoly.yaml
+    enabled: true
+    description: "nokia, Enfpoly (timeout 120 s)"
+  - path: enforcement_suite/nokia_enfguard.yaml
+    enabled: true
+    description: "nokia, EnfGuard (timeout 120 s)"
+  - path: enforcement_suite/nokia_dogwood.yaml
+    enabled: true
+    description: "nokia, Dogwood (timeout 120 s)"
+  - path: enforcement_suite/nokia_monpoly.yaml
+    enabled: true
+    description: "nokia, MonPoly (timeout 120 s)"
+  - path: enforcement_suite/ic_enfguard.yaml
+    enabled: true
+    description: "ic, EnfGuard (timeout 600 s)"
+  - path: enforcement_suite/ic_dogwood.yaml
+    enabled: true
+    description: "ic, Dogwood (timeout 600 s)"
+  - path: enforcement_suite/ic_monpoly.yaml
+    enabled: true
+    description: "ic, MonPoly (timeout 600 s)"

@@ -8,7 +8,8 @@ from Infrastructure.DataTypes.Verification.OutputStructures.AbstractOutputStrucu
 from Infrastructure.DataTypes.Verification.OutputStructures.Structures.Verdicts import Verdicts
 from Infrastructure.DataTypes.Verification.OutputStructures.SubTypes.VariableOrder import VariableOrder, DefaultVariableOrder
 from Infrastructure.Monitors.BaseMonitorTemplate import BaseMonitorTemplate, OfflineRunnable, OnlineRunnable
-from Archive.Implementations.Monitors.SharedFunctions import parse_variable_order_monpoly, parse_monpoly_output
+from Archive.Implementations.Monitors.SharedFunctions import parse_variable_order_monpoly, parse_monpoly_output, \
+    uses_latency_marker
 from Infrastructure.constants import SIGNATURE_KEY, POLICY_KEY, TRACE_KEY, FOLDER_KEY
 
 
@@ -88,6 +89,11 @@ class MonPoly(BaseMonitorTemplate, OfflineRunnable, OnlineRunnable):
 
         if "nonewlastts" in self.params: cmd += ["-nonewlastts"]
         if "no_rw" in self.params: cmd += ["-no_rw"]
+        if "ignore_parse_errors" in self.params: cmd += ["-ignore_parse_errors"]
+        if uses_latency_marker(self.params):
+            # the echo of the marker delimits the steps: -verbose would add
+            # its own `At time point` lines, i.e. a second delimiter per step
+            return cmd, None
         cmd += ["-verbose", "-nofilteremptytp", "-nofilterrel"]
         return cmd, None
 
