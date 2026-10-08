@@ -5,8 +5,8 @@ from typing import List, Tuple, Optional, Dict
 
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import InputOutputTraceFormats
-from Infrastructure.BenchmarkBuilder.Coordinator.CaseStudyCoordinator import RunOracleException, TimedOut
-from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
+from Infrastructure.BenchmarkBuilder.Coordinator.CaseStudyCoordinator import RunOracleException
+from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator, run_guard_monitor
 from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
 from Infrastructure.DataTypes.Contracts.SubContracts.SyntheticContract import SyntheticExperiment
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, GenerationConstraints, TimeGuardingTool
@@ -22,7 +22,7 @@ from Infrastructure.constants import ORACLE_KEY, SEEDS_KEY, PATH_KEY, SIZE_KEY, 
     PATH_TO_FOLDER
 from Infrastructure.DataTypes.FileRepresenters.SeedHandler import SeedHandler
 from Infrastructure.DataTypes.FileRepresenters.FileHandling import to_file
-from Infrastructure.Monitors.MonitorExceptions import ToolException
+from Infrastructure.Monitors.MonitorExceptions import TimedOut
 from Infrastructure.AutoConversion.InputOutputTraceFormats import trace_inout_format_to_str
 
 
@@ -286,15 +286,7 @@ def synthetic_trace_creation(
             verbose=False
         )
         try:
-            cmd, name = guard.construct_offline_command()
-            out, code = guard.image.run_offline(parameters=cmd, path_to_data=num_path, time_on=time_on, timeout=time_out, name=name)
-            if code != 0:
-                if code == 124:
-                    raise TimedOut()
-                elif code == 137:
-                    raise ToolException("OOM Killer activated")
-                else:
-                    raise ToolException(code)
+            run_guard_monitor(guard, num_path, time_on=time_on, time_out=time_out)
         except TimedOut:
             return True, data_file, result_file
 

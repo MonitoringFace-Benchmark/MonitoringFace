@@ -5,7 +5,7 @@ from typing import Optional, List, Tuple, Dict
 from Infrastructure.AutoConversion.InputOutputPolicyFormats import str_to_policy_inout_format, InputOutputPolicyFormats
 from Infrastructure.AutoConversion.InputOutputTraceFormats import str_to_trace_inout_format, InputOutputTraceFormats
 from Infrastructure.AutoConversion.PolicyAlternatives import ALTERNATIVE_SEPARATOR, parse_policy_alternatives
-from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator
+from Infrastructure.BenchmarkBuilder.Coordinator.Coordinator import Coordinator, run_guard_monitor
 from Infrastructure.Builders.ProcessorBuilder.CaseStudiesGenerators.CaseStudyImageGenerator import CaseStudyImageGenerator
 from Infrastructure.DataTypes.Contracts.OnlineExperimentContract import OnlineExperimentContractGeneral
 from Infrastructure.DataTypes.Contracts.SubContracts.CaseStudyContract import CaseStudySetupContract
@@ -14,16 +14,13 @@ from Infrastructure.DataTypes.FingerPrint.FingerPrint import data_class_to_finge
 from Infrastructure.DataTypes.PathManager.PathManager import PathManager
 from Infrastructure.DataTypes.Types.custome_type import OnlineOffline
 from Infrastructure.Monitors.BaseMonitorTemplate import select_policy
+from Infrastructure.Monitors.MonitorExceptions import TimedOut
 from Infrastructure.Oracles.AbstractOracleTemplate import AbstractOracleTemplate
 from Infrastructure.constants import TRACE_KEY, POLICY_KEY, PATH_KEY, BENCHMARK_BUILDING_OFFSET, \
     SIGNATURE_KEY, FINGERPRINT_EXPERIMENT, FINGERPRINT_DATA, FINGERPRINT_COMPONENTS, PATH_TO_NAMED_DATA, \
     PATH_TO_NAMED_EXPERIMENT, \
     PATH_TO_INSTRUCTIONS
 from Infrastructure.DataTypes.Contracts.SubContracts.TimeBounds import TimeConstraints, TimeGuardingTool
-
-
-class TimedOut(Exception):
-    pass
 
 
 class RunOracleException(Exception):
@@ -174,12 +171,9 @@ class CaseStudyCoordinator(Coordinator):
                         named_path_to_data, data_type, guard_policy_type, data_file, sig, guard_policy,
                         self.path_manager, verbose=False
                     )
-                    cmd, name = mon.construct_offline_command()
-                    mon.image.run_offline(
-                        parameters=cmd, path_to_data=sfh.folder, time_on=None, timeout=run_time_out, name=name
-                    )
+                    run_guard_monitor(mon, named_path_to_data, time_out=run_time_out)
                 except TimedOut:
-                    raise TimedOut(f"Monitor {self.oracle} timed out ({run_time_out} seconds)")
+                    raise TimedOut(f"Monitor {mon.name} timed out ({run_time_out} seconds)")
             sfh.clean_up_folder()
         print(f"{BENCHMARK_BUILDING_OFFSET} Finished: Verifying with Oracle\n")
         sfh.remove_folder()
